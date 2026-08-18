@@ -47,3 +47,9 @@
   color: #fff;
   border-color: var(--navy);
 }
+
+.purple {
+  background: var(--purple-bg);
+  color: var(--purple-text);
+  border-color: var(--purple-border);
+}

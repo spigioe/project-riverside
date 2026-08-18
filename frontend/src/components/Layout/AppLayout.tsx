@@ -1,4 +1,6 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { authClient, RefreshRequest } from '../../api'
 import { useAuthStore } from '../../store/useAuthStore'
 import { NotificationBell } from '../NotificationBell/NotificationBell'
 import { ToastContainer } from '../Toast/ToastContainer'
@@ -48,6 +50,32 @@ function SearchIcon() {
 
 export function AppLayout() {
   const user = useAuthStore((state) => state.user)
+  const refreshToken = useAuthStore((state) => state.refreshToken)
+  const logout = useAuthStore((state) => state.logout)
+  const navigate = useNavigate()
+
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  async function handleLogout() {
+    try {
+      await authClient.logout(new RefreshRequest({ refreshToken: refreshToken ?? undefined }))
+    } catch {
+      // a kijelentkezés helyi állapotát a szerver hívás sikerétől függetlenül töröljük
+    }
+    logout()
+    navigate('/login')
+  }
 
   return (
     <div className={styles.shell}>
@@ -87,12 +115,30 @@ export function AppLayout() {
           <div className={styles.topbarActions}>
             <NotificationBell />
             {user && (
-              <div className={styles.userBlock}>
-                <div className={styles.avatar}>{getInitials(user.fullName)}</div>
-                <div>
-                  <div className={styles.userName}>{user.fullName}</div>
-                  <div className={styles.userRole}>{ROLE_LABELS[user.role] ?? user.role}</div>
-                </div>
+              <div className={styles.userMenuWrap} ref={userMenuRef}>
+                <button
+                  type="button"
+                  className={styles.userBlock}
+                  onClick={() => setIsUserMenuOpen((v) => !v)}
+                  aria-label="Felhasználói menü"
+                >
+                  <div className={styles.avatar}>{getInitials(user.fullName)}</div>
+                  <div>
+                    <div className={styles.userName}>{user.fullName}</div>
+                    <div className={styles.userRole}>{ROLE_LABELS[user.role] ?? user.role}</div>
+                  </div>
+                </button>
+                {isUserMenuOpen && (
+                  <div className={styles.userDropdown}>
+                    <button
+                      type="button"
+                      className={styles.userDropdownItem}
+                      onClick={handleLogout}
+                    >
+                      Kijelentkezés
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

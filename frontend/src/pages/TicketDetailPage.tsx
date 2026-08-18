@@ -13,6 +13,7 @@ import {
 } from '../api'
 import { StatusBadge } from '../components/Badge/StatusBadge'
 import { PriorityBadge } from '../components/Badge/PriorityBadge'
+import badgeStyles from '../components/Badge/Badge.module.css'
 import { formatDateTime, formatTicketId } from '../lib/format'
 import styles from './TicketDetailPage.module.css'
 
@@ -124,6 +125,9 @@ export function TicketDetailPage() {
         <div className={styles.metaRow}>
           <StatusBadge status={ticket.status!} />
           <PriorityBadge priority={ticket.priority!} />
+          {ticket.isCsmFlagged && (
+            <span className={`${badgeStyles.badge} ${badgeStyles.purple}`}>CSM jelölt</span>
+          )}
           {ticket.categoryName && <span className={styles.sourceTag}>{ticket.categoryName}</span>}
           <span className={styles.sourceTag}>{SOURCE_LABELS[ticket.source!]}</span>
           <span className={styles.metaMono}>
@@ -222,7 +226,12 @@ export function TicketDetailPage() {
             </div>
             <div className={styles.toggleRow}>
               <div>
-                <div className={styles.toggleLabel}>CSM jelölés</div>
+                <div className={styles.toggleLabel}>
+                  CSM jelölés
+                  {ticket.isCsmFlagged && (
+                    <span className={`${badgeStyles.badge} ${badgeStyles.purple}`}>Aktív</span>
+                  )}
+                </div>
                 <div className={styles.toggleSub}>Eszkalálás CSM felé</div>
               </div>
               <button

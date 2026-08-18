@@ -326,6 +326,9 @@
 }
 
 .toggleLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-heading);
   font-size: 10px;
   font-weight: 700;
