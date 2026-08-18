@@ -1,0 +1,21 @@
+using SupportPortal.Application.DTOs.Common;
+using SupportPortal.Application.DTOs.Tickets;
+using SupportPortal.Domain.Enums;
+
+namespace SupportPortal.Application.Interfaces;
+
+public enum TicketAssignResult { Success, TicketNotFound, UserNotFound }
+
+public enum TicketMergeResult { Success, TicketNotFound, TargetNotFound, SelfMerge, SourceAlreadyMerged, TargetAlreadyMerged }
+
+public interface ITicketService
+{
+    Task<PagedResult<TicketListItemDto>> GetTicketsAsync(TicketListQuery query);
+    Task<TicketDetailDto?> GetTicketByIdAsync(int id);
+    Task<TicketDetailDto> CreateTicketAsync(CreateTicketRequest request, int currentUserId);
+    Task<bool> UpdateTicketAsync(int id, UpdateTicketRequest request);
+    Task<bool> UpdateStatusAsync(int id, TicketStatus status);
+    Task<TicketAssignResult> AssignAsync(int id, int? assignedToId);
+    Task<bool?> ToggleCsmAsync(int id);
+    Task<TicketMergeResult> MergeAsync(int id, int targetTicketId);
+}
