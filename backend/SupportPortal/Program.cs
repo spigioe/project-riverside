@@ -4,9 +4,11 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using NSwag;
 using NSwag.Generation.Processors.Security;
+using SupportPortal.Application.DTOs;
 using SupportPortal.Application.DTOs.Auth;
 using SupportPortal.Application.Interfaces;
 using SupportPortal.Data;
@@ -27,6 +29,12 @@ var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
     ?? throw new InvalidOperationException("JWT settings not found.");
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+
+// ── Email (Mailpit) ────────────────────────────────────────────────────────────
+var mailSettings = builder.Configuration.GetSection("Mail").Get<MailSettings>()
+    ?? throw new InvalidOperationException("Mail settings not found.");
+
+builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("Mail"));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -50,6 +58,11 @@ builder.Services.AddAuthorization();
 // ── Services ───────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddHttpClient<IEmailService, EmailService>(client =>
+    client.BaseAddress = new Uri(mailSettings.ApiBaseUrl));
+builder.Services.AddScoped<ITicketEmailProcessor, TicketEmailProcessor>();
+builder.Services.AddHostedService<EmailPollingService>();
 
 // ── Validáció ──────────────────────────────────────────────────────────────────
 builder.Services.AddFluentValidationAutoValidation();
@@ -59,6 +72,13 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
+
+// A nem-nullable string property-kre az ASP.NET Core (a <Nullable>enable</Nullable> miatt)
+// automatikusan egy saját, angol "The X field is required." hibát injektálna a FluentValidation
+// magyar üzenete mellé, ha egy kötelező mező teljesen hiányzik a JSON body-ból. Ezt tiltjuk le,
+// hogy kizárólag a FluentValidation validátorok magyar üzenetei érvényesüljenek.
+builder.Services.Configure<MvcOptions>(options =>
+    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
 
 // ── OpenAPI / NSwag ────────────────────────────────────────────────────────────
 builder.Services.AddOpenApiDocument(config =>

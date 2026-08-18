@@ -117,4 +117,28 @@ public class TicketController(ITicketService ticketService) : ControllerBase
             _ => Problem(statusCode: StatusCodes.Status500InternalServerError),
         };
     }
+
+    [HttpGet("{id:int}/messages")]
+    [ProducesResponseType(typeof(IReadOnlyList<TicketMessageDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMessages(int id)
+    {
+        var messages = await ticketService.GetMessagesAsync(id);
+        if (messages is null)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
+
+        return Ok(messages);
+    }
+
+    [HttpPost("{id:int}/messages")]
+    [ProducesResponseType(typeof(TicketMessageDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddMessage(int id, [FromBody] CreateTicketMessageRequest request)
+    {
+        var message = await ticketService.AddMessageAsync(id, request, User.GetUserId());
+        if (message is null)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
+
+        return CreatedAtAction(nameof(GetMessages), new { id }, message);
+    }
 }

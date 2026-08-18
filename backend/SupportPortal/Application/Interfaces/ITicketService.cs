@@ -18,4 +18,6 @@ public interface ITicketService
     Task<TicketAssignResult> AssignAsync(int id, int? assignedToId);
     Task<bool?> ToggleCsmAsync(int id);
     Task<TicketMergeResult> MergeAsync(int id, int targetTicketId);
+    Task<IReadOnlyList<TicketMessageDto>?> GetMessagesAsync(int ticketId);
+    Task<TicketMessageDto?> AddMessageAsync(int ticketId, CreateTicketMessageRequest request, int currentUserId);
 }

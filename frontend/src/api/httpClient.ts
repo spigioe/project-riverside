@@ -1,7 +1,12 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '../store/useAuthStore'
 
-export const baseURL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5000'
+// Alapértelmezésben relatív URL (üres base) — a kérések ugyanarra az originre mennek, amiről az
+// SPA is kiszolgálódik, így nincs cross-origin kérés és nincs CORS hiba. Dockerben az Nginx proxy
+// (docker/nginx/default.conf) irányítja a /api-t a backendre, `npm run dev` alatt a Vite dev
+// szerver proxy-ja (lásd vite.config.ts). Csak akkor állítsd VITE_API_BASE_URL-t, ha ténylegesen
+// egy másik (nem ugyanazon origin mögötti) backendre kell mutatni.
+export const baseURL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export const httpClient = axios.create({ baseURL })
 

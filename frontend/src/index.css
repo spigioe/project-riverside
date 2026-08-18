@@ -1,12 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 :root {
-  color-scheme: light dark;
-  font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* ── Brand ────────────────────────────────────────────── */
+  --navy: #10162F;
+  --primary: #4A6CF7;
+  --primary-hover: #3A5CE6;
+  --primary-tint-bg: #EEF1FF;
+  --primary-tint-border: #C5CFFE;
+
+  /* ── Surfaces ─────────────────────────────────────────── */
+  --bg: #F5F5FA;
+  --bg-alt: #F5F5FA;
+  --surface: #fff;
+  --border-light: #DBDDE8;
+  --text: #10162F;
+  --text-muted: #585C6D;
+
+  /* ── Neo-brutalist shadow ─────────────────────────────── */
+  --shadow-pop-sm: 3px 3px 0 0 var(--navy);
+  --shadow-pop: 4px 4px 0 0 var(--navy);
+
+  /* ── Semantic (status / priority) ────────────────────── */
+  --gray-bg: #F5F5FA;
+  --gray-text: #585C6D;
+  --gray-border: #DBDDE8;
+
+  --amber-bg: #FFF6D6;
+  --amber-text: #B88700;
+  --amber-border: #F5E09E;
+
+  --green-bg: #E6F7F1;
+  --green-text: #00A878;
+  --green-border: #A8E0CB;
+
+  --red-bg: #FDE8EE;
+  --red-text: #C0193E;
+  --red-border: #FCA5A5;
+
+  /* ── Type ─────────────────────────────────────────────── */
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-heading: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  --radius: 4px;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
 }
 
 body {
-  margin: 0;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
   min-height: 100svh;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+input, select, textarea, button {
+  font-family: inherit;
+  color: inherit;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: -1px;
+}
+
+button {
+  cursor: pointer;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 3px;
 }

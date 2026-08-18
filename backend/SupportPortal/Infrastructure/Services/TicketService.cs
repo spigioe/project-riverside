@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using SupportPortal.Application.DTOs;
 using SupportPortal.Application.DTOs.Common;
 using SupportPortal.Application.DTOs.Tickets;
 using SupportPortal.Application.Interfaces;
@@ -8,7 +11,11 @@ using SupportPortal.Domain.Enums;
 
 namespace SupportPortal.Infrastructure.Services;
 
-public class TicketService(AppDbContext db) : ITicketService
+public class TicketService(
+    AppDbContext db,
+    IEmailService emailService,
+    IOptions<MailSettings> mailOptions,
+    ILogger<TicketService> logger) : ITicketService
 {
     public async Task<PagedResult<TicketListItemDto>> GetTicketsAsync(TicketListQuery query)
     {
@@ -25,6 +32,15 @@ public class TicketService(AppDbContext db) : ITicketService
 
         if (query.CategoryId.HasValue)
             ticketsQuery = ticketsQuery.Where(t => t.CategoryId == query.CategoryId.Value);
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var search = query.Search.Trim();
+            ticketsQuery = ticketsQuery.Where(t =>
+                t.Subject.Contains(search) ||
+                t.RequesterEmail.Contains(search) ||
+                t.RequesterName.Contains(search));
+        }
 
         var totalCount = await ticketsQuery.CountAsync();
 
@@ -164,5 +180,101 @@ public class TicketService(AppDbContext db) : ITicketService
 
         await db.SaveChangesAsync();
         return TicketMergeResult.Success;
+    }
+
+    public async Task<IReadOnlyList<TicketMessageDto>?> GetMessagesAsync(int ticketId)
+    {
+        var ticketExists = await db.Tickets.AnyAsync(t => t.Id == ticketId);
+        if (!ticketExists) return null;
+
+        return await db.TicketMessages
+            .AsNoTracking()
+            .Where(m => m.TicketId == ticketId)
+            .OrderBy(m => m.CreatedAt)
+            .Select(m => new TicketMessageDto(
+                m.Id, m.TicketId,
+                m.SenderUserId, m.SenderUser != null ? m.SenderUser.FullName : null,
+                m.SenderEmail, m.Body, m.IsInternalNote, m.Direction, m.CreatedAt))
+            .ToListAsync();
+    }
+
+    public async Task<TicketMessageDto?> AddMessageAsync(int ticketId, CreateTicketMessageRequest request, int currentUserId)
+    {
+        var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
+        if (ticket is null) return null;
+
+        var message = new TicketMessage
+        {
+            TicketId = ticketId,
+            SenderUserId = currentUserId,
+            Body = request.Body,
+            IsInternalNote = request.IsInternalNote,
+            Direction = MessageDirection.Outbound,
+        };
+
+        db.TicketMessages.Add(message);
+        await db.SaveChangesAsync();
+
+        if (!request.IsInternalNote)
+            await SendReplyEmailAsync(ticket, request.Body);
+
+        return await db.TicketMessages
+            .AsNoTracking()
+            .Where(m => m.Id == message.Id)
+            .Select(m => new TicketMessageDto(
+                m.Id, m.TicketId,
+                m.SenderUserId, m.SenderUser != null ? m.SenderUser.FullName : null,
+                m.SenderEmail, m.Body, m.IsInternalNote, m.Direction, m.CreatedAt))
+            .FirstAsync();
+    }
+
+    private async Task SendReplyEmailAsync(Ticket ticket, string body)
+    {
+        // Az eredeti (legkorábbi) bejövő email erre a jegyre — ennek Message-ID-jére válaszolunk,
+        // hogy a levelezőkliens/Mailpit egy szálban tartsa a beszélgetést.
+        var original = await db.EmailQueues
+            .Where(q => q.TicketId == ticket.Id && q.ExternalMessageId != null)
+            .OrderBy(q => q.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        var subject = $"Re: [#{ticket.Id}] {ticket.Subject}";
+
+        try
+        {
+            var messageId = await emailService.SendAsync(
+                ticket.RequesterEmail, subject, body, original?.ExternalMessageId, original?.ExternalMessageId);
+
+            db.EmailQueues.Add(new EmailQueue
+            {
+                TicketId = ticket.Id,
+                FromAddress = mailOptions.Value.FromAddress,
+                ToAddress = ticket.RequesterEmail,
+                Subject = subject,
+                Body = body,
+                Status = EmailQueueStatus.Sent,
+                ExternalMessageId = messageId,
+                InReplyTo = original?.ExternalMessageId,
+                ReferencesHeader = original?.ExternalMessageId,
+                SentAt = DateTime.UtcNow,
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Nem sikerült elküldeni a válaszemailt a(z) {TicketId} jegyhez.", ticket.Id);
+
+            db.EmailQueues.Add(new EmailQueue
+            {
+                TicketId = ticket.Id,
+                FromAddress = mailOptions.Value.FromAddress,
+                ToAddress = ticket.RequesterEmail,
+                Subject = subject,
+                Body = body,
+                Status = EmailQueueStatus.Failed,
+                InReplyTo = original?.ExternalMessageId,
+                ReferencesHeader = original?.ExternalMessageId,
+            });
+        }
+
+        await db.SaveChangesAsync();
     }
 }

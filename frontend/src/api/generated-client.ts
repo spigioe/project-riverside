@@ -203,7 +203,7 @@ export class TicketClient {
 
     }
 
-    getTickets(status?: TicketStatus | null | undefined, priority?: TicketPriority | null | undefined, categoryId?: number | null | undefined, page?: number | undefined, pageSize?: number | undefined, cancelToken?: CancelToken): Promise<PagedResultOfTicketListItemDto> {
+    getTickets(status?: TicketStatus | null | undefined, priority?: TicketPriority | null | undefined, categoryId?: number | null | undefined, search?: string | null | undefined, page?: number | undefined, pageSize?: number | undefined, cancelToken?: CancelToken): Promise<PagedResultOfTicketListItemDto> {
         let url_ = this.baseUrl + "/api/portal/tickets?";
         if (status !== undefined && status !== null)
             url_ += "Status=" + encodeURIComponent("" + status) + "&";
@@ -211,6 +211,8 @@ export class TicketClient {
             url_ += "Priority=" + encodeURIComponent("" + priority) + "&";
         if (categoryId !== undefined && categoryId !== null)
             url_ += "CategoryId=" + encodeURIComponent("" + categoryId) + "&";
+        if (search !== undefined && search !== null)
+            url_ += "Search=" + encodeURIComponent("" + search) + "&";
         if (page === null)
             throw new globalThis.Error("The parameter 'page' cannot be null.");
         else if (page !== undefined)
@@ -677,6 +679,202 @@ export class TicketClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<void>(null as any);
+    }
+
+    getMessages(id: number, cancelToken?: CancelToken): Promise<TicketMessageDto[]> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/messages";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetMessages(_response);
+        });
+    }
+
+    protected processGetMessages(response: AxiosResponse): Promise<TicketMessageDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(TicketMessageDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<TicketMessageDto[]>(result200);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<TicketMessageDto[]>(null as any);
+    }
+
+    addMessage(id: number, request: CreateTicketMessageRequest, cancelToken?: CancelToken): Promise<TicketMessageDto> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/messages";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processAddMessage(_response);
+        });
+    }
+
+    protected processAddMessage(response: AxiosResponse): Promise<TicketMessageDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = TicketMessageDto.fromJS(resultData201);
+            return Promise.resolve<TicketMessageDto>(result201);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<TicketMessageDto>(null as any);
+    }
+}
+
+export class UsersClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getUsers( cancelToken?: CancelToken): Promise<UserSummaryDto[]> {
+        let url_ = this.baseUrl + "/api/portal/users";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetUsers(_response);
+        });
+    }
+
+    protected processGetUsers(response: AxiosResponse): Promise<UserSummaryDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(UserSummaryDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<UserSummaryDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<UserSummaryDto[]>(null as any);
     }
 }
 
@@ -1471,6 +1669,167 @@ export class MergeTicketRequest implements IMergeTicketRequest {
 
 export interface IMergeTicketRequest {
     targetTicketId?: number;
+}
+
+export class TicketMessageDto implements ITicketMessageDto {
+    id?: number;
+    ticketId?: number;
+    senderUserId?: number | undefined;
+    senderUserName?: string | undefined;
+    senderEmail?: string | undefined;
+    body?: string;
+    isInternalNote?: boolean;
+    direction?: MessageDirection;
+    createdAt?: Date;
+
+    constructor(data?: ITicketMessageDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.ticketId = _data["ticketId"];
+            this.senderUserId = _data["senderUserId"];
+            this.senderUserName = _data["senderUserName"];
+            this.senderEmail = _data["senderEmail"];
+            this.body = _data["body"];
+            this.isInternalNote = _data["isInternalNote"];
+            this.direction = _data["direction"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): TicketMessageDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new TicketMessageDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["ticketId"] = this.ticketId;
+        data["senderUserId"] = this.senderUserId;
+        data["senderUserName"] = this.senderUserName;
+        data["senderEmail"] = this.senderEmail;
+        data["body"] = this.body;
+        data["isInternalNote"] = this.isInternalNote;
+        data["direction"] = this.direction;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface ITicketMessageDto {
+    id?: number;
+    ticketId?: number;
+    senderUserId?: number | undefined;
+    senderUserName?: string | undefined;
+    senderEmail?: string | undefined;
+    body?: string;
+    isInternalNote?: boolean;
+    direction?: MessageDirection;
+    createdAt?: Date;
+}
+
+export enum MessageDirection {
+    Inbound = "Inbound",
+    Outbound = "Outbound",
+}
+
+export class CreateTicketMessageRequest implements ICreateTicketMessageRequest {
+    body?: string;
+    isInternalNote?: boolean;
+
+    constructor(data?: ICreateTicketMessageRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.body = _data["body"];
+            this.isInternalNote = _data["isInternalNote"];
+        }
+    }
+
+    static fromJS(data: any): CreateTicketMessageRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateTicketMessageRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["body"] = this.body;
+        data["isInternalNote"] = this.isInternalNote;
+        return data;
+    }
+}
+
+export interface ICreateTicketMessageRequest {
+    body?: string;
+    isInternalNote?: boolean;
+}
+
+export class UserSummaryDto implements IUserSummaryDto {
+    id?: number;
+    fullName?: string;
+    email?: string;
+    role?: string;
+
+    constructor(data?: IUserSummaryDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.fullName = _data["fullName"];
+            this.email = _data["email"];
+            this.role = _data["role"];
+        }
+    }
+
+    static fromJS(data: any): UserSummaryDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new UserSummaryDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["fullName"] = this.fullName;
+        data["email"] = this.email;
+        data["role"] = this.role;
+        return data;
+    }
+}
+
+export interface IUserSummaryDto {
+    id?: number;
+    fullName?: string;
+    email?: string;
+    role?: string;
 }
 
 export class SwaggerException extends Error {

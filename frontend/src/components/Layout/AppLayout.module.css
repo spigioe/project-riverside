@@ -1,0 +1,182 @@
+.shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Sidebar ──────────────────────────────────────────── */
+
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: var(--navy);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.brandMark {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  background: #1B2240;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.brandName {
+  font-family: var(--font-heading);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+}
+
+.brandSub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.nav {
+  padding: 10px 0;
+  flex: 1;
+}
+
+.navSection {
+  padding: 6px 16px 4px;
+  font-family: var(--font-heading);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.32);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 16px;
+  margin: 1px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.68);
+  border-left: 3px solid transparent;
+}
+
+.navLink:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.navLinkActive {
+  color: #fff;
+  background: rgba(74, 108, 247, 0.14);
+  border-left: 3px solid var(--primary);
+}
+
+.navIcon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+/* ── Main column ──────────────────────────────────────── */
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.topbar {
+  height: 54px;
+  min-height: 54px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 14px;
+}
+
+.searchWrap {
+  flex: 1;
+  max-width: 440px;
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  display: flex;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 7px 12px 7px 30px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.userBlock {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.userName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.userRole {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--bg-alt);
+}

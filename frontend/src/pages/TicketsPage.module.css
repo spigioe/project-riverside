@@ -1,0 +1,183 @@
+.page {
+  padding: 28px 28px 40px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.subtitle {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.filterBar {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.select {
+  padding: 6px 10px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.searchWrap {
+  flex: 1;
+  min-width: 180px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.tableCard {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.table thead tr {
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.table th {
+  padding: 10px;
+  text-align: left;
+  font-family: var(--font-heading);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 10px;
+  font-size: 13px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:nth-child(odd) {
+  background: var(--bg-alt);
+}
+
+.checkCol {
+  width: 40px;
+  padding-left: 14px !important;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.subjectCell {
+  max-width: 260px;
+}
+
+.subjectLink {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.emptyCell {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted);
+}
+
+.pager {
+  padding: 11px 18px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pagerButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagerButtons button {
+  padding: 5px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.pagerButtons button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pagerButtons button:not(:disabled):hover {
+  border-color: var(--navy);
+  color: var(--text);
+}
+
+.pagerCurrent {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text);
+}
