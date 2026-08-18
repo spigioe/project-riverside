@@ -33,11 +33,19 @@
 - /docs/support_portal_tervezes_v1.docx — teljes tervezési döntések
 - /docs/support_portal_ek_diagramok.docx — adatbázis E-K diagramok
 - /docs/Support Portal v2.dc.html - wireframe diagram
+- CSS token rendszer: neo-brutalist, --navy: #10162F, --primary: #4A6CF7, Inter + Space Grotesk + JetBrains Mono
+- Komponensek: shadow-pop (4px 4px 0 0 navy), pill badge-ek, 4px border-radius, nincs gradient
 
 ## Elvégzett lépések
 - 1. lépés KÉSZ: Docker Compose stack (MySQL, Mailpit, MinIO, Nginx placeholder)
 - 2. lépés KÉSZ: ASP.NET Core projekt, EF Core entitások, migrációk, seed adatok
 - 3. lépés KÉSZ: JWT auth, BCrypt, refresh token rotáció, remember me
+- 4. lépés KÉSZ: Ticket CRUD API (/api/portal/tickets/) — 17/17 teszt zöld
+  - GET /tickets (szűrés, lapozás), GET /tickets/{id}
+  - POST /tickets, PUT /tickets/{id}
+  - PATCH /{id}/status, /{id}/assign, /{id}/csm
+  - POST /{id}/merge (cascade: auto-close, isMerged, mergedIntoTicketId)
+  - FluentValidation + magyar ProblemDetails hibák
 
 ## Seed adatok
 - Admin user: admin@supportportal.dev / Admin1234!
@@ -45,13 +53,10 @@
 - Master SLA policy (mind a 4 prioritáshoz)
 - Munkaidő: H-P 8:00-17:00
 
-## Következő feladat (4. lépés)
-Ticket CRUD API a /api/portal/tickets/ útvonalon:
-- GET /tickets — lista (szűrés státusz/prioritás/kategória szerint, lapozás)
-- GET /tickets/{id} — részletek
-- POST /tickets — létrehozás
-- PUT /tickets/{id} — szerkesztés
-- PATCH /tickets/{id}/status — státusz módosítás
-- PATCH /tickets/{id}/assign — hozzárendelés
-- PATCH /tickets/{id}/csm — CSM flag toggle
-- POST /tickets/{id}/merge — merge ajánlat elfogadása
+## Következő feladat (5. lépés)
+React frontend scaffold:
+- Vite + React 19 + TypeScript projekt a /frontend mappában
+- React Query (server state), Zustand (UI state)
+- NSwag kliens generálás a backend OpenAPI specből
+- Frontend Dockerfile frissítése (multi-stage: node build + nginx serve)
+- Alap routing: /login, /tickets, /tickets/:id

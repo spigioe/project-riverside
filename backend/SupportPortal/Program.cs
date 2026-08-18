@@ -5,6 +5,8 @@ using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using NSwag;
+using NSwag.Generation.Processors.Security;
 using SupportPortal.Application.DTOs.Auth;
 using SupportPortal.Application.Interfaces;
 using SupportPortal.Data;
@@ -58,6 +60,22 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 
+// ── OpenAPI / NSwag ────────────────────────────────────────────────────────────
+builder.Services.AddOpenApiDocument(config =>
+{
+    config.DocumentName = "v1";
+    config.Title = "Support Portal API";
+    config.Version = "v1";
+    config.AddSecurity("JWT", [], new OpenApiSecurityScheme
+    {
+        Type = OpenApiSecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "JWT Bearer token. Példa: \"Bearer {token}\""
+    });
+    config.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("JWT"));
+});
+
 // ── CORS (dev) ─────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
@@ -82,6 +100,13 @@ if (app.Environment.IsDevelopment())
 app.UseCors("DevCors");
 app.UseAuthentication();
 app.UseAuthorization();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseOpenApi(); // /swagger/v1/swagger.json
+    app.UseSwaggerUi(); // /swagger
+}
+
 app.MapControllers();
 
 app.Run();

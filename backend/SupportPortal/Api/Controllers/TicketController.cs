@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SupportPortal.Api.Extensions;
+using SupportPortal.Application.DTOs.Common;
 using SupportPortal.Application.DTOs.Tickets;
 using SupportPortal.Application.Interfaces;
 
@@ -12,6 +13,7 @@ namespace SupportPortal.Api.Controllers;
 public class TicketController(ITicketService ticketService) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(PagedResult<TicketListItemDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTickets([FromQuery] TicketListQuery query)
     {
         var result = await ticketService.GetTicketsAsync(query);
@@ -19,6 +21,8 @@ public class TicketController(ITicketService ticketService) : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(TicketDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetTicket(int id)
     {
         var ticket = await ticketService.GetTicketByIdAsync(id);
@@ -29,6 +33,7 @@ public class TicketController(ITicketService ticketService) : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType(typeof(TicketDetailDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateTicket([FromBody] CreateTicketRequest request)
     {
         var ticket = await ticketService.CreateTicketAsync(request, User.GetUserId());
@@ -36,6 +41,8 @@ public class TicketController(ITicketService ticketService) : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateTicket(int id, [FromBody] UpdateTicketRequest request)
     {
         var success = await ticketService.UpdateTicketAsync(id, request);
@@ -46,6 +53,8 @@ public class TicketController(ITicketService ticketService) : ControllerBase
     }
 
     [HttpPatch("{id:int}/status")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateTicketStatusRequest request)
     {
         var success = await ticketService.UpdateStatusAsync(id, request.Status);
@@ -56,6 +65,9 @@ public class TicketController(ITicketService ticketService) : ControllerBase
     }
 
     [HttpPatch("{id:int}/assign")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> AssignTicket(int id, [FromBody] AssignTicketRequest request)
     {
         var result = await ticketService.AssignAsync(id, request.AssignedToId);
@@ -71,16 +83,21 @@ public class TicketController(ITicketService ticketService) : ControllerBase
     }
 
     [HttpPatch("{id:int}/csm")]
+    [ProducesResponseType(typeof(ToggleCsmResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ToggleCsm(int id)
     {
         var isCsmFlagged = await ticketService.ToggleCsmAsync(id);
         if (isCsmFlagged is null)
             return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
 
-        return Ok(new { isCsmFlagged = isCsmFlagged.Value });
+        return Ok(new ToggleCsmResponse(isCsmFlagged.Value));
     }
 
     [HttpPost("{id:int}/merge")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> MergeTicket(int id, [FromBody] MergeTicketRequest request)
     {
         var result = await ticketService.MergeAsync(id, request.TargetTicketId);

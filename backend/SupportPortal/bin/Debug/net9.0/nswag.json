@@ -1,0 +1,22 @@
+{
+  "runtime": "Net90",
+  "defaultVariables": null,
+  "documentGenerator": {
+    "fromDocument": {
+      "url": "http://localhost:5000/swagger/v1/swagger.json"
+    }
+  },
+  "codeGenerators": {
+    "openApiToTypeScriptClient": {
+      "className": "{controller}Client",
+      "template": "Axios",
+      "promiseType": "Promise",
+      "generateClientClasses": true,
+      "generateDtoTypes": true,
+      "generateOptionalParameters": true,
+      "markOptionalProperties": true,
+      "typeScriptVersion": 5.0,
+      "output": "../../frontend/src/api/generated-client.ts"
+    }
+  }
+}

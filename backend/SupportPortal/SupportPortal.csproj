@@ -17,7 +17,34 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Minio" Version="7.0.0" />
+    <PackageReference Include="NSwag.AspNetCore" Version="14.7.1" />
+    <PackageReference Include="NSwag.MSBuild" Version="14.7.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.*" />
   </ItemGroup>
+
+  <!--
+    NSwag: a Portal API TypeScript kliens generálása a frontend/src/api/ alá.
+    Csak Debug build után fut (a Release/publish, pl. a Docker image build, kihagyja),
+    és csak akkor hívja meg ténylegesen az nswag-ot, ha a backend fut a localhost:5000-en —
+    enélkül a generálás úgyis meghiúsulna, ez csak elkerüli a felesleges hibaüzenetet.
+  -->
+  <Target Name="GenerateApiClient" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <Exec Command="curl -sf -o /dev/null http://localhost:5000/swagger/v1/swagger.json"
+          IgnoreExitCode="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="NSwagBackendCheckExitCode" />
+    </Exec>
+    <Message Importance="high"
+              Condition="'$(NSwagBackendCheckExitCode)' != '0'"
+              Text="NSwag: a backend nem érhető el a http://localhost:5000 címen — a TypeScript API kliens generálása kimarad." />
+    <Exec Command="$(NSwagExe_Net90) run nswag.json /variables:Configuration=$(Configuration)"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          Condition="'$(NSwagBackendCheckExitCode)' == '0'"
+          ContinueOnError="WarnAndContinue" />
+  </Target>
 
 </Project>

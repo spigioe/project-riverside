@@ -53,8 +53,8 @@ services:
   # ── Frontend (Nginx + React build) ──────────────────────
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: sp_frontend
     restart: unless-stopped
     ports:
