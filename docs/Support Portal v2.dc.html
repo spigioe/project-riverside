@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; color: #10162F; background: #F5F5FA; }
+    a { color: #4A6CF7; } a:hover { color: #3A5CE6; }
+    input, select, textarea, button { font-family: inherit; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #4A6CF7; outline-offset: -1px; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #DBDDE8; border-radius: 3px; }
+  </style>
+</helmet>
+
+<!-- Screen switcher -->
+<div style="background:#10162F;padding:8px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;position:sticky;top:0;z-index:200">
+  <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,.38);letter-spacing:.12em;margin-right:4px">SCREEN</span>
+  <button style="{{ btnLogin }}" onClick="{{ loginClick }}">Login</button>
+  <button style="{{ btnDash }}" onClick="{{ dashClick }}">Dashboard</button>
+  <button style="{{ btnTickets }}" onClick="{{ ticketsClick }}">Ticket List</button>
+  <button style="{{ btnDetail }}" onClick="{{ detailClick }}">Ticket Detail</button>
+  <button style="{{ btnSettings }}" onClick="{{ settingsClick }}">Settings — SLA</button>
+</div>
+
+<div style="height:calc(100vh - 41px);overflow:hidden;display:flex;flex-direction:column">
+
+  <!-- ════ LOGIN ════ -->
+  <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;overflow-y:auto;background:#F5F5FA;display:flex;align-items:center;justify-content:center;padding:40px 20px">
+      <div style="width:100%;max-width:420px">
+        <div style="background:#fff;border:2px solid #10162F;border-radius:4px;box-shadow:4px 4px 0 0 #10162F;padding:36px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
+            <div style="width:36px;height:36px;background:#10162F;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <span style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#4A6CF7">S</span>
+            </div>
+            <div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:#10162F">SupportDesk</div>
+              <div style="font-size:11.5px;color:#585C6D">Internal ticketing portal</div>
+            </div>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:#10162F;margin-bottom:24px">Sign in to your account</div>
+          <div style="margin-bottom:16px">
+            <label style="display:block;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#10162F;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px">Email address</label>
+            <input type="email" placeholder="you@company.com" style="width:100%;padding:9px 12px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-size:14px;color:#10162F" />
+          </div>
+          <div style="margin-bottom:20px">
+            <label style="display:block;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#10162F;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px">Password</label>
+            <input type="password" placeholder="••••••••" style="width:100%;padding:9px 12px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-size:14px" />
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:24px">
+            <input type="checkbox" id="rem" style="width:15px;height:15px;accent-color:#4A6CF7;cursor:pointer" />
+            <label for="rem" style="font-size:13.5px;color:#10162F;cursor:pointer">Remember me</label>
+          </div>
+          <button onClick="{{ dashClick }}" style="width:100%;padding:11px;background:#4A6CF7;color:#fff;border:2px solid #10162F;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:3px 3px 0 0 #10162F;font-family:'Space Grotesk',sans-serif;letter-spacing:.01em" style-hover="transform:translate(-1px,-1px);box-shadow:4px 4px 0 0 #10162F" style-active="transform:translate(1px,1px);box-shadow:2px 2px 0 0 #10162F">Sign in →</button>
+        </div>
+        <div style="text-align:center;margin-top:16px;font-size:12px;color:#585C6D">Protected by TLS 1.3 · Internal use only</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ════ APP SHELL ════ -->
+  <sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex:1;overflow:hidden">
+
+      <!-- Icon strip 56px -->
+      <div style="width:56px;min-width:56px;background:#10162F;display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:4px;border-right:1px solid rgba(255,255,255,.07)">
+        <div style="width:34px;height:34px;background:#1B2240;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;cursor:pointer" onClick="{{ dashClick }}">
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:#4A6CF7">S</span>
+        </div>
+        <div style="{{ icoTickets }}" onClick="{{ ticketsClick }}">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="14" height="14" rx="2"></rect>
+            <line x1="5.5" y1="6.5" x2="12.5" y2="6.5"></line>
+            <line x1="5.5" y1="9.5" x2="12.5" y2="9.5"></line>
+            <line x1="5.5" y1="12.5" x2="9.5" y2="12.5"></line>
+          </svg>
+        </div>
+        <div style="{{ icoReports }}">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <polyline points="2,15 2,11 5.5,11 5.5,15"></polyline>
+            <polyline points="7.5,15 7.5,7 11,7 11,15"></polyline>
+            <polyline points="13,15 13,3 16.5,3 16.5,15"></polyline>
+          </svg>
+        </div>
+        <div style="{{ icoSettings }}" onClick="{{ settingsClick }}">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <circle cx="9" cy="9" r="2.5"></circle>
+            <path d="M9 2.5v1.5M9 14v1.5M2.5 9H4M14 9h1.5M4.3 4.3l1.1 1.1M12.6 12.6l1.1 1.1M4.3 13.7l1.1-1.1M12.6 5.4l1.1-1.1"></path>
+          </svg>
+        </div>
+        <div style="{{ icoAdmin }}">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 2L3 5v4c0 3.5 2.7 6.8 6 8 3.3-1.2 6-4.5 6-8V5L9 2z"></path>
+          </svg>
+        </div>
+        <div style="margin-top:auto;width:30px;height:30px;border-radius:50%;background:#4A6CF7;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;cursor:pointer">SK</div>
+      </div>
+
+      <!-- Nav panel 200px -->
+      <aside style="width:200px;min-width:200px;background:#10162F;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.07)">
+        <div style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.07)">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:13.5px;font-weight:700;color:#fff">SupportDesk</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(255,255,255,.38);margin-top:1px">v2.4 · production</div>
+        </div>
+        <nav style="padding:10px 0;flex:1">
+          <div style="padding:6px 16px 3px;font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.32);letter-spacing:.1em;text-transform:uppercase">Main</div>
+          <div style="{{ navTickets }}" onClick="{{ ticketsClick }}">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="1.5" y="1.5" width="11" height="11" rx="1.5"></rect>
+              <line x1="4" y1="5" x2="10" y2="5"></line>
+              <line x1="4" y1="7.5" x2="10" y2="7.5"></line>
+              <line x1="4" y1="10" x2="7" y2="10"></line>
+            </svg>
+            Tickets
+            <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(255,255,255,.13);padding:1px 5px;border-radius:3px">47</span>
+          </div>
+          <div style="{{ navReports }}">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <polyline points="1.5,12 1.5,9 4,9 4,12"></polyline>
+              <polyline points="5.5,12 5.5,5.5 8,5.5 8,12"></polyline>
+              <polyline points="9.5,12 9.5,2.5 12,2.5 12,12"></polyline>
+            </svg>
+            Reports
+          </div>
+          <div style="{{ navSettings }}" onClick="{{ settingsClick }}">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <circle cx="7" cy="7" r="2"></circle>
+              <path d="M7 1.5v1.5M7 11v1.5M1.5 7H3M11 7h1.5M3.2 3.2l1 1M9.8 9.8l1 1M3.2 10.8l1-1M9.8 4.2l1-1"></path>
+            </svg>
+            Settings
+          </div>
+          <div style="{{ navAdmin }}">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7 1.5L2 4v3c0 2.8 2.2 5.2 5 6 2.8-.8 5-3.2 5-6V4L7 1.5z"></path>
+            </svg>
+            Admin
+          </div>
+        </nav>
+      </aside>
+
+      <!-- Main column -->
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0">
+
+        <!-- Topbar -->
+        <div style="height:54px;background:#fff;border-bottom:1px solid #DBDDE8;display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0">
+          <div style="flex:1;max-width:440px;position:relative">
+            <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#585C6D;pointer-events:none" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <circle cx="6" cy="6" r="4.5"></circle>
+              <line x1="9.2" y1="9.2" x2="12.5" y2="12.5"></line>
+            </svg>
+            <input type="text" placeholder="Search tickets, IDs, requesters…" style="width:100%;padding:7px 12px 7px 30px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-size:13px;color:#10162F" />
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:16px">
+            <div style="position:relative;cursor:pointer">
+              <svg width="19" height="19" viewBox="0 0 19 19" fill="none" stroke="#585C6D" stroke-width="1.5" stroke-linecap="round">
+                <path d="M9.5 2a5.5 5.5 0 015.5 5.5c0 3.3.8 5.1 1.4 6H2.6C3.2 12.6 4 10.8 4 7.5A5.5 5.5 0 019.5 2z"></path>
+                <path d="M7.8 15a2 2 0 003.4 0"></path>
+              </svg>
+              <div style="position:absolute;top:-4px;right:-4px;width:14px;height:14px;background:#C0193E;border-radius:50%;font-size:8px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-family:'JetBrains Mono',monospace">3</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <div style="width:32px;height:32px;border-radius:50%;background:#4A6CF7;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">SK</div>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:#10162F;white-space:nowrap">Sarah K.</div>
+                <div style="font-size:11px;color:#585C6D">Agent</div>
+              </div>
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="#585C6D" stroke-width="1.5" stroke-linecap="round">
+                <polyline points="2,3.5 5.5,7 9,3.5"></polyline>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div style="flex:1;overflow-y:auto;background:#F5F5FA">
+
+          <!-- ════ DASHBOARD ════ -->
+          <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:28px 28px 40px">
+              <div style="margin-bottom:22px">
+                <h1 style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:#10162F">Dashboard</h1>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#585C6D;margin-top:3px">Mon, Aug 18 2026 · 14:43</div>
+              </div>
+              <!-- Stats -->
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
+                <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;padding:18px 20px">
+                  <div style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Open Tickets</div>
+                  <div style="font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;color:#10162F;line-height:1">47</div>
+                  <div style="font-size:12px;color:#585C6D;margin-top:7px">↑ 5 since yesterday</div>
+                </div>
+                <div style="background:#fff;border:1px solid #DBDDE8;border-left:4px solid #C0193E;border-radius:4px;padding:18px 20px">
+                  <div style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">SLA Breached</div>
+                  <div style="font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;color:#C0193E;line-height:1">8</div>
+                  <div style="font-size:12px;color:#C0193E;margin-top:7px">Immediate action needed</div>
+                </div>
+                <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;padding:18px 20px">
+                  <div style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Unassigned</div>
+                  <div style="font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;color:#10162F;line-height:1">12</div>
+                  <div style="font-size:12px;color:#585C6D;margin-top:7px">Across 4 categories</div>
+                </div>
+                <div style="background:#fff;border:1px solid #DBDDE8;border-left:4px solid #00A878;border-radius:4px;padding:18px 20px">
+                  <div style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Resolved Today</div>
+                  <div style="font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;color:#00A878;line-height:1">23</div>
+                  <div style="font-size:12px;color:#585C6D;margin-top:7px">↑ 8 since yesterday</div>
+                </div>
+              </div>
+              <!-- Grid: table + SLA panel -->
+              <div style="display:grid;grid-template-columns:1fr 264px;gap:16px;align-items:start">
+                <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;overflow:hidden">
+                  <div style="padding:12px 18px;border-bottom:1px solid #DBDDE8;display:flex;align-items:center;justify-content:space-between">
+                    <span style="font-family:'Space Grotesk',sans-serif;font-size:13.5px;font-weight:700;color:#10162F">Recent Tickets</span>
+                    <button onClick="{{ ticketsClick }}" style="font-size:13px;color:#4A6CF7;background:none;border:none;cursor:pointer;font-weight:500;padding:0">View all →</button>
+                  </div>
+                  <div style="overflow-x:auto">
+                    <table style="width:100%;min-width:520px;border-collapse:collapse">
+                      <thead>
+                        <tr style="background:#F5F5FA">
+                          <th style="padding:9px 18px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Subject</th>
+                          <th style="padding:9px 12px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Status</th>
+                          <th style="padding:9px 12px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Priority</th>
+                          <th style="padding:9px 12px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Agent</th>
+                          <th style="padding:9px 18px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <sc-for list="{{ tickets }}" as="ticket" hint-placeholder-count="5">
+                          <tr style="{{ ticket.rowStyle }}" onClick="{{ ticket.onOpen }}">
+                            <td style="padding:9px 18px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">
+                              <span style="font-size:13px;color:#4A6CF7;font-weight:500">{{ ticket.subject }}</span>
+                            </td>
+                            <td style="padding:9px 12px"><span style="{{ ticket.sBadge }}">{{ ticket.statusLabel }}</span></td>
+                            <td style="padding:9px 12px"><span style="{{ ticket.pBadge }}">{{ ticket.priorityLabel }}</span></td>
+                            <td style="padding:9px 12px;font-size:13px;color:#585C6D;white-space:nowrap">{{ ticket.agent }}</td>
+                            <td style="padding:9px 18px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#585C6D;white-space:nowrap">{{ ticket.created }}</td>
+                          </tr>
+                        </sc-for>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <!-- SLA warnings -->
+                <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;overflow:hidden">
+                  <div style="padding:11px 14px;border-bottom:1px solid #DBDDE8;display:flex;align-items:center;gap:7px">
+                    <div style="width:7px;height:7px;border-radius:50%;background:#C0193E;animation:blink 2s infinite;flex-shrink:0"></div>
+                    <span style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#10162F">SLA Warnings</span>
+                  </div>
+                  <div style="padding:10px 12px;display:flex;flex-direction:column;gap:7px">
+                    <div style="border:1px solid #fca5a5;border-left:4px solid #C0193E;border-radius:4px;padding:9px 11px;background:#FDE8EE">
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;color:#C0193E;margin-bottom:2px">T-1039 · URGENT</div>
+                      <div style="font-size:12px;color:#10162F;margin-bottom:4px;line-height:1.4">SSL cert renewal for subdomain</div>
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#C0193E;font-weight:500">⏱ 0h 18m left</div>
+                    </div>
+                    <div style="border:1px solid #fcd34d;border-left:4px solid #B88700;border-radius:4px;padding:9px 11px;background:#FFF6D6">
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;color:#B88700;margin-bottom:2px">T-1042 · HIGH</div>
+                      <div style="font-size:12px;color:#10162F;margin-bottom:4px;line-height:1.4">Dashboard inaccessible after update</div>
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#B88700;font-weight:500">⏱ 1h 42m left</div>
+                    </div>
+                    <div style="border:1px solid #fcd34d;border-left:4px solid #B88700;border-radius:4px;padding:9px 11px;background:#FFF6D6">
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;color:#B88700;margin-bottom:2px">T-1041 · MEDIUM</div>
+                      <div style="font-size:12px;color:#10162F;margin-bottom:4px;line-height:1.4">Invoice PDF not generating</div>
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#B88700;font-weight:500">⏱ 3h 05m left</div>
+                    </div>
+                  </div>
+                  <div style="padding:9px 14px;border-top:1px solid #DBDDE8">
+                    <a href="#" style="font-size:12.5px">View all at-risk →</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ════ TICKET LIST ════ -->
+          <sc-if value="{{ isTickets }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:28px 28px 40px">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
+                <div>
+                  <h1 style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:#10162F">Tickets</h1>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#585C6D;margin-top:3px">143 total · 47 open · 8 breached</div>
+                </div>
+                <button style="padding:8px 16px;background:#4A6CF7;color:#fff;border:2px solid #10162F;border-radius:4px;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:3px 3px 0 0 #10162F;font-family:'Space Grotesk',sans-serif;flex-shrink:0" style-hover="transform:translate(-1px,-1px);box-shadow:4px 4px 0 0 #10162F" style-active="transform:translate(1px,1px);box-shadow:2px 2px 0 0 #10162F">+ New Ticket</button>
+              </div>
+              <!-- Filter bar -->
+              <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;padding:12px 16px;margin-bottom:10px">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <select style="padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-size:13px;color:#10162F">
+                    <option>All Statuses</option><option>New</option><option>Open</option><option>Pending</option><option>Resolved</option><option>Closed</option>
+                  </select>
+                  <select style="padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-size:13px;color:#10162F">
+                    <option>All Priorities</option><option>Low</option><option>Medium</option><option>High</option><option>Urgent</option>
+                  </select>
+                  <select style="padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-size:13px;color:#10162F">
+                    <option>All Categories</option><option>Bug</option><option>Billing</option><option>Integration</option><option>Infrastructure</option>
+                  </select>
+                  <select style="padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-size:13px;color:#10162F">
+                    <option>All Agents</option><option>Sarah K.</option><option>Mike R.</option><option>Tom B.</option>
+                  </select>
+                  <div style="flex:1;min-width:150px;position:relative">
+                    <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#585C6D;pointer-events:none" width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                      <circle cx="5.5" cy="5.5" r="4"></circle>
+                      <line x1="8.7" y1="8.7" x2="11.5" y2="11.5"></line>
+                    </svg>
+                    <input type="text" placeholder="Search…" style="width:100%;padding:6px 10px 6px 27px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-size:13px" />
+                  </div>
+                </div>
+                <!-- Active filter pills -->
+                <div style="display:flex;align-items:center;gap:6px;margin-top:10px">
+                  <span style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;color:#585C6D;letter-spacing:.04em;text-transform:uppercase">Active:</span>
+                  <span style="display:inline-flex;align-items:center;gap:5px;padding:2px 8px;background:#EEF1FF;border:1px solid #c5cffe;border-radius:99px;font-size:12px;font-weight:500;color:#4A6CF7;cursor:pointer">Status: Open <span style="font-size:14px;line-height:1;margin-top:-1px">×</span></span>
+                  <span style="display:inline-flex;align-items:center;gap:5px;padding:2px 8px;background:#FFF6D6;border:1px solid #f5e09e;border-radius:99px;font-size:12px;font-weight:500;color:#B88700;cursor:pointer">Priority: High <span style="font-size:14px;line-height:1;margin-top:-1px">×</span></span>
+                </div>
+              </div>
+              <!-- Bulk toolbar -->
+              <sc-if value="{{ hasBulk }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#10162F;border-radius:4px;padding:9px 16px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#fff;font-weight:500">{{ bulkCount }} selected</span>
+                  <div style="width:1px;height:16px;background:rgba(255,255,255,.2)"></div>
+                  <button style="padding:5px 12px;background:transparent;border:1px solid rgba(255,255,255,.3);border-radius:4px;font-size:13px;color:#fff;cursor:pointer">Assign</button>
+                  <button style="padding:5px 12px;background:transparent;border:1px solid rgba(255,255,255,.3);border-radius:4px;font-size:13px;color:#fff;cursor:pointer">Change Status</button>
+                  <button style="padding:5px 12px;background:transparent;border:1px solid rgba(255,255,255,.3);border-radius:4px;font-size:13px;color:#fff;cursor:pointer">Set Priority</button>
+                  <button style="padding:5px 12px;background:transparent;border:1px solid rgba(255,255,255,.3);border-radius:4px;font-size:13px;color:#FDE8EE;cursor:pointer">Close</button>
+                  <button onClick="{{ clearBulk }}" style="margin-left:auto;padding:5px;background:none;border:none;font-size:13px;color:rgba(255,255,255,.55);cursor:pointer">✕ Clear</button>
+                </div>
+              </sc-if>
+              <!-- Table -->
+              <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;overflow:hidden">
+                <table style="width:100%;border-collapse:collapse">
+                  <thead>
+                    <tr style="background:#F5F5FA;border-bottom:1px solid #DBDDE8">
+                      <th style="padding:10px 14px;width:44px"><input type="checkbox" checked="{{ allChecked }}" onChange="{{ toggleAll }}" style="width:14px;height:14px;accent-color:#4A6CF7" /></th>
+                      <th style="padding:10px 10px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">#ID</th>
+                      <th style="padding:10px 10px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Subject</th>
+                      <th style="padding:10px 10px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Requester</th>
+                      <th style="padding:10px 10px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Status</th>
+                      <th style="padding:10px 10px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Priority</th>
+                      <th style="padding:10px 10px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Agent</th>
+                      <th style="padding:10px 10px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Category</th>
+                      <th style="padding:10px 14px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <sc-for list="{{ tickets }}" as="ticket" hint-placeholder-count="6">
+                      <tr style="{{ ticket.rowStyle }}">
+                        <td style="padding:10px 14px"><input type="checkbox" checked="{{ ticket.checked }}" onChange="{{ ticket.onCheck }}" style="width:14px;height:14px;accent-color:#4A6CF7" /></td>
+                        <td style="padding:10px 10px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#585C6D;white-space:nowrap">{{ ticket.id }}</td>
+                        <td style="padding:10px 10px;max-width:210px" onClick="{{ ticket.onOpen }}">
+                          <span style="font-size:13px;color:#4A6CF7;font-weight:500;cursor:pointer;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ticket.subject }}</span>
+                        </td>
+                        <td style="padding:10px 10px;font-size:13px;color:#585C6D;white-space:nowrap">{{ ticket.requester }}</td>
+                        <td style="padding:10px 10px"><span style="{{ ticket.sBadge }}">{{ ticket.statusLabel }}</span></td>
+                        <td style="padding:10px 10px"><span style="{{ ticket.pBadge }}">{{ ticket.priorityLabel }}</span></td>
+                        <td style="padding:10px 10px;font-size:13px;color:#10162F;white-space:nowrap">{{ ticket.agent }}</td>
+                        <td style="padding:10px 10px;font-size:13px;color:#585C6D">{{ ticket.category }}</td>
+                        <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#585C6D;white-space:nowrap">{{ ticket.created }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+                <div style="padding:11px 18px;border-top:1px solid #DBDDE8;display:flex;align-items:center;justify-content:space-between">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#585C6D">1–6 of 143</span>
+                  <div style="display:flex;align-items:center;gap:3px">
+                    <button style="padding:5px 10px;border:1px solid #DBDDE8;border-radius:4px;background:#fff;font-size:13px;color:#585C6D;cursor:pointer">‹</button>
+                    <button style="padding:5px 10px;border:1px solid #10162F;border-radius:4px;background:#10162F;font-size:13px;font-weight:700;color:#fff;cursor:pointer">1</button>
+                    <button style="padding:5px 10px;border:1px solid #DBDDE8;border-radius:4px;background:#fff;font-size:13px;color:#585C6D;cursor:pointer">2</button>
+                    <button style="padding:5px 10px;border:1px solid #DBDDE8;border-radius:4px;background:#fff;font-size:13px;color:#585C6D;cursor:pointer">3</button>
+                    <span style="font-size:13px;color:#585C6D;padding:0 3px">…</span>
+                    <button style="padding:5px 10px;border:1px solid #DBDDE8;border-radius:4px;background:#fff;font-size:13px;color:#585C6D;cursor:pointer">24</button>
+                    <button style="padding:5px 10px;border:1px solid #DBDDE8;border-radius:4px;background:#fff;font-size:13px;color:#585C6D;cursor:pointer">›</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ════ TICKET DETAIL ════ -->
+          <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:24px 28px 40px;display:grid;grid-template-columns:1fr 252px;gap:22px;align-items:start">
+              <!-- Left -->
+              <div style="min-width:0">
+                <button onClick="{{ ticketsClick }}" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#585C6D;background:none;border:none;cursor:pointer;padding:0;margin-bottom:18px">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="8,2 4,6 8,10"></polyline></svg>
+                  Back to tickets
+                </button>
+                <h1 style="font-family:'Space Grotesk',sans-serif;font-size:21px;font-weight:700;color:#10162F;margin-bottom:12px;line-height:1.35;text-wrap:pretty">Cannot access customer dashboard after recent update</h1>
+                <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:22px">
+                  <span style="display:inline-flex;padding:3px 9px;border-radius:99px;font-family:'Space Grotesk',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:#F5F5FA;color:#585C6D;border:1px solid #DBDDE8">Open</span>
+                  <span style="display:inline-flex;padding:3px 9px;border-radius:99px;font-family:'Space Grotesk',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:#FFF6D6;color:#B88700">High</span>
+                  <span style="display:inline-flex;padding:3px 9px;border-radius:99px;font-family:'Space Grotesk',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:#F5F5FA;color:#585C6D;border:1px solid #DBDDE8">Bug</span>
+                  <span style="display:inline-flex;align-items:center;gap:4px;font-size:13px;color:#585C6D">
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="11" height="9" rx="1.5"></rect><polyline points="1,5 6.5,8.5 12,5"></polyline></svg>
+                    Email
+                  </span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#585C6D">T-1042 · 2h ago · alice@example.com</span>
+                </div>
+
+                <!-- Thread -->
+                <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;margin-bottom:14px;overflow:hidden">
+                  <div style="padding:11px 18px;border-bottom:1px solid #DBDDE8;display:flex;align-items:center;gap:8px">
+                    <span style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#10162F">Conversation</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#585C6D">5 messages</span>
+                  </div>
+                  <div style="padding:18px">
+                    <sc-for list="{{ messages }}" as="msg" hint-placeholder-count="3">
+                      <sc-if value="{{ msg.isSystem }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex;align-items:center;gap:8px;margin:0 0 16px;padding:0 2px">
+                          <div style="flex:1;height:1px;background:#DBDDE8"></div>
+                          <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#585C6D;background:#F5F5FA;border:1px solid #DBDDE8;padding:2px 9px;border-radius:999px;white-space:nowrap">{{ msg.systemText }}</span>
+                          <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#585C6D">{{ msg.time }}</span>
+                          <div style="flex:1;height:1px;background:#DBDDE8"></div>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ msg.isRegular }}" hint-placeholder-val="{{ true }}">
+                        <div style="{{ msg.wrapStyle }}">
+                          <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+                            <div style="width:22px;height:22px;border-radius:50%;background:#4A6CF7;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">{{ msg.initials }}</div>
+                            <span style="font-size:12.5px;font-weight:600;color:#10162F">{{ msg.author }}</span>
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#585C6D">{{ msg.time }}</span>
+                            <sc-if value="{{ msg.isNote }}" hint-placeholder-val="{{ false }}">
+                              <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;background:#FFF6D6;color:#B88700;border:1px solid #f5e09e;padding:1px 6px;border-radius:4px">INTERNAL</span>
+                            </sc-if>
+                          </div>
+                          <div style="{{ msg.bubbleStyle }}">{{ msg.body }}</div>
+                        </div>
+                      </sc-if>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <!-- Reply composer -->
+                <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;overflow:hidden">
+                  <div style="padding:9px 14px;border-bottom:1px solid #DBDDE8;display:flex;align-items:center;gap:4px">
+                    <button style="padding:5px 12px;border-radius:4px;background:#10162F;color:#fff;border:none;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;cursor:pointer">Reply</button>
+                    <button style="padding:5px 12px;border-radius:4px;background:none;color:#585C6D;border:none;font-size:13px;cursor:pointer">Internal Note</button>
+                  </div>
+                  <div style="padding:8px 14px;border-bottom:1px solid #DBDDE8;display:flex;align-items:center;gap:3px;flex-wrap:wrap">
+                    <button style="padding:3px 8px;border:none;background:none;font-size:14px;font-weight:700;color:#10162F;cursor:pointer;border-radius:3px;font-family:Georgia,serif" style-hover="background:#F5F5FA">B</button>
+                    <button style="padding:3px 8px;border:none;background:none;font-size:14px;font-style:italic;color:#10162F;cursor:pointer;border-radius:3px;font-family:Georgia,serif" style-hover="background:#F5F5FA">I</button>
+                    <button style="padding:3px 7px;border:none;background:none;color:#10162F;cursor:pointer;border-radius:3px;display:flex;align-items:center" style-hover="background:#F5F5FA">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5.5 7a2.5 2.5 0 004.5 1.5H12M8.5 7a2.5 2.5 0 00-4.5-1.5H2"></path></svg>
+                    </button>
+                    <div style="width:1px;height:16px;background:#DBDDE8;margin:0 4px"></div>
+                    <button style="padding:3px 9px;border:none;background:none;font-size:12.5px;color:#10162F;cursor:pointer;border-radius:3px;display:flex;align-items:center;gap:4px" style-hover="background:#F5F5FA">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 7.5v2a1 1 0 01-1 1H2a1 1 0 01-1-1v-2M6 1v6M3.5 4l2.5-3 2.5 3"></path></svg>
+                      Attach
+                    </button>
+                    <div style="width:1px;height:16px;background:#DBDDE8;margin:0 4px"></div>
+                    <button style="padding:4px 10px;border:1px solid #DBDDE8;border-radius:4px;background:#F5F5FA;font-size:12px;color:#10162F;cursor:pointer">Canned Response</button>
+                    <button style="padding:4px 10px;border:1px solid #d8b4fe;border-radius:4px;background:#EDE9FE;font-size:12px;color:#6D3FC7;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-weight:600" style-hover="background:#ddd6fe">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#6D3FC7" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1l1.2 3.2H10L7.8 6.5l.9 3L6 7.8 3.3 9.5l.9-3L2 4.2h2.8z"></path></svg>
+                      AI Suggest
+                    </button>
+                  </div>
+                  <textarea placeholder="Write your reply to alice@example.com…" style="width:100%;min-height:88px;padding:12px 14px;border:none;resize:vertical;font-size:14px;color:#10162F;outline:none;background:#fff;line-height:1.55"></textarea>
+                  <div style="padding:10px 14px;border-top:1px solid #DBDDE8;display:flex;align-items:center;justify-content:flex-end;gap:8px">
+                    <button style="padding:7px 14px;background:#fff;border:1px solid #DBDDE8;border-radius:4px;font-size:13px;color:#585C6D;cursor:pointer">Save Draft</button>
+                    <button style="padding:7px 16px;background:#4A6CF7;border:2px solid #10162F;border-radius:4px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;box-shadow:2px 2px 0 0 #10162F" style-hover="transform:translate(-1px,-1px);box-shadow:3px 3px 0 0 #10162F" style-active="transform:translate(1px,1px);box-shadow:1px 1px 0 0 #10162F">Send Reply →</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right column -->
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <!-- Properties -->
+                <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;overflow:hidden">
+                  <div style="padding:10px 14px;border-bottom:1px solid #DBDDE8">
+                    <span style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Properties</span>
+                  </div>
+                  <div style="padding:12px 14px;display:flex;flex-direction:column;gap:11px">
+                    <div>
+                      <label style="display:block;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Assigned Agent</label>
+                      <select style="width:100%;padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-size:13px;color:#10162F">
+                        <option>Sarah K.</option><option>Mike R.</option><option>Tom B.</option><option>Unassigned</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style="display:block;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Status</label>
+                      <select style="width:100%;padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-size:13px;color:#10162F">
+                        <option>Open</option><option>Pending</option><option>Resolved</option><option>Closed</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style="display:block;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Priority</label>
+                      <select style="width:100%;padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-size:13px;color:#10162F">
+                        <option>High</option><option>Urgent</option><option>Medium</option><option>Low</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style="display:block;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Category</label>
+                      <select style="width:100%;padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-size:13px;color:#10162F">
+                        <option>Bug</option><option>Billing</option><option>Integration</option><option>Infrastructure</option>
+                      </select>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding-top:2px">
+                      <div>
+                        <div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">CSM Flag</div>
+                        <div style="font-size:11.5px;color:#585C6D;margin-top:2px">Escalate to CSM</div>
+                      </div>
+                      <div style="width:36px;height:20px;background:#DBDDE8;border-radius:10px;position:relative;cursor:pointer;flex-shrink:0;border:1px solid #c5c8d5">
+                        <div style="position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- SLA -->
+                <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;overflow:hidden">
+                  <div style="padding:10px 14px;border-bottom:1px solid #DBDDE8">
+                    <span style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">SLA Status</span>
+                  </div>
+                  <div style="padding:12px 14px">
+                    <div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Response</div>
+                    <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:#B88700;font-variant-numeric:tabular-nums">1h 42m</div>
+                    <div style="margin-top:7px;height:4px;background:#F5F5FA;border-radius:2px;overflow:hidden;border:1px solid #DBDDE8">
+                      <div style="height:100%;width:62%;background:#B88700;border-radius:2px"></div>
+                    </div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#585C6D;margin-top:4px">Due 16:30 today</div>
+                    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #DBDDE8">
+                      <div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Resolution</div>
+                      <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:#00A878;font-variant-numeric:tabular-nums">21h 18m</div>
+                      <div style="margin-top:7px;height:4px;background:#F5F5FA;border-radius:2px;overflow:hidden;border:1px solid #DBDDE8">
+                        <div style="height:100%;width:11%;background:#00A878;border-radius:2px"></div>
+                      </div>
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#585C6D;margin-top:4px">Due tomorrow 12:30</div>
+                    </div>
+                  </div>
+                </div>
+                <!-- ClickUp -->
+                <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;overflow:hidden">
+                  <div style="padding:10px 14px;border-bottom:1px solid #DBDDE8;display:flex;align-items:center;justify-content:space-between">
+                    <span style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">ClickUp Tasks</span>
+                    <button style="font-size:12px;color:#4A6CF7;background:none;border:none;cursor:pointer;font-weight:600">+ Link</button>
+                  </div>
+                  <div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 9px;border:1px solid #DBDDE8;border-radius:4px;background:#F5F5FA">
+                      <div><div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#585C6D">CU-4821</div><div style="font-size:12px;color:#10162F;margin-top:1px">Fix dashboard CSS import</div></div>
+                      <span style="padding:2px 7px;border-radius:99px;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:#E6F7F1;color:#00A878;flex-shrink:0">Done</span>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 9px;border:1px solid #DBDDE8;border-radius:4px;background:#F5F5FA">
+                      <div><div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#585C6D">CU-4822</div><div style="font-size:12px;color:#10162F;margin-top:1px">Deploy hotfix to production</div></div>
+                      <span style="padding:2px 7px;border-radius:99px;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:#EEF1FF;color:#4A6CF7;flex-shrink:0">Active</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ════ SETTINGS SLA ════ -->
+          <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;min-height:calc(100vh - 95px)">
+              <!-- Settings submenu -->
+              <div style="width:200px;min-width:200px;background:#fff;border-right:1px solid #DBDDE8;padding:12px 0;flex-shrink:0">
+                <div style="padding:10px 16px 5px;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.1em">Settings</div>
+                <div style="padding:8px 16px;font-size:13.5px;color:#585C6D;cursor:pointer;border-left:4px solid transparent">Users &amp; Roles</div>
+                <div style="padding:8px 16px;font-size:13.5px;color:#4A6CF7;cursor:pointer;background:#F5F5FA;border-left:4px solid #4A6CF7;font-weight:600">SLA</div>
+                <div style="padding:8px 16px;font-size:13.5px;color:#585C6D;cursor:pointer;border-left:4px solid transparent">Email</div>
+                <div style="padding:8px 16px;font-size:13.5px;color:#585C6D;cursor:pointer;border-left:4px solid transparent">Notifications</div>
+                <div style="padding:8px 16px;font-size:13.5px;color:#585C6D;cursor:pointer;border-left:4px solid transparent">Ticket Settings</div>
+                <div style="padding:8px 16px;font-size:13.5px;color:#585C6D;cursor:pointer;border-left:4px solid transparent">Integration</div>
+                <div style="padding:8px 16px;font-size:13.5px;color:#585C6D;cursor:pointer;border-left:4px solid transparent">System</div>
+              </div>
+              <!-- SLA content -->
+              <div style="flex:1;overflow-y:auto;padding:28px 28px 40px">
+                <div style="margin-bottom:22px">
+                  <h1 style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#10162F">SLA Policies</h1>
+                  <div style="font-size:13px;color:#585C6D;margin-top:4px">Response and resolution targets by priority level.</div>
+                </div>
+                <!-- Master SLA -->
+                <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;overflow:hidden;margin-bottom:20px">
+                  <div style="padding:13px 20px;border-bottom:1px solid #DBDDE8;display:flex;align-items:center;justify-content:space-between">
+                    <div>
+                      <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#10162F">Master SLA Policy</div>
+                      <div style="font-size:12px;color:#585C6D;margin-top:2px">Applies to all tickets unless overridden by a domain exception</div>
+                    </div>
+                    <button style="padding:7px 14px;background:#4A6CF7;color:#fff;border:2px solid #10162F;border-radius:4px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:2px 2px 0 0 #10162F" style-hover="transform:translate(-1px,-1px);box-shadow:3px 3px 0 0 #10162F" style-active="transform:translate(1px,1px);box-shadow:1px 1px 0 0 #10162F">Save Changes</button>
+                  </div>
+                  <table style="width:100%;border-collapse:collapse">
+                    <thead>
+                      <tr style="background:#F5F5FA">
+                        <th style="padding:9px 20px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em;width:130px">Priority</th>
+                        <th style="padding:9px 20px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Response (min)</th>
+                        <th style="padding:9px 20px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Resolution (min)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style="background:#F5F5FA;border-top:1px solid #DBDDE8">
+                        <td style="padding:12px 20px"><span style="padding:2px 9px;border-radius:99px;font-family:'Space Grotesk',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:#E6F7F1;color:#00A878">Low</span></td>
+                        <td style="padding:12px 20px"><div style="display:flex;align-items:center;gap:8px"><input type="number" defaultValue="1440" style="width:80px;padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;text-align:right" /><span style="font-size:13px;color:#585C6D">min</span></div></td>
+                        <td style="padding:12px 20px"><div style="display:flex;align-items:center;gap:8px"><input type="number" defaultValue="4320" style="width:80px;padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;text-align:right" /><span style="font-size:13px;color:#585C6D">min</span></div></td>
+                      </tr>
+                      <tr style="background:#fff;border-top:1px solid #DBDDE8">
+                        <td style="padding:12px 20px"><span style="padding:2px 9px;border-radius:99px;font-family:'Space Grotesk',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:#EEF1FF;color:#4A6CF7">Medium</span></td>
+                        <td style="padding:12px 20px"><div style="display:flex;align-items:center;gap:8px"><input type="number" defaultValue="720" style="width:80px;padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;text-align:right" /><span style="font-size:13px;color:#585C6D">min</span></div></td>
+                        <td style="padding:12px 20px"><div style="display:flex;align-items:center;gap:8px"><input type="number" defaultValue="2880" style="width:80px;padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;text-align:right" /><span style="font-size:13px;color:#585C6D">min</span></div></td>
+                      </tr>
+                      <tr style="background:#F5F5FA;border-top:1px solid #DBDDE8">
+                        <td style="padding:12px 20px"><span style="padding:2px 9px;border-radius:99px;font-family:'Space Grotesk',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:#FFF6D6;color:#B88700">High</span></td>
+                        <td style="padding:12px 20px"><div style="display:flex;align-items:center;gap:8px"><input type="number" defaultValue="240" style="width:80px;padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;text-align:right" /><span style="font-size:13px;color:#585C6D">min</span></div></td>
+                        <td style="padding:12px 20px"><div style="display:flex;align-items:center;gap:8px"><input type="number" defaultValue="1440" style="width:80px;padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;text-align:right" /><span style="font-size:13px;color:#585C6D">min</span></div></td>
+                      </tr>
+                      <tr style="background:#fff;border-top:1px solid #DBDDE8">
+                        <td style="padding:12px 20px"><span style="padding:2px 9px;border-radius:99px;font-family:'Space Grotesk',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:#FDE8EE;color:#C0193E">Urgent</span></td>
+                        <td style="padding:12px 20px"><div style="display:flex;align-items:center;gap:8px"><input type="number" defaultValue="60" style="width:80px;padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;text-align:right" /><span style="font-size:13px;color:#585C6D">min</span></div></td>
+                        <td style="padding:12px 20px"><div style="display:flex;align-items:center;gap:8px"><input type="number" defaultValue="480" style="width:80px;padding:6px 10px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;text-align:right" /><span style="font-size:13px;color:#585C6D">min</span></div></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <!-- Domain exceptions -->
+                <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;overflow:hidden;margin-bottom:20px">
+                  <div style="padding:13px 20px;border-bottom:1px solid #DBDDE8;display:flex;align-items:center;justify-content:space-between">
+                    <div>
+                      <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#10162F">Domain Exceptions</div>
+                      <div style="font-size:12px;color:#585C6D;margin-top:2px">Override master policy for specific client domains</div>
+                    </div>
+                    <button style="padding:7px 14px;background:#fff;color:#10162F;border:2px solid #10162F;border-radius:4px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:2px 2px 0 0 #10162F" style-hover="transform:translate(-1px,-1px);box-shadow:3px 3px 0 0 #10162F" style-active="transform:translate(1px,1px);box-shadow:1px 1px 0 0 #10162F">+ Add Exception</button>
+                  </div>
+                  <table style="width:100%;border-collapse:collapse">
+                    <thead>
+                      <tr style="background:#F5F5FA">
+                        <th style="padding:9px 20px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Domain</th>
+                        <th style="padding:9px 20px;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Policy</th>
+                        <th style="padding:9px 20px;text-align:right;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#585C6D;text-transform:uppercase;letter-spacing:.07em">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style="background:#F5F5FA;border-top:1px solid #DBDDE8">
+                        <td style="padding:11px 20px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F">acmecorp.com</td>
+                        <td style="padding:11px 20px;font-size:13px;color:#585C6D">Enterprise SLA</td>
+                        <td style="padding:11px 20px;text-align:right">
+                          <button style="font-size:13px;color:#4A6CF7;background:none;border:none;cursor:pointer;font-weight:600;margin-right:12px">Edit</button>
+                          <button style="font-size:13px;color:#C0193E;background:none;border:none;cursor:pointer;font-weight:600">Delete</button>
+                        </td>
+                      </tr>
+                      <tr style="background:#fff;border-top:1px solid #DBDDE8">
+                        <td style="padding:11px 20px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F">startup.io</td>
+                        <td style="padding:11px 20px;font-size:13px;color:#585C6D">Standard SLA</td>
+                        <td style="padding:11px 20px;text-align:right">
+                          <button style="font-size:13px;color:#4A6CF7;background:none;border:none;cursor:pointer;font-weight:600;margin-right:12px">Edit</button>
+                          <button style="font-size:13px;color:#C0193E;background:none;border:none;cursor:pointer;font-weight:600">Delete</button>
+                        </td>
+                      </tr>
+                      <tr style="background:#F5F5FA;border-top:1px solid #DBDDE8">
+                        <td style="padding:11px 20px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F">techfirm.io</td>
+                        <td style="padding:11px 20px;font-size:13px;color:#585C6D">Priority SLA</td>
+                        <td style="padding:11px 20px;text-align:right">
+                          <button style="font-size:13px;color:#4A6CF7;background:none;border:none;cursor:pointer;font-weight:600;margin-right:12px">Edit</button>
+                          <button style="font-size:13px;color:#C0193E;background:none;border:none;cursor:pointer;font-weight:600">Delete</button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <!-- Business hours -->
+                <div style="background:#fff;border:1px solid #DBDDE8;border-radius:4px;overflow:hidden">
+                  <div style="padding:13px 20px;border-bottom:1px solid #DBDDE8">
+                    <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#10162F">Business Hours</div>
+                    <div style="font-size:12px;color:#585C6D;margin-top:2px">SLA timers pause outside these hours</div>
+                  </div>
+                  <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+                    <div style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:16px">
+                      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:#10162F;cursor:pointer"><input type="checkbox" defaultChecked="{{ true }}" style="width:14px;height:14px;accent-color:#4A6CF7" /> Mon</label>
+                      <div style="display:flex;align-items:center;gap:8px"><input type="time" defaultValue="09:00" style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F" /><span style="font-size:13px;color:#585C6D">–</span><input type="time" defaultValue="18:00" style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F" /></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:16px">
+                      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:#10162F;cursor:pointer"><input type="checkbox" defaultChecked="{{ true }}" style="width:14px;height:14px;accent-color:#4A6CF7" /> Tue</label>
+                      <div style="display:flex;align-items:center;gap:8px"><input type="time" defaultValue="09:00" style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F" /><span style="font-size:13px;color:#585C6D">–</span><input type="time" defaultValue="18:00" style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F" /></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:16px">
+                      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:#10162F;cursor:pointer"><input type="checkbox" defaultChecked="{{ true }}" style="width:14px;height:14px;accent-color:#4A6CF7" /> Wed</label>
+                      <div style="display:flex;align-items:center;gap:8px"><input type="time" defaultValue="09:00" style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F" /><span style="font-size:13px;color:#585C6D">–</span><input type="time" defaultValue="18:00" style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F" /></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:16px">
+                      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:#10162F;cursor:pointer"><input type="checkbox" defaultChecked="{{ true }}" style="width:14px;height:14px;accent-color:#4A6CF7" /> Thu</label>
+                      <div style="display:flex;align-items:center;gap:8px"><input type="time" defaultValue="09:00" style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F" /><span style="font-size:13px;color:#585C6D">–</span><input type="time" defaultValue="18:00" style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F" /></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:16px">
+                      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:#10162F;cursor:pointer"><input type="checkbox" defaultChecked="{{ true }}" style="width:14px;height:14px;accent-color:#4A6CF7" /> Fri</label>
+                      <div style="display:flex;align-items:center;gap:8px"><input type="time" defaultValue="09:00" style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F" /><span style="font-size:13px;color:#585C6D">–</span><input type="time" defaultValue="18:00" style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#10162F" /></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:16px;opacity:.42">
+                      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#10162F;cursor:pointer"><input type="checkbox" style="width:14px;height:14px;accent-color:#4A6CF7" /> Sat</label>
+                      <div style="display:flex;align-items:center;gap:8px"><input type="time" disabled style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#585C6D" /><span style="font-size:13px;color:#585C6D">–</span><input type="time" disabled style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#585C6D" /></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:90px 1fr;align-items:center;gap:16px;opacity:.42">
+                      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#10162F;cursor:pointer"><input type="checkbox" style="width:14px;height:14px;accent-color:#4A6CF7" /> Sun</label>
+                      <div style="display:flex;align-items:center;gap:8px"><input type="time" disabled style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#585C6D" /><span style="font-size:13px;color:#585C6D">–</span><input type="time" disabled style="padding:5px 9px;background:#F5F5FA;border:1px solid #DBDDE8;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#585C6D" /></div>
+                    </div>
+                  </div>
+                  <div style="padding:12px 20px;border-top:1px solid #DBDDE8;display:flex;justify-content:flex-end;gap:8px">
+                    <button style="padding:7px 14px;background:#fff;border:1px solid #DBDDE8;border-radius:4px;font-size:13px;color:#585C6D;cursor:pointer">Reset</button>
+                    <button style="padding:7px 16px;background:#4A6CF7;border:2px solid #10162F;border-radius:4px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;cursor:pointer;box-shadow:2px 2px 0 0 #10162F" style-hover="transform:translate(-1px,-1px);box-shadow:3px 3px 0 0 #10162F" style-active="transform:translate(1px,1px);box-shadow:1px 1px 0 0 #10162F">Save Hours</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { screen: 'dashboard', checked: [] };
+
+  toggleCheck(id) {
+    const c = this.state.checked;
+    this.setState({ checked: c.includes(id) ? c.filter(x => x !== id) : [...c, id] });
+  }
+
+  renderVals() {
+    const { screen, checked } = this.state;
+    const go = s => () => this.setState({ screen: s, checked: [] });
+
+    const btn = s => ({
+      background: screen === s ? '#4A6CF7' : 'transparent',
+      color: '#fff',
+      border: '1px solid ' + (screen === s ? '#4A6CF7' : 'rgba(255,255,255,.28)'),
+      padding: '4px 12px', borderRadius: '4px', fontSize: '12px',
+      fontWeight: screen === s ? '600' : '400', cursor: 'pointer',
+      fontFamily: 'Inter, sans-serif',
+    });
+
+    const ico = (...ss) => {
+      const a = ss.includes(screen);
+      return {
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: '38px', height: '38px', borderRadius: '7px',
+        background: a ? '#4A6CF7' : 'transparent',
+        color: a ? '#fff' : 'rgba(255,255,255,.5)',
+        cursor: 'pointer',
+      };
+    };
+
+    const nav = (...ss) => {
+      const a = ss.includes(screen);
+      return {
+        display: 'flex', alignItems: 'center', gap: '9px',
+        padding: '9px 16px',
+        borderLeft: `4px solid ${a ? '#4A6CF7' : 'transparent'}`,
+        background: a ? '#4A6CF7' : 'transparent',
+        color: a ? '#fff' : 'rgba(255,255,255,.62)',
+        cursor: 'pointer', fontSize: '14px', fontWeight: a ? '600' : '400',
+        userSelect: 'none',
+      };
+    };
+
+    const sbadge = () => ({
+      display: 'inline-flex', alignItems: 'center',
+      padding: '2px 8px', borderRadius: '99px',
+      fontFamily: "'Space Grotesk', sans-serif",
+      fontSize: '0.68rem', fontWeight: '700',
+      letterSpacing: '.06em', textTransform: 'uppercase',
+      background: '#F5F5FA', color: '#585C6D', border: '1px solid #DBDDE8',
+    });
+
+    const pbadge = p => {
+      const m = {
+        low:    { background: '#E6F7F1', color: '#00A878', border: '1px solid #b3e8d8' },
+        medium: { background: '#EEF1FF', color: '#4A6CF7', border: '1px solid #c5cffe' },
+        high:   { background: '#FFF6D6', color: '#B88700', border: '1px solid #f5e09e' },
+        urgent: { background: '#FDE8EE', color: '#C0193E', border: '1px solid #fca5a5' },
+      };
+      return {
+        display: 'inline-flex', alignItems: 'center',
+        padding: '2px 8px', borderRadius: '99px',
+        fontFamily: "'Space Grotesk', sans-serif",
+        fontSize: '0.68rem', fontWeight: '700',
+        letterSpacing: '.06em', textTransform: 'uppercase',
+        ...m[p] || m.low,
+      };
+    };
+
+    const raw = [
+      { id: 'T-1042', subject: 'Cannot access customer dashboard after recent update', requester: 'alice@example.com', status: 'open',     statusLabel: 'Open',     priority: 'high',   priorityLabel: 'High',   agent: 'Sarah K.', category: 'Bug',            created: '2h ago' },
+      { id: 'T-1041', subject: 'Invoice PDF not generating for Q2 period',             requester: 'bob@acme.com',       status: 'pending',  statusLabel: 'Pending',  priority: 'medium', priorityLabel: 'Medium', agent: 'Mike R.',  category: 'Billing',        created: '4h ago' },
+      { id: 'T-1040', subject: 'Requesting API key for new integration project',       requester: 'carlos@corp.com',    status: 'new',      statusLabel: 'New',      priority: 'low',    priorityLabel: 'Low',    agent: '—',        category: 'Integration',    created: '6h ago' },
+      { id: 'T-1039', subject: 'SSL certificate renewal required for subdomain',       requester: 'dana@techfirm.io',   status: 'open',     statusLabel: 'Open',     priority: 'urgent', priorityLabel: 'Urgent', agent: 'Sarah K.', category: 'Infrastructure', created: '8h ago' },
+      { id: 'T-1038', subject: 'Export to CSV includes deleted records in output',     requester: 'eve@startup.co',     status: 'resolved', statusLabel: 'Resolved', priority: 'medium', priorityLabel: 'Medium', agent: 'Tom B.',   category: 'Bug',            created: '1d ago' },
+      { id: 'T-1037', subject: 'User onboarding skips two-factor authentication',     requester: 'frank@bigcorp.com',  status: 'closed',   statusLabel: 'Closed',   priority: 'low',    priorityLabel: 'Low',    agent: 'Mike R.',  category: 'Security',       created: '2d ago' },
+    ];
+
+    const tickets = raw.map((t, i) => ({
+      ...t,
+      rowStyle: { background: i % 2 === 0 ? '#F5F5FA' : '#fff', borderBottom: '1px solid #DBDDE8' },
+      sBadge: sbadge(),
+      pBadge: pbadge(t.priority),
+      checked: checked.includes(t.id),
+      onCheck: () => this.toggleCheck(t.id),
+      onOpen: () => this.setState({ screen: 'detail' }),
+    }));
+
+    const messages = [
+      {
+        id: 1, isSystem: false, isRegular: true, isNote: false,
+        author: 'Alice Johnson', initials: 'AJ', time: '14:23',
+        body: "Hi team, since yesterday's update I can't access the customer dashboard — white screen on Chrome and Firefox. This is blocking my daily work. Please help urgently.",
+        systemText: '',
+        wrapStyle: { display: 'flex', flexDirection: 'column', marginBottom: '18px', paddingRight: '56px' },
+        bubbleStyle: { background: '#F5F5FA', border: '1px solid #DBDDE8', borderRadius: '4px', padding: '12px 14px', fontSize: '14px', lineHeight: '1.6', color: '#10162F' },
+      },
+      {
+        id: 2, isSystem: true, isRegular: false, isNote: false,
+        author: '', initials: '', time: '14:28', body: '',
+        systemText: 'Assigned to Sarah K. by System',
+        wrapStyle: {}, bubbleStyle: {},
+      },
+      {
+        id: 3, isSystem: false, isRegular: true, isNote: true,
+        author: 'Sarah K.', initials: 'SK', time: '14:35',
+        body: 'Checking with dev — release may have broken a CSS import path. Following up with Alice shortly. Flagging for sprint.',
+        systemText: '',
+        wrapStyle: { display: 'flex', flexDirection: 'column', marginBottom: '18px' },
+        bubbleStyle: { background: '#FFF6D6', border: '1px solid #f5e09e', borderRadius: '4px', padding: '12px 14px', fontSize: '14px', lineHeight: '1.6', color: '#10162F' },
+      },
+      {
+        id: 4, isSystem: false, isRegular: true, isNote: false,
+        author: 'Sarah K.', initials: 'SK', time: '14:42',
+        body: "Hi Alice, we've found a CSS path broken in yesterday's release. Try /dashboard?legacy=true for now. A fix is deploying — we'll email you once live.",
+        systemText: '',
+        wrapStyle: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: '18px', paddingLeft: '56px' },
+        bubbleStyle: { background: '#EEF1FF', border: '1px solid #c5cffe', borderRadius: '4px', padding: '12px 14px', fontSize: '14px', lineHeight: '1.6', color: '#10162F' },
+      },
+      {
+        id: 5, isSystem: false, isRegular: true, isNote: false,
+        author: 'Alice Johnson', initials: 'AJ', time: '15:18',
+        body: 'The workaround works — thank you! Any ETA on the real fix?',
+        systemText: '',
+        wrapStyle: { display: 'flex', flexDirection: 'column', marginBottom: '0', paddingRight: '56px' },
+        bubbleStyle: { background: '#F5F5FA', border: '1px solid #DBDDE8', borderRadius: '4px', padding: '12px 14px', fontSize: '14px', lineHeight: '1.6', color: '#10162F' },
+      },
+    ];
+
+    return {
+      isLogin: screen === 'login',
+      isApp: screen !== 'login',
+      isDashboard: screen === 'dashboard',
+      isTickets: screen === 'tickets',
+      isDetail: screen === 'detail',
+      isSettings: screen === 'settings',
+      loginClick: go('login'),
+      dashClick: go('dashboard'),
+      ticketsClick: go('tickets'),
+      detailClick: go('detail'),
+      settingsClick: go('settings'),
+      btnLogin: btn('login'),
+      btnDash: btn('dashboard'),
+      btnTickets: btn('tickets'),
+      btnDetail: btn('detail'),
+      btnSettings: btn('settings'),
+      icoTickets: ico('tickets', 'detail'),
+      icoReports: ico('reports'),
+      icoSettings: ico('settings'),
+      icoAdmin: ico('admin'),
+      navTickets: nav('tickets', 'detail'),
+      navReports: nav('reports'),
+      navSettings: nav('settings'),
+      navAdmin: nav('admin'),
+      tickets,
+      messages,
+      hasBulk: checked.length > 0,
+      bulkCount: checked.length,
+      allChecked: checked.length === raw.length,
+      toggleAll: () => {
+        const all = raw.map(t => t.id);
+        this.setState({ checked: checked.length === all.length ? [] : all });
+      },
+      clearBulk: () => this.setState({ checked: [] }),
+    };
+  }
+}
+</script>
+</body>
+</html>

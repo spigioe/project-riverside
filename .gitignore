@@ -1,0 +1,23 @@
+# Env
+.env
+.env.local
+
+# .NET
+backend/bin/
+backend/obj/
+backend/*.user
+backend/.vs/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Docker volumes (lokális adat)
+.docker-data/
+
+# Claude Code
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
