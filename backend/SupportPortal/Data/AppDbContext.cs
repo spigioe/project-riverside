@@ -27,6 +27,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<EmailQueue> EmailQueues => Set<EmailQueue>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
