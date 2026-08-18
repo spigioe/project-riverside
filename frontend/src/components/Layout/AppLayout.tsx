@@ -1,5 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuthStore } from '../../store/useAuthStore'
+import { NotificationBell } from '../NotificationBell/NotificationBell'
+import { ToastContainer } from '../Toast/ToastContainer'
 import styles from './AppLayout.module.css'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -82,20 +84,24 @@ export function AppLayout() {
             <span className={styles.searchIcon}><SearchIcon /></span>
             <input type="text" placeholder="Keresés jegyek, azonosítók, bejelentők között…" className={styles.searchInput} />
           </div>
-          {user && (
-            <div className={styles.userBlock}>
-              <div className={styles.avatar}>{getInitials(user.fullName)}</div>
-              <div>
-                <div className={styles.userName}>{user.fullName}</div>
-                <div className={styles.userRole}>{ROLE_LABELS[user.role] ?? user.role}</div>
+          <div className={styles.topbarActions}>
+            <NotificationBell />
+            {user && (
+              <div className={styles.userBlock}>
+                <div className={styles.avatar}>{getInitials(user.fullName)}</div>
+                <div>
+                  <div className={styles.userName}>{user.fullName}</div>
+                  <div className={styles.userRole}>{ROLE_LABELS[user.role] ?? user.role}</div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         <main className={styles.content}>
           <Outlet />
         </main>
       </div>
+      <ToastContainer />
     </div>
   )
 }

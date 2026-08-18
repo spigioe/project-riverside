@@ -1,0 +1,135 @@
+.wrap {
+  position: relative;
+}
+
+.bellButton {
+  position: relative;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px;
+  display: flex;
+}
+
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  background: var(--red-text, #C0193E);
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  font-family: var(--font-mono);
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(16, 22, 47, 0.14);
+  overflow: hidden;
+  z-index: 100;
+}
+
+.dropdownHeader {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dropdownTitle {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.markAllButton {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 600;
+  padding: 0;
+}
+
+.markAllButton:hover {
+  color: var(--primary-hover);
+}
+
+.list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.item:hover {
+  background: var(--bg-alt);
+}
+
+.itemDot {
+  width: 7px;
+  height: 7px;
+  min-width: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  margin-top: 5px;
+}
+
+.itemBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemMessage {
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.itemTime {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.empty {
+  padding: 24px 14px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}

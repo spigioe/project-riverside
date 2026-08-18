@@ -1,0 +1,59 @@
+.container {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 320px;
+  max-width: calc(100vw - 36px);
+}
+
+.toast {
+  background: var(--navy);
+  color: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-pop-sm);
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  animation: slide-in 0.15s ease-out;
+}
+
+.toast:hover {
+  background: #1B2240;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.message {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.closeButton:hover {
+  color: #fff;
+}

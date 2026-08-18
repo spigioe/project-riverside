@@ -14,9 +14,9 @@ public interface ITicketService
     Task<TicketDetailDto?> GetTicketByIdAsync(int id);
     Task<TicketDetailDto> CreateTicketAsync(CreateTicketRequest request, int currentUserId);
     Task<bool> UpdateTicketAsync(int id, UpdateTicketRequest request);
-    Task<bool> UpdateStatusAsync(int id, TicketStatus status);
-    Task<TicketAssignResult> AssignAsync(int id, int? assignedToId);
-    Task<bool?> ToggleCsmAsync(int id);
+    Task<bool> UpdateStatusAsync(int id, TicketStatus status, int currentUserId);
+    Task<TicketAssignResult> AssignAsync(int id, int? assignedToId, int currentUserId);
+    Task<bool?> ToggleCsmAsync(int id, int currentUserId);
     Task<TicketMergeResult> MergeAsync(int id, int targetTicketId);
     Task<IReadOnlyList<TicketMessageDto>?> GetMessagesAsync(int ticketId);
     Task<TicketMessageDto?> AddMessageAsync(int ticketId, CreateTicketMessageRequest request, int currentUserId);

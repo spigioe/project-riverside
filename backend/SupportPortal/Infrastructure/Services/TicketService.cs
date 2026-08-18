@@ -15,6 +15,7 @@ public class TicketService(
     AppDbContext db,
     IEmailService emailService,
     IOptions<MailSettings> mailOptions,
+    INotificationService notificationService,
     ILogger<TicketService> logger) : ITicketService
 {
     public async Task<PagedResult<TicketListItemDto>> GetTicketsAsync(TicketListQuery query)
@@ -97,6 +98,14 @@ public class TicketService(
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
 
+        var activeUserIds = await db.Users
+            .Where(u => u.IsActive && u.Id != currentUserId)
+            .Select(u => u.Id)
+            .ToListAsync();
+
+        foreach (var userId in activeUserIds)
+            await notificationService.SendAsync(userId, NotificationTrigger.NewTicket, ticket.Id, $"Új ticket érkezett: {ticket.Subject}");
+
         return (await GetTicketByIdAsync(ticket.Id))!;
     }
 
@@ -117,7 +126,7 @@ public class TicketService(
         return true;
     }
 
-    public async Task<bool> UpdateStatusAsync(int id, TicketStatus status)
+    public async Task<bool> UpdateStatusAsync(int id, TicketStatus status, int currentUserId)
     {
         var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
         if (ticket is null) return false;
@@ -126,10 +135,18 @@ public class TicketService(
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
+
+        if (ticket.AssignedToId.HasValue && ticket.AssignedToId.Value != currentUserId)
+        {
+            await notificationService.SendAsync(
+                ticket.AssignedToId.Value, NotificationTrigger.StatusChanged, ticket.Id,
+                $"Státusz változott (#{ticket.Id}): {ticket.Subject} → {status}");
+        }
+
         return true;
     }
 
-    public async Task<TicketAssignResult> AssignAsync(int id, int? assignedToId)
+    public async Task<TicketAssignResult> AssignAsync(int id, int? assignedToId, int currentUserId)
     {
         var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
         if (ticket is null) return TicketAssignResult.TicketNotFound;
@@ -144,10 +161,18 @@ public class TicketService(
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
+
+        if (assignedToId.HasValue && assignedToId.Value != currentUserId)
+        {
+            await notificationService.SendAsync(
+                assignedToId.Value, NotificationTrigger.Assigned, ticket.Id,
+                $"Hozzád rendelve: #{ticket.Id} {ticket.Subject}");
+        }
+
         return TicketAssignResult.Success;
     }
 
-    public async Task<bool?> ToggleCsmAsync(int id)
+    public async Task<bool?> ToggleCsmAsync(int id, int currentUserId)
     {
         var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
         if (ticket is null) return null;
@@ -156,6 +181,19 @@ public class TicketService(
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
+
+        if (ticket.IsCsmFlagged)
+        {
+            var adminIds = await db.Users
+                .Where(u => u.IsActive && u.Id != currentUserId &&
+                    (u.Role.Name == UserRole.MasterAdmin || u.Role.Name == UserRole.Admin))
+                .Select(u => u.Id)
+                .ToListAsync();
+
+            foreach (var userId in adminIds)
+                await notificationService.SendAsync(userId, NotificationTrigger.CsmFlagged, ticket.Id, $"CSM jelölés: #{ticket.Id} {ticket.Subject}");
+        }
+
         return ticket.IsCsmFlagged;
     }
 
@@ -217,6 +255,18 @@ public class TicketService(
 
         if (!request.IsInternalNote)
             await SendReplyEmailAsync(ticket, request.Body);
+
+        var recipientIds = new HashSet<int>();
+        if (ticket.AssignedToId.HasValue) recipientIds.Add(ticket.AssignedToId.Value);
+        if (ticket.CreatedById.HasValue) recipientIds.Add(ticket.CreatedById.Value);
+        recipientIds.Remove(currentUserId);
+
+        foreach (var userId in recipientIds)
+        {
+            await notificationService.SendAsync(
+                userId, NotificationTrigger.NewMessage, ticket.Id,
+                $"Új üzenet érkezett a(z) #{ticket.Id} jegyhez: {ticket.Subject}");
+        }
 
         return await db.TicketMessages
             .AsNoTracking()

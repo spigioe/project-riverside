@@ -9,6 +9,7 @@ public class Notification
     public int? TicketId { get; set; }
     public Ticket? Ticket { get; set; }
     public NotificationTrigger TriggerType { get; set; }
+    public string Message { get; set; } = null!;
     public bool IsRead { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

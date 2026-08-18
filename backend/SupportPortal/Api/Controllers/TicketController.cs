@@ -57,7 +57,7 @@ public class TicketController(ITicketService ticketService) : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateTicketStatusRequest request)
     {
-        var success = await ticketService.UpdateStatusAsync(id, request.Status);
+        var success = await ticketService.UpdateStatusAsync(id, request.Status, User.GetUserId());
         if (!success)
             return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
 
@@ -70,7 +70,7 @@ public class TicketController(ITicketService ticketService) : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> AssignTicket(int id, [FromBody] AssignTicketRequest request)
     {
-        var result = await ticketService.AssignAsync(id, request.AssignedToId);
+        var result = await ticketService.AssignAsync(id, request.AssignedToId, User.GetUserId());
         return result switch
         {
             TicketAssignResult.Success => NoContent(),
@@ -87,7 +87,7 @@ public class TicketController(ITicketService ticketService) : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ToggleCsm(int id)
     {
-        var isCsmFlagged = await ticketService.ToggleCsmAsync(id);
+        var isCsmFlagged = await ticketService.ToggleCsmAsync(id, User.GetUserId());
         if (isCsmFlagged is null)
             return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
 

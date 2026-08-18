@@ -51,6 +51,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 Encoding.UTF8.GetBytes(jwtSettings.Secret)),
             ClockSkew = TimeSpan.Zero
         };
+
+        // Az EventSource API nem tud egyéni Authorization headert küldeni, ezért az SSE stream
+        // endpoint kivételesen query stringből is elfogadja a tokent. Szigorúan csak erre az
+        // egy útvonalra korlátozva — minden más endpoint továbbra is csak Authorization headert fogad el.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Path.StartsWithSegments("/api/portal/notifications/stream"))
+                {
+                    var token = context.Request.Query["token"];
+                    if (!string.IsNullOrEmpty(token))
+                        context.Token = token;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -63,6 +80,7 @@ builder.Services.AddHttpClient<IEmailService, EmailService>(client =>
     client.BaseAddress = new Uri(mailSettings.ApiBaseUrl));
 builder.Services.AddScoped<ITicketEmailProcessor, TicketEmailProcessor>();
 builder.Services.AddHostedService<EmailPollingService>();
+builder.Services.AddSingleton<INotificationService, NotificationService>();
 
 // ── Validáció ──────────────────────────────────────────────────────────────────
 builder.Services.AddFluentValidationAutoValidation();

@@ -142,8 +142,14 @@
   color: var(--text);
 }
 
-.userBlock {
+.topbarActions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.userBlock {
   display: flex;
   align-items: center;
   gap: 8px;
