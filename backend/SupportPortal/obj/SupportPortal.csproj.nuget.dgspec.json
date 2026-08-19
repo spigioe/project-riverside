@@ -44,6 +44,10 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "dependencies": {
+            "Anthropic": {
+              "target": "Package",
+              "version": "[12.40.0, )"
+            },
             "BCrypt.Net-Next": {
               "target": "Package",
               "version": "[4.2.0, )"

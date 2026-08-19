@@ -160,3 +160,11 @@
 /home/spigi_f9n7/projects/support-portal/backend/SupportPortal/obj/Debug/net9.0/SupportPortal.pdb
 /home/spigi_f9n7/projects/support-portal/backend/SupportPortal/obj/Debug/net9.0/SupportPortal.genruntimeconfig.cache
 /home/spigi_f9n7/projects/support-portal/backend/SupportPortal/obj/Debug/net9.0/ref/SupportPortal.dll
+/home/spigi_f9n7/projects/support-portal/backend/SupportPortal/bin/Debug/net9.0/Anthropic.dll
+/home/spigi_f9n7/projects/support-portal/backend/SupportPortal/bin/Debug/net9.0/Microsoft.Extensions.AI.Abstractions.dll
+/home/spigi_f9n7/projects/support-portal/backend/SupportPortal/bin/Debug/net9.0/System.IO.Pipelines.dll
+/home/spigi_f9n7/projects/support-portal/backend/SupportPortal/bin/Debug/net9.0/System.Net.ServerSentEvents.dll
+/home/spigi_f9n7/projects/support-portal/backend/SupportPortal/bin/Debug/net9.0/System.Text.Encodings.Web.dll
+/home/spigi_f9n7/projects/support-portal/backend/SupportPortal/bin/Debug/net9.0/System.Text.Json.dll
+/home/spigi_f9n7/projects/support-portal/backend/SupportPortal/bin/Debug/net9.0/runtimes/browser/lib/net8.0/System.Text.Encodings.Web.dll
+/home/spigi_f9n7/projects/support-portal/backend/SupportPortal/bin/Debug/net9.0/runtimes/win/lib/net9.0/System.Text.Encodings.Web.dll
