@@ -1173,6 +1173,488 @@ export class CategoriesClient {
     }
 }
 
+export class CsmClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getAll( cancelToken?: CancelToken): Promise<CsmDto[]> {
+        let url_ = this.baseUrl + "/api/portal/csm";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetAll(_response);
+        });
+    }
+
+    protected processGetAll(response: AxiosResponse): Promise<CsmDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CsmDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<CsmDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CsmDto[]>(null as any);
+    }
+
+    create(request: CreateCsmRequest, cancelToken?: CancelToken): Promise<CsmDto> {
+        let url_ = this.baseUrl + "/api/portal/csm";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreate(_response);
+        });
+    }
+
+    protected processCreate(response: AxiosResponse): Promise<CsmDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = CsmDto.fromJS(resultData201);
+            return Promise.resolve<CsmDto>(result201);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CsmDto>(null as any);
+    }
+
+    update(id: number, request: UpdateCsmRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/csm/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdate(_response);
+        });
+    }
+
+    protected processUpdate(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    delete(id: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/csm/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDelete(_response);
+        });
+    }
+
+    protected processDelete(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    suggest(requesterEmail?: string | undefined, cancelToken?: CancelToken): Promise<CsmSuggestionDto> {
+        let url_ = this.baseUrl + "/api/portal/csm/suggest?";
+        if (requesterEmail === null)
+            throw new globalThis.Error("The parameter 'requesterEmail' cannot be null.");
+        else if (requesterEmail !== undefined)
+            url_ += "requesterEmail=" + encodeURIComponent("" + requesterEmail) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSuggest(_response);
+        });
+    }
+
+    protected processSuggest(response: AxiosResponse): Promise<CsmSuggestionDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = CsmSuggestionDto.fromJS(resultData200);
+            return Promise.resolve<CsmSuggestionDto>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CsmSuggestionDto>(null as any);
+    }
+}
+
+export class DashboardClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getWidgets( cancelToken?: CancelToken): Promise<DashboardWidgetDto[]> {
+        let url_ = this.baseUrl + "/api/portal/dashboard/widgets";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetWidgets(_response);
+        });
+    }
+
+    protected processGetWidgets(response: AxiosResponse): Promise<DashboardWidgetDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(DashboardWidgetDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<DashboardWidgetDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<DashboardWidgetDto[]>(null as any);
+    }
+
+    saveWidgets(request: UpdateDashboardWidgetsRequest, cancelToken?: CancelToken): Promise<DashboardWidgetDto[]> {
+        let url_ = this.baseUrl + "/api/portal/dashboard/widgets";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSaveWidgets(_response);
+        });
+    }
+
+    protected processSaveWidgets(response: AxiosResponse): Promise<DashboardWidgetDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(DashboardWidgetDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<DashboardWidgetDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<DashboardWidgetDto[]>(null as any);
+    }
+
+    getStats( cancelToken?: CancelToken): Promise<DashboardStatsDto> {
+        let url_ = this.baseUrl + "/api/portal/dashboard/stats";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetStats(_response);
+        });
+    }
+
+    protected processGetStats(response: AxiosResponse): Promise<DashboardStatsDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = DashboardStatsDto.fromJS(resultData200);
+            return Promise.resolve<DashboardStatsDto>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<DashboardStatsDto>(null as any);
+    }
+}
+
 export class IntegrationClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -1332,6 +1814,120 @@ export class IntegrationClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<TestClickUpConnectionResponse>(null as any);
+    }
+}
+
+export class MeClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getPreferences( cancelToken?: CancelToken): Promise<UserPreferenceDto> {
+        let url_ = this.baseUrl + "/api/portal/me/preferences";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetPreferences(_response);
+        });
+    }
+
+    protected processGetPreferences(response: AxiosResponse): Promise<UserPreferenceDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = UserPreferenceDto.fromJS(resultData200);
+            return Promise.resolve<UserPreferenceDto>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<UserPreferenceDto>(null as any);
+    }
+
+    updatePreferences(request: UpdateUserPreferenceRequest, cancelToken?: CancelToken): Promise<UserPreferenceDto> {
+        let url_ = this.baseUrl + "/api/portal/me/preferences";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdatePreferences(_response);
+        });
+    }
+
+    protected processUpdatePreferences(response: AxiosResponse): Promise<UserPreferenceDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = UserPreferenceDto.fromJS(resultData200);
+            return Promise.resolve<UserPreferenceDto>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<UserPreferenceDto>(null as any);
     }
 }
 
@@ -4525,6 +5121,441 @@ export interface IUpdateCategoryRequest {
     parentId?: number | undefined;
 }
 
+export class CsmDto implements ICsmDto {
+    id?: number;
+    name?: string;
+    email?: string;
+    domains?: string[];
+    createdAt?: Date;
+
+    constructor(data?: ICsmDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.email = _data["email"];
+            if (Array.isArray(_data["domains"])) {
+                this.domains = [] as any;
+                for (let item of _data["domains"])
+                    this.domains!.push(item);
+            }
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): CsmDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new CsmDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["email"] = this.email;
+        if (Array.isArray(this.domains)) {
+            data["domains"] = [];
+            for (let item of this.domains)
+                data["domains"].push(item);
+        }
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface ICsmDto {
+    id?: number;
+    name?: string;
+    email?: string;
+    domains?: string[];
+    createdAt?: Date;
+}
+
+export class CreateCsmRequest implements ICreateCsmRequest {
+    name?: string;
+    email?: string;
+    domains?: string[];
+
+    constructor(data?: ICreateCsmRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.email = _data["email"];
+            if (Array.isArray(_data["domains"])) {
+                this.domains = [] as any;
+                for (let item of _data["domains"])
+                    this.domains!.push(item);
+            }
+        }
+    }
+
+    static fromJS(data: any): CreateCsmRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateCsmRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["email"] = this.email;
+        if (Array.isArray(this.domains)) {
+            data["domains"] = [];
+            for (let item of this.domains)
+                data["domains"].push(item);
+        }
+        return data;
+    }
+}
+
+export interface ICreateCsmRequest {
+    name?: string;
+    email?: string;
+    domains?: string[];
+}
+
+export class UpdateCsmRequest implements IUpdateCsmRequest {
+    name?: string;
+    email?: string;
+    domains?: string[];
+
+    constructor(data?: IUpdateCsmRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.email = _data["email"];
+            if (Array.isArray(_data["domains"])) {
+                this.domains = [] as any;
+                for (let item of _data["domains"])
+                    this.domains!.push(item);
+            }
+        }
+    }
+
+    static fromJS(data: any): UpdateCsmRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateCsmRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["email"] = this.email;
+        if (Array.isArray(this.domains)) {
+            data["domains"] = [];
+            for (let item of this.domains)
+                data["domains"].push(item);
+        }
+        return data;
+    }
+}
+
+export interface IUpdateCsmRequest {
+    name?: string;
+    email?: string;
+    domains?: string[];
+}
+
+export class CsmSuggestionDto implements ICsmSuggestionDto {
+    csmId?: number | undefined;
+    csmName?: string | undefined;
+    csmEmail?: string | undefined;
+
+    constructor(data?: ICsmSuggestionDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.csmId = _data["csmId"];
+            this.csmName = _data["csmName"];
+            this.csmEmail = _data["csmEmail"];
+        }
+    }
+
+    static fromJS(data: any): CsmSuggestionDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new CsmSuggestionDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["csmId"] = this.csmId;
+        data["csmName"] = this.csmName;
+        data["csmEmail"] = this.csmEmail;
+        return data;
+    }
+}
+
+export interface ICsmSuggestionDto {
+    csmId?: number | undefined;
+    csmName?: string | undefined;
+    csmEmail?: string | undefined;
+}
+
+export class DashboardWidgetDto implements IDashboardWidgetDto {
+    id?: number;
+    widgetType?: DashboardWidgetType;
+    positionX?: number;
+    positionY?: number;
+    width?: number;
+    height?: number;
+    config?: string | undefined;
+
+    constructor(data?: IDashboardWidgetDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.widgetType = _data["widgetType"];
+            this.positionX = _data["positionX"];
+            this.positionY = _data["positionY"];
+            this.width = _data["width"];
+            this.height = _data["height"];
+            this.config = _data["config"];
+        }
+    }
+
+    static fromJS(data: any): DashboardWidgetDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new DashboardWidgetDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["widgetType"] = this.widgetType;
+        data["positionX"] = this.positionX;
+        data["positionY"] = this.positionY;
+        data["width"] = this.width;
+        data["height"] = this.height;
+        data["config"] = this.config;
+        return data;
+    }
+}
+
+export interface IDashboardWidgetDto {
+    id?: number;
+    widgetType?: DashboardWidgetType;
+    positionX?: number;
+    positionY?: number;
+    width?: number;
+    height?: number;
+    config?: string | undefined;
+}
+
+export enum DashboardWidgetType {
+    Unresolved = "Unresolved",
+    Overdue = "Overdue",
+    DueToday = "DueToday",
+    Open = "Open",
+    Unassigned = "Unassigned",
+    SlaCompliance = "SlaCompliance",
+    TrendChart = "TrendChart",
+    RecentActivity = "RecentActivity",
+}
+
+export class UpdateDashboardWidgetsRequest implements IUpdateDashboardWidgetsRequest {
+    widgets?: UpdateDashboardWidgetItem[];
+
+    constructor(data?: IUpdateDashboardWidgetsRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["widgets"])) {
+                this.widgets = [] as any;
+                for (let item of _data["widgets"])
+                    this.widgets!.push(UpdateDashboardWidgetItem.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): UpdateDashboardWidgetsRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateDashboardWidgetsRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.widgets)) {
+            data["widgets"] = [];
+            for (let item of this.widgets)
+                data["widgets"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IUpdateDashboardWidgetsRequest {
+    widgets?: UpdateDashboardWidgetItem[];
+}
+
+export class UpdateDashboardWidgetItem implements IUpdateDashboardWidgetItem {
+    widgetType?: DashboardWidgetType;
+    positionX?: number;
+    positionY?: number;
+    width?: number;
+    height?: number;
+    config?: string | undefined;
+
+    constructor(data?: IUpdateDashboardWidgetItem) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.widgetType = _data["widgetType"];
+            this.positionX = _data["positionX"];
+            this.positionY = _data["positionY"];
+            this.width = _data["width"];
+            this.height = _data["height"];
+            this.config = _data["config"];
+        }
+    }
+
+    static fromJS(data: any): UpdateDashboardWidgetItem {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateDashboardWidgetItem();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["widgetType"] = this.widgetType;
+        data["positionX"] = this.positionX;
+        data["positionY"] = this.positionY;
+        data["width"] = this.width;
+        data["height"] = this.height;
+        data["config"] = this.config;
+        return data;
+    }
+}
+
+export interface IUpdateDashboardWidgetItem {
+    widgetType?: DashboardWidgetType;
+    positionX?: number;
+    positionY?: number;
+    width?: number;
+    height?: number;
+    config?: string | undefined;
+}
+
+export class DashboardStatsDto implements IDashboardStatsDto {
+    unresolved?: number;
+    overdue?: number;
+    dueToday?: number;
+    open?: number;
+    unassigned?: number;
+    slaCompliance?: number;
+
+    constructor(data?: IDashboardStatsDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.unresolved = _data["unresolved"];
+            this.overdue = _data["overdue"];
+            this.dueToday = _data["dueToday"];
+            this.open = _data["open"];
+            this.unassigned = _data["unassigned"];
+            this.slaCompliance = _data["slaCompliance"];
+        }
+    }
+
+    static fromJS(data: any): DashboardStatsDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new DashboardStatsDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["unresolved"] = this.unresolved;
+        data["overdue"] = this.overdue;
+        data["dueToday"] = this.dueToday;
+        data["open"] = this.open;
+        data["unassigned"] = this.unassigned;
+        data["slaCompliance"] = this.slaCompliance;
+        return data;
+    }
+}
+
+export interface IDashboardStatsDto {
+    unresolved?: number;
+    overdue?: number;
+    dueToday?: number;
+    open?: number;
+    unassigned?: number;
+    slaCompliance?: number;
+}
+
 export class ClickUpConfigDto implements IClickUpConfigDto {
     isConfigured?: boolean;
     apiKeyMasked?: string | undefined;
@@ -4651,6 +5682,91 @@ export class TestClickUpConnectionResponse implements ITestClickUpConnectionResp
 export interface ITestClickUpConnectionResponse {
     success?: boolean;
     message?: string;
+}
+
+export class UserPreferenceDto implements IUserPreferenceDto {
+    ticketPropertiesAutosave?: boolean;
+    ticketListView?: TicketListView;
+
+    constructor(data?: IUserPreferenceDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.ticketPropertiesAutosave = _data["ticketPropertiesAutosave"];
+            this.ticketListView = _data["ticketListView"];
+        }
+    }
+
+    static fromJS(data: any): UserPreferenceDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new UserPreferenceDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["ticketPropertiesAutosave"] = this.ticketPropertiesAutosave;
+        data["ticketListView"] = this.ticketListView;
+        return data;
+    }
+}
+
+export interface IUserPreferenceDto {
+    ticketPropertiesAutosave?: boolean;
+    ticketListView?: TicketListView;
+}
+
+export enum TicketListView {
+    Table = "Table",
+    Card = "Card",
+}
+
+export class UpdateUserPreferenceRequest implements IUpdateUserPreferenceRequest {
+    ticketPropertiesAutosave?: boolean;
+    ticketListView?: TicketListView;
+
+    constructor(data?: IUpdateUserPreferenceRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.ticketPropertiesAutosave = _data["ticketPropertiesAutosave"];
+            this.ticketListView = _data["ticketListView"];
+        }
+    }
+
+    static fromJS(data: any): UpdateUserPreferenceRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateUserPreferenceRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["ticketPropertiesAutosave"] = this.ticketPropertiesAutosave;
+        data["ticketListView"] = this.ticketListView;
+        return data;
+    }
+}
+
+export interface IUpdateUserPreferenceRequest {
+    ticketPropertiesAutosave?: boolean;
+    ticketListView?: TicketListView;
 }
 
 export class NotificationDto implements INotificationDto {
@@ -5390,10 +6506,13 @@ export class TicketListItemDto implements ITicketListItemDto {
     assignedToName?: string | undefined;
     requesterEmail?: string;
     requesterName?: string;
+    requesterCompany?: string;
     isCsmFlagged?: boolean;
     isMerged?: boolean;
     slaDueAt?: Date | undefined;
     slaBreach?: boolean;
+    lastMessageBody?: string | undefined;
+    lastMessageAt?: Date | undefined;
     createdAt?: Date;
     updatedAt?: Date;
 
@@ -5418,10 +6537,13 @@ export class TicketListItemDto implements ITicketListItemDto {
             this.assignedToName = _data["assignedToName"];
             this.requesterEmail = _data["requesterEmail"];
             this.requesterName = _data["requesterName"];
+            this.requesterCompany = _data["requesterCompany"];
             this.isCsmFlagged = _data["isCsmFlagged"];
             this.isMerged = _data["isMerged"];
             this.slaDueAt = _data["slaDueAt"] ? new Date(_data["slaDueAt"].toString()) : undefined as any;
             this.slaBreach = _data["slaBreach"];
+            this.lastMessageBody = _data["lastMessageBody"];
+            this.lastMessageAt = _data["lastMessageAt"] ? new Date(_data["lastMessageAt"].toString()) : undefined as any;
             this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
             this.updatedAt = _data["updatedAt"] ? new Date(_data["updatedAt"].toString()) : undefined as any;
         }
@@ -5446,10 +6568,13 @@ export class TicketListItemDto implements ITicketListItemDto {
         data["assignedToName"] = this.assignedToName;
         data["requesterEmail"] = this.requesterEmail;
         data["requesterName"] = this.requesterName;
+        data["requesterCompany"] = this.requesterCompany;
         data["isCsmFlagged"] = this.isCsmFlagged;
         data["isMerged"] = this.isMerged;
         data["slaDueAt"] = this.slaDueAt ? this.slaDueAt.toISOString() : undefined as any;
         data["slaBreach"] = this.slaBreach;
+        data["lastMessageBody"] = this.lastMessageBody;
+        data["lastMessageAt"] = this.lastMessageAt ? this.lastMessageAt.toISOString() : undefined as any;
         data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
         data["updatedAt"] = this.updatedAt ? this.updatedAt.toISOString() : undefined as any;
         return data;
@@ -5467,10 +6592,13 @@ export interface ITicketListItemDto {
     assignedToName?: string | undefined;
     requesterEmail?: string;
     requesterName?: string;
+    requesterCompany?: string;
     isCsmFlagged?: boolean;
     isMerged?: boolean;
     slaDueAt?: Date | undefined;
     slaBreach?: boolean;
+    lastMessageBody?: string | undefined;
+    lastMessageAt?: Date | undefined;
     createdAt?: Date;
     updatedAt?: Date;
 }

@@ -18,6 +18,8 @@ public class Ticket
     public string RequesterName { get; set; } = null!;
     public TicketSource Source { get; set; } = TicketSource.Portal;
     public bool IsCsmFlagged { get; set; } = false;
+    public int? CsmId { get; set; }
+    public CsmManager? Csm { get; set; }
     public int? MergedIntoTicketId { get; set; }
     public Ticket? MergedIntoTicket { get; set; }
     public bool IsMerged { get; set; } = false;

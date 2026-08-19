@@ -20,4 +20,6 @@ public class User
     public ICollection<AiInteraction> AiInteractions { get; set; } = [];
     public ICollection<ApiKey> ApiKeys { get; set; } = [];
     public ICollection<AuditLog> AuditLogs { get; set; } = [];
+    public ICollection<DashboardWidget> DashboardWidgets { get; set; } = [];
+    public UserPreference? Preference { get; set; }
 }

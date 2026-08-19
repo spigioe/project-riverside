@@ -10,7 +10,7 @@ using SupportPortal.Domain.Enums;
 
 namespace SupportPortal.Infrastructure.Services;
 
-public partial class TicketEmailProcessor(AppDbContext db, ILogger<TicketEmailProcessor> logger) : ITicketEmailProcessor
+public partial class TicketEmailProcessor(AppDbContext db, ICsmService csmService, ILogger<TicketEmailProcessor> logger) : ITicketEmailProcessor
 {
     [GeneratedRegex(@"\[#(\d+)\]")]
     private static partial Regex SubjectTicketIdRegex();
@@ -54,6 +54,7 @@ public partial class TicketEmailProcessor(AppDbContext db, ILogger<TicketEmailPr
                 Source = TicketSource.Email,
                 RequesterEmail = fromAddress.Address,
                 RequesterName = string.IsNullOrWhiteSpace(fromAddress.Name) ? fromAddress.Address : fromAddress.Name,
+                CsmId = await csmService.FindCsmIdForEmailAsync(fromAddress.Address),
             };
             db.Tickets.Add(ticket);
             await db.SaveChangesAsync();

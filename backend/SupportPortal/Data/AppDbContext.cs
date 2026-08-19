@@ -28,6 +28,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<EmailQueue> EmailQueues => Set<EmailQueue>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<CsmManager> CsmManagers => Set<CsmManager>();
+    public DbSet<CsmDomain> CsmDomains => Set<CsmDomain>();
+    public DbSet<DashboardWidget> DashboardWidgets => Set<DashboardWidget>();
+    public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -13,10 +13,13 @@ public record TicketListItemDto(
     string? AssignedToName,
     string RequesterEmail,
     string RequesterName,
+    string RequesterCompany,
     bool IsCsmFlagged,
     bool IsMerged,
     DateTime? SlaDueAt,
     bool SlaBreach,
+    string? LastMessageBody,
+    DateTime? LastMessageAt,
     DateTime CreatedAt,
     DateTime UpdatedAt
 );

@@ -109,6 +109,9 @@ builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IAiService, AiService>();
+builder.Services.AddScoped<ICsmService, CsmService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
 builder.Services.AddHttpClient<IIntegrationService, IntegrationService>(client =>
     client.BaseAddress = new Uri("https://api.clickup.com/api/v2/"));
 builder.Services.AddHttpClient<IClickUpLinkService, ClickUpLinkService>(client =>

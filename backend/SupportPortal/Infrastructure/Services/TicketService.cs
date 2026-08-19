@@ -16,6 +16,7 @@ public class TicketService(
     IEmailService emailService,
     IOptions<MailSettings> mailOptions,
     INotificationService notificationService,
+    ICsmService csmService,
     ILogger<TicketService> logger) : ITicketService
 {
     public async Task<PagedResult<TicketListItemDto>> GetTicketsAsync(TicketListQuery query)
@@ -51,19 +52,37 @@ public class TicketService(
 
         var totalCount = await ticketsQuery.CountAsync();
 
-        var items = await ticketsQuery
+        var rows = await ticketsQuery
             .OrderByDescending(t => t.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(t => new TicketListItemDto(
+            .Select(t => new
+            {
                 t.Id, t.Subject, t.Status, t.Priority,
-                t.CategoryId, t.Category != null ? t.Category.Name : null,
-                t.AssignedToId, t.AssignedTo != null ? t.AssignedTo.FullName : null,
+                t.CategoryId, CategoryName = t.Category != null ? t.Category.Name : null,
+                t.AssignedToId, AssignedToName = t.AssignedTo != null ? t.AssignedTo.FullName : null,
                 t.RequesterEmail, t.RequesterName,
                 t.IsCsmFlagged, t.IsMerged,
                 t.SlaDueAt, t.SlaBreach,
-                t.CreatedAt, t.UpdatedAt))
+                t.CreatedAt, t.UpdatedAt,
+                LastMessageBody = t.Messages.OrderByDescending(m => m.CreatedAt).Select(m => m.Body).FirstOrDefault(),
+                LastMessageAt = t.Messages.OrderByDescending(m => m.CreatedAt).Select(m => (DateTime?)m.CreatedAt).FirstOrDefault(),
+            })
             .ToListAsync();
+
+        // A cégnév (email domain) kliens oldalon (memóriában) számolt, nem az adatbázis-lekérdezésben —
+        // egyszerű string-művelet, nincs értelme SQL-be tolni.
+        var items = rows
+            .Select(r => new TicketListItemDto(
+                r.Id, r.Subject, r.Status, r.Priority,
+                r.CategoryId, r.CategoryName,
+                r.AssignedToId, r.AssignedToName,
+                r.RequesterEmail, r.RequesterName, ExtractCompanyFromEmail(r.RequesterEmail),
+                r.IsCsmFlagged, r.IsMerged,
+                r.SlaDueAt, r.SlaBreach,
+                r.LastMessageBody, r.LastMessageAt,
+                r.CreatedAt, r.UpdatedAt))
+            .ToList();
 
         return new PagedResult<TicketListItemDto>(items, page, pageSize, totalCount);
     }
@@ -99,6 +118,7 @@ public class TicketService(
             RequesterEmail = request.RequesterEmail,
             RequesterName = request.RequesterName,
             Source = source,
+            CsmId = await csmService.FindCsmIdForEmailAsync(request.RequesterEmail),
         };
 
         db.Tickets.Add(ticket);
@@ -282,6 +302,12 @@ public class TicketService(
                 m.SenderUserId, m.SenderUser != null ? m.SenderUser.FullName : null,
                 m.SenderEmail, m.Body, m.IsInternalNote, m.Direction, m.CreatedAt))
             .FirstAsync();
+    }
+
+    private static string ExtractCompanyFromEmail(string email)
+    {
+        var idx = email.LastIndexOf('@');
+        return idx >= 0 && idx < email.Length - 1 ? email[(idx + 1)..] : email;
     }
 
     private async Task SendReplyEmailAsync(Ticket ticket, string body)

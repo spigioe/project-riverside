@@ -117,6 +117,56 @@ cd frontend && npm run dev               # port 5173
   - Claude Desktop MCP bekötés (a terv 12. lépés első fele) felhasználói oldali, helyi lépés — ezt
     nem tudtam elvégezni/tesztelni ebben a környezetben, a meglévő "MCP szerver" kulcs (11. lépésből)
     használható hozzá
+- 13a. lépés KÉSZ: Backend + adatmodell — UX fejlesztések előkészítése (CSM, dashboard, preferences)
+  - KIZÁRÓLAG backend — a "13a" jelzés szándékos: a terv "Settings kiegészítés: /settings/csm oldal"
+    pontja NEM készült el, az a felhasználó explicit kérése szerint egy külön (13b, frontend) lépés lesz
+  - Migráció: `UxImprovements` (20260819105949) — CsmManagers, CsmDomains, DashboardWidgets,
+    UserPreferences táblák + Tickets.CsmId (nullable FK, SetNull on delete). Alkalmazva és tesztelve
+    élő MySQL-en (dev DB-n), pontosan a terv szerinti oszlopokkal/constraintekkel
+  - CsmManagers.Email UNIQUE — a tervben nem szerepelt explicit, de a "duplikált CSM email" hiba
+    kezeléséhez szükséges volt (409 Conflict CreateCsmResult.EmailTaken/UpdateCsmResult.EmailTaken)
+  - CsmDomains.EmailDomain NEM unique (sem globálisan, sem CSM-enként) — szándékosan, mert a terv
+    kimondja, hogy több CSM is felelős lehet ugyanarra a domainre ("az első találat kerül beállításra")
+  - ICsmService.FindCsmIdForEmailAsync: domain → CsmDomains egyezés, OrderBy(Id) ASC → első (legkorábban
+    létrehozott) találat CsmId-ja. Ugyanez a metódus hívva mindkét helyen (lásd lent), nincs duplikált logika
+  - DELETE /api/portal/csm/{id}: a terv "törlés (soft: csak ha nincs aktív ticket...)" szövegét ÚGY
+    értelmeztem, hogy ez egy feltételes HARD delete, nem entity-szintű soft-delete — a csm_managers
+    tábla tervezett oszlopai között (id, name, email, created_at) nincs is_active/deleted_at mező, tehát
+    soft-delete flag fizikailag nem is lett volna hova tenni. "Aktív ticket" = Status New/Open/Pending
+    (nem Resolved/Closed). Ha van ilyen → 409 DeleteCsmResult.HasActiveTickets
+  - Automatikus CSM hozzárendelés MINDKÉT helyen bekötve és élesben tesztelve:
+    - TicketService.CreateTicketAsync (POST /api/portal/tickets) — csm.FindCsmIdForEmailAsync(requesterEmail)
+    - TicketEmailProcessor.ProcessOneAsync — csak ÚJ ticketnél (nem meglévő ticket új üzeneténél, ott
+      nincs értelme, a ticket CsmId-ja már be van állítva vagy szándékosan üres)
+    - Élő teszt: SMTP-n (Mailpit) küldött email mol.hu domainről → EmailPollingService felkapta →
+      ticket CsmId helyesen kitöltve (DB-ben ellenőrizve)
+  - Dashboard widgets default-listája (unresolved, overdue, open, unassigned) automatikusan mentésre
+    kerül a DB-be az ELSŐ GET /widgets hívásnál (nem csak visszaadva) — pontosan a terv szerint,
+    tesztelve: második GET hívás ugyanazokat az Id-kat adja vissza, nem generál újakat
+  - PUT /api/portal/dashboard/widgets: replace-all (töröl mindent a userhez, majd újra beszúr) —
+    FluentValidation ellenőrzi hogy a WidgetType-ok egyediek-e a request-en belül (a UNIQUE(user_id,
+    widget_type) DB constraint helyett egy értelmezhető 400-as hibát ad vissza, nem nyers DB kivételt)
+  - GET /api/portal/dashboard/stats: sla_compliance mezőhöz ÚJRAHASZNÁLVA a meglévő
+    IAnalyticsService.GetSlaComplianceAsync-et (11. lépésből) — nincs duplikált SLA-számítási logika.
+    unresolved = Status New/Open/Pending; overdue = SlaBreach==true; due_today = SlaDueAt ma van ÉS nem
+    breach-elt ÉS nincs lezárva; unassigned = AssignedToId==null ÉS nincs merge-elve
+  - GET /api/portal/me/preferences: ha nincs UserPreferences sor, default (true, Table) VISSZAADVA de
+    NEM perzisztálva — a terv csak a dashboard widgeteknél írta elő az auto-persist-et explicit módon,
+    a preferences-nél nem; a sor csak az első PUT-nál jön létre (upsert)
+  - GET /api/portal/tickets kiegészítve: requesterCompany (RequesterEmail domain-je, memóriában
+    számolva a lekérdezés után — egyszerű string-művelet, nincs értelme SQL-be tolni),
+    lastMessageBody/lastMessageAt (korrelált subquery `t.Messages.OrderByDescending(...).FirstOrDefault()`
+    — ez JÓL fordult le Pomelo-n, nem ütközött a 11. lépésben talált GroupBy-buggal, mert nincs GroupBy)
+  - EF Core/Pomelo óvatosság (11. lépés tanulsága): a nested-collection-projection mintát (pl. CSM
+    domain lista egy Select()-en belül `.Select(...).ToList()`-tal) NEM SQL-ben próbáltam megoldani —
+    CsmService mindenhol előbb `.Include().ToListAsync()`-kal materializál, utána map-el DTO-vá
+    memóriában (lásd CategoryService.GetTreeAsync is hasonlóan jár el, nem véletlen egyezés)
+  - Minden új endpoint tesztelve curl-lel: CSM CRUD (siker+409 email ütközés+400 domain formátum+409
+    aktív ticket miatt nem törölhető), dashboard widgets (default lista+replace-all+400 duplikált típus),
+    dashboard stats, user preferences (default+update), ticket lista requesterCompany/lastMessage mezők
+  - NEM készült el (explicit felhasználói kérésre, 13b lesz): /settings/csm frontend oldal, dashboard
+    widget UI, user preferences UI, ticket lista card nézet ami a requesterCompany/lastMessage-t
+    megjelenítené — a mezők megvannak a backend válaszban, de a frontend még nem használja őket
 
 ## Seed adatok
 - Admin user: admin@supportportal.dev / Admin1234!
@@ -137,7 +187,8 @@ cd frontend && npm run dev               # port 5173
 
 ## Nyitott hibák / TODO
 - [ ] Notification bell SSE tesztelése több userrel
-- [ ] CSM user hozzárendelés dropdown a ticket properties panelben
+- [ ] ~~CSM user hozzárendelés dropdown a ticket properties panelben~~ — backend (13a) kész, frontend
+      UI (13b) még hátravan: /settings/csm oldal, ticket properties panel CSM megjelenítés/kézi felülírás
 - [ ] README.md hiányzik (setup leírás új gépre)
 - [ ] ClickUp UI vizuális ellenőrzése böngészőben
 - [ ] Settings UI vizuális ellenőrzése böngészőben (9. lépés)
@@ -145,6 +196,13 @@ cd frontend && npm run dev               # port 5173
 - [ ] AI funkciók (12. lépés) valós Anthropic API kulccsal még nincsenek kipróbálva — csak a graceful
       degradation (kulcs nélkül) és a 404 eset lett tesztelve ebben a környezetben
 - [ ] AI funkciók UI vizuális ellenőrzése böngészőben (12. lépés)
+- [ ] 13a. lépés backend UI vizuális ellenőrzése nem releváns (nincs frontend rész ebben a lépésben)
+- [ ] Teszt adatok: ticket #12, #13 és CSM "Kovács Anna Módosítva" (id=1) a 13a. lépés teszteléséből
+      bent maradtak a dev DB-ben (nem törölhetők FK constraint miatt Notifications tábla felől) —
+      ártalmatlanok, de ha tiszta demo state kell, kézzel törlendők vagy DB reseteld
 
-## Következő feladat (13. lépés)
-Még nincs meghatározva.
+## Következő feladat (13b. lépés)
+Frontend — CSM, dashboard widgets, user preferences UI (a 13a. lépés backendjéhez).
+Még nincs részletezve — a 13a. lépés "NEM készült el" listája (fentebb, az elvégzett lépéseknél)
+tartalmazza a pontos hatókört, amiből ez a lépés kiindulhat: /settings/csm oldal, dashboard widget UI,
+user preferences UI, ticket lista card nézet (requesterCompany/lastMessage megjelenítéssel).
