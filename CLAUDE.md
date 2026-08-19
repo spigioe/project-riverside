@@ -78,6 +78,20 @@
     In-Reply-To/References az adott ticket legkorábbi bejövő emailjére mutat
   - Teszt: SMTP küldés → új ticket (New/Email) → API reply → Mailpit-ben helyes fejlécekkel →
     threadelt válasz email → ugyanahhoz a tickethez (nem új) → subject [#ID] tag is működik önmagában
+- - 8. lépés KÉSZ: SSE értesítések + Login form
+  - Login form: email/jelszó/remember me, redirect /tickets-re, magyar hibaüzenet
+  - SSE endpoint: /api/portal/notifications/stream (JWT query param auth)
+  - NotificationService: ConcurrentDictionary nyitott kapcsolatok, trigger küldés
+  - NotificationsController: stream + REST (lista, olvasottnak jelölés)
+  - useNotifications hook: EventSource + reconnect + polling fallback
+  - Toast komponens: jobb felső sarok, 5mp auto-eltűnés, kattintásra navigál
+  - NotificationBell: olvasatlan számlálóval, legördülő lista
+
+## Dev stack (Docker crash miatt módosítva)
+- Dockerben CSAK: db, mailpit, minio (docker compose up -d db mailpit minio)
+- Backend lokálisan: dotnet run (port 5000)
+- Frontend lokálisan: npm run dev (port 5173)
+- NE futtass docker compose build parancsot — WSL2 crash-t okoz
 
 ## Seed adatok
 - Admin user: admin@supportportal.dev / Admin1234!
@@ -85,19 +99,10 @@
 - Master SLA policy (mind a 4 prioritáshoz)
 - Munkaidő: H-P 8:00-17:00
 
-## Következő feladat (8. lépés)
-SSE értesítések + Login form — ezzel élesíthetői állapotba kerül az alap rendszer.
+## Nyitott hibák / TODO
+- [ ] Notification bell SSE tesztelése több userrel (egyelőre csak self-trigger hiányzik)
+- [ ] CSM user hozzárendelés a tickethez (jelenleg csak boolean flag + badge) — beállítások után implementálandó
+- [ ] README.md hiányzik (setup leírás új gépre)
 
-### SSE értesítések
-- Backend: GET /api/portal/notifications/stream — SSE endpoint, JWT auth
-- Triggerek: new_ticket, assigned, csm_flagged, new_message, status_changed, sla_warning, sla_breached
-- Minden trigger feature flag-gel kapcsolható (notification_preferences tábla)
-- Polling fallback: ha SSE kapcsolat megszakad, 30mp-es polling
-- Frontend: useNotifications hook, toast értesítések a jobb felső sarokban
-
-### Login form
-- /login route — jelenleg placeholder
-- Email + jelszó + "Megjegyez" checkbox
-- Sikeres login → redirect /tickets-re
-- Hibás login → magyar hibaüzenet
-- Design: a mockup login oldala alapján (/docs/Support Portal v2.dc.html)
+## Következő feladat (9. lépés)
+Beállítások menü implementálása — az összes konfigurációs felület.

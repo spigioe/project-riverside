@@ -8,13 +8,20 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(AppDbContext db)
     {
+        // A szerepkörök seedelése minden induláskor lefut (idempotens), függetlenül attól, hogy
+        // a felhasználó- és ticket-seed már megtörtént-e — így a később hozzáadott UserRole
+        // enum értékek (Admin, Viewer) is biztosan léteznek Role sorként.
+        var existingRoleNames = await db.Roles.Select(r => r.Name).ToListAsync();
+        foreach (var roleName in Enum.GetValues<UserRole>())
+        {
+            if (!existingRoleNames.Contains(roleName))
+                db.Roles.Add(new Role { Name = roleName });
+        }
+        await db.SaveChangesAsync();
+
         if (await db.Users.AnyAsync()) return; // már seedelt
 
-        // Szerepkörök
-        var masterAdminRole = new Role { Name = UserRole.MasterAdmin };
-        var agentRole = new Role { Name = UserRole.Agent };
-        db.Roles.AddRange(masterAdminRole, agentRole);
-        await db.SaveChangesAsync();
+        var masterAdminRole = await db.Roles.FirstAsync(r => r.Name == UserRole.MasterAdmin);
 
         // Master admin user
         var admin = new User

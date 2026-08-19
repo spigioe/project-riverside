@@ -51,4 +51,18 @@ public class NotificationsController(INotificationService notificationService) :
         await notificationService.MarkAllAsReadAsync(User.GetUserId());
         return NoContent();
     }
+
+    [HttpGet("~/api/portal/notification-preferences")]
+    [ProducesResponseType(typeof(IReadOnlyList<NotificationPreferenceDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPreferences()
+    {
+        return Ok(await notificationService.GetPreferencesAsync(User.GetUserId()));
+    }
+
+    [HttpPut("~/api/portal/notification-preferences")]
+    [ProducesResponseType(typeof(IReadOnlyList<NotificationPreferenceDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdatePreferences([FromBody] UpdateNotificationPreferencesRequest request)
+    {
+        return Ok(await notificationService.UpdatePreferencesAsync(User.GetUserId(), request));
+    }
 }

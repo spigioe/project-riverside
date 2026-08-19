@@ -21,4 +21,7 @@ public interface INotificationService
     Task<IReadOnlyList<NotificationDto>> GetUnreadAsync(int userId);
     Task<bool> MarkAsReadAsync(int notificationId, int userId);
     Task MarkAllAsReadAsync(int userId);
+
+    Task<IReadOnlyList<NotificationPreferenceDto>> GetPreferencesAsync(int userId);
+    Task<IReadOnlyList<NotificationPreferenceDto>> UpdatePreferencesAsync(int userId, UpdateNotificationPreferencesRequest request);
 }

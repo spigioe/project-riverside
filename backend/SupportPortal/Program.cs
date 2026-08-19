@@ -10,8 +10,10 @@ using NSwag;
 using NSwag.Generation.Processors.Security;
 using SupportPortal.Application.DTOs;
 using SupportPortal.Application.DTOs.Auth;
+using SupportPortal.Application.DTOs.Encryption;
 using SupportPortal.Application.Interfaces;
 using SupportPortal.Data;
+using SupportPortal.Infrastructure.Security;
 using SupportPortal.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,7 +24,11 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Connection string 'Default' not found.");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 0)), mySqlOptions =>
+    mySqlOptions.EnableRetryOnFailure(
+        maxRetryCount: 5,
+        maxRetryDelay: TimeSpan.FromSeconds(10),
+        errorNumbersToAdd: null)));
 
 // ── JWT Auth ───────────────────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
@@ -35,6 +41,10 @@ var mailSettings = builder.Configuration.GetSection("Mail").Get<MailSettings>()
     ?? throw new InvalidOperationException("Mail settings not found.");
 
 builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("Mail"));
+
+// ── Titkosítás (ClickUp API kulcs stb.) ───────────────────────────────────────
+builder.Services.Configure<EncryptionSettings>(builder.Configuration.GetSection("Encryption"));
+builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -81,6 +91,13 @@ builder.Services.AddHttpClient<IEmailService, EmailService>(client =>
 builder.Services.AddScoped<ITicketEmailProcessor, TicketEmailProcessor>();
 builder.Services.AddHostedService<EmailPollingService>();
 builder.Services.AddSingleton<INotificationService, NotificationService>();
+builder.Services.AddScoped<ISlaService, SlaService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<ICannedResponseService, CannedResponseService>();
+builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddHttpClient<IIntegrationService, IntegrationService>(client =>
+    client.BaseAddress = new Uri("https://api.clickup.com/api/v2/"));
 
 // ── Validáció ──────────────────────────────────────────────────────────────────
 builder.Services.AddFluentValidationAutoValidation();

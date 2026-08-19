@@ -10,6 +10,253 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, CancelToken } from 'axios';
 
+export class ApiKeysClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getKeys( cancelToken?: CancelToken): Promise<ApiKeyDto[]> {
+        let url_ = this.baseUrl + "/api/portal/api-keys";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetKeys(_response);
+        });
+    }
+
+    protected processGetKeys(response: AxiosResponse): Promise<ApiKeyDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(ApiKeyDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<ApiKeyDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ApiKeyDto[]>(null as any);
+    }
+
+    createKey(request: CreateApiKeyRequest, cancelToken?: CancelToken): Promise<CreateApiKeyResponse> {
+        let url_ = this.baseUrl + "/api/portal/api-keys";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreateKey(_response);
+        });
+    }
+
+    protected processCreateKey(response: AxiosResponse): Promise<CreateApiKeyResponse> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = CreateApiKeyResponse.fromJS(resultData201);
+            return Promise.resolve<CreateApiKeyResponse>(result201);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CreateApiKeyResponse>(null as any);
+    }
+
+    revokeKey(id: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/api-keys/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processRevokeKey(_response);
+        });
+    }
+
+    protected processRevokeKey(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+}
+
+export class AuditLogClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getAuditLog(entityType?: string | null | undefined, page?: number | undefined, pageSize?: number | undefined, cancelToken?: CancelToken): Promise<PagedResultOfAuditLogDto> {
+        let url_ = this.baseUrl + "/api/portal/audit-log?";
+        if (entityType !== undefined && entityType !== null)
+            url_ += "EntityType=" + encodeURIComponent("" + entityType) + "&";
+        if (page === null)
+            throw new globalThis.Error("The parameter 'page' cannot be null.");
+        else if (page !== undefined)
+            url_ += "Page=" + encodeURIComponent("" + page) + "&";
+        if (pageSize === null)
+            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
+        else if (pageSize !== undefined)
+            url_ += "PageSize=" + encodeURIComponent("" + pageSize) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetAuditLog(_response);
+        });
+    }
+
+    protected processGetAuditLog(response: AxiosResponse): Promise<PagedResultOfAuditLogDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = PagedResultOfAuditLogDto.fromJS(resultData200);
+            return Promise.resolve<PagedResultOfAuditLogDto>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<PagedResultOfAuditLogDto>(null as any);
+    }
+}
+
 export class AuthClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -187,6 +434,904 @@ export class AuthClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<void>(null as any);
+    }
+}
+
+export class CannedResponsesClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getFolders( cancelToken?: CancelToken): Promise<CannedResponseFolderDto[]> {
+        let url_ = this.baseUrl + "/api/portal/canned-response-folders";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetFolders(_response);
+        });
+    }
+
+    protected processGetFolders(response: AxiosResponse): Promise<CannedResponseFolderDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CannedResponseFolderDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<CannedResponseFolderDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CannedResponseFolderDto[]>(null as any);
+    }
+
+    createFolder(request: CreateCannedResponseFolderRequest, cancelToken?: CancelToken): Promise<CannedResponseFolderDto> {
+        let url_ = this.baseUrl + "/api/portal/canned-response-folders";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreateFolder(_response);
+        });
+    }
+
+    protected processCreateFolder(response: AxiosResponse): Promise<CannedResponseFolderDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = CannedResponseFolderDto.fromJS(resultData201);
+            return Promise.resolve<CannedResponseFolderDto>(result201);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CannedResponseFolderDto>(null as any);
+    }
+
+    updateFolder(id: number, request: UpdateCannedResponseFolderRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/canned-response-folders/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdateFolder(_response);
+        });
+    }
+
+    protected processUpdateFolder(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    deleteFolder(id: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/canned-response-folders/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDeleteFolder(_response);
+        });
+    }
+
+    protected processDeleteFolder(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    getResponses(folderId?: number | null | undefined, cancelToken?: CancelToken): Promise<CannedResponseDto[]> {
+        let url_ = this.baseUrl + "/api/portal/canned-responses?";
+        if (folderId !== undefined && folderId !== null)
+            url_ += "folderId=" + encodeURIComponent("" + folderId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetResponses(_response);
+        });
+    }
+
+    protected processGetResponses(response: AxiosResponse): Promise<CannedResponseDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CannedResponseDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<CannedResponseDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CannedResponseDto[]>(null as any);
+    }
+
+    createResponse(request: CreateCannedResponseRequest, cancelToken?: CancelToken): Promise<CannedResponseDto> {
+        let url_ = this.baseUrl + "/api/portal/canned-responses";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreateResponse(_response);
+        });
+    }
+
+    protected processCreateResponse(response: AxiosResponse): Promise<CannedResponseDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = CannedResponseDto.fromJS(resultData201);
+            return Promise.resolve<CannedResponseDto>(result201);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CannedResponseDto>(null as any);
+    }
+
+    updateResponse(id: number, request: UpdateCannedResponseRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/canned-responses/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdateResponse(_response);
+        });
+    }
+
+    protected processUpdateResponse(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    deleteResponse(id: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/canned-responses/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDeleteResponse(_response);
+        });
+    }
+
+    protected processDeleteResponse(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+}
+
+export class CategoriesClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getTree( cancelToken?: CancelToken): Promise<CategoryDto[]> {
+        let url_ = this.baseUrl + "/api/portal/categories";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetTree(_response);
+        });
+    }
+
+    protected processGetTree(response: AxiosResponse): Promise<CategoryDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CategoryDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<CategoryDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CategoryDto[]>(null as any);
+    }
+
+    create(request: CreateCategoryRequest, cancelToken?: CancelToken): Promise<CategoryDto> {
+        let url_ = this.baseUrl + "/api/portal/categories";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreate(_response);
+        });
+    }
+
+    protected processCreate(response: AxiosResponse): Promise<CategoryDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = CategoryDto.fromJS(resultData201);
+            return Promise.resolve<CategoryDto>(result201);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CategoryDto>(null as any);
+    }
+
+    update(id: number, request: UpdateCategoryRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/categories/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdate(_response);
+        });
+    }
+
+    protected processUpdate(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    delete(id: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/categories/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDelete(_response);
+        });
+    }
+
+    protected processDelete(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+}
+
+export class IntegrationClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getConfig( cancelToken?: CancelToken): Promise<ClickUpConfigDto> {
+        let url_ = this.baseUrl + "/api/portal/integration/clickup";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetConfig(_response);
+        });
+    }
+
+    protected processGetConfig(response: AxiosResponse): Promise<ClickUpConfigDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = ClickUpConfigDto.fromJS(resultData200);
+            return Promise.resolve<ClickUpConfigDto>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ClickUpConfigDto>(null as any);
+    }
+
+    updateConfig(request: UpdateClickUpConfigRequest, cancelToken?: CancelToken): Promise<ClickUpConfigDto> {
+        let url_ = this.baseUrl + "/api/portal/integration/clickup";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdateConfig(_response);
+        });
+    }
+
+    protected processUpdateConfig(response: AxiosResponse): Promise<ClickUpConfigDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = ClickUpConfigDto.fromJS(resultData200);
+            return Promise.resolve<ClickUpConfigDto>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ClickUpConfigDto>(null as any);
+    }
+
+    testConnection( cancelToken?: CancelToken): Promise<TestClickUpConnectionResponse> {
+        let url_ = this.baseUrl + "/api/portal/integration/clickup/test-connection";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processTestConnection(_response);
+        });
+    }
+
+    protected processTestConnection(response: AxiosResponse): Promise<TestClickUpConnectionResponse> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = TestClickUpConnectionResponse.fromJS(resultData200);
+            return Promise.resolve<TestClickUpConnectionResponse>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<TestClickUpConnectionResponse>(null as any);
     }
 }
 
@@ -398,6 +1543,667 @@ export class NotificationsClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<void>(null as any);
+    }
+
+    getPreferences( cancelToken?: CancelToken): Promise<NotificationPreferenceDto[]> {
+        let url_ = this.baseUrl + "/api/portal/notification-preferences";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetPreferences(_response);
+        });
+    }
+
+    protected processGetPreferences(response: AxiosResponse): Promise<NotificationPreferenceDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(NotificationPreferenceDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<NotificationPreferenceDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<NotificationPreferenceDto[]>(null as any);
+    }
+
+    updatePreferences(request: UpdateNotificationPreferencesRequest, cancelToken?: CancelToken): Promise<NotificationPreferenceDto[]> {
+        let url_ = this.baseUrl + "/api/portal/notification-preferences";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdatePreferences(_response);
+        });
+    }
+
+    protected processUpdatePreferences(response: AxiosResponse): Promise<NotificationPreferenceDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(NotificationPreferenceDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<NotificationPreferenceDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<NotificationPreferenceDto[]>(null as any);
+    }
+}
+
+export class RolesClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getRoles( cancelToken?: CancelToken): Promise<RoleDto[]> {
+        let url_ = this.baseUrl + "/api/portal/roles";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetRoles(_response);
+        });
+    }
+
+    protected processGetRoles(response: AxiosResponse): Promise<RoleDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(RoleDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<RoleDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<RoleDto[]>(null as any);
+    }
+}
+
+export class SettingsClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getEmailSettings( cancelToken?: CancelToken): Promise<EmailSettingsDto> {
+        let url_ = this.baseUrl + "/api/portal/settings/email";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetEmailSettings(_response);
+        });
+    }
+
+    protected processGetEmailSettings(response: AxiosResponse): Promise<EmailSettingsDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = EmailSettingsDto.fromJS(resultData200);
+            return Promise.resolve<EmailSettingsDto>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<EmailSettingsDto>(null as any);
+    }
+}
+
+export class SlaClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getPolicies( cancelToken?: CancelToken): Promise<SlaPolicyDto[]> {
+        let url_ = this.baseUrl + "/api/portal/sla/policies";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetPolicies(_response);
+        });
+    }
+
+    protected processGetPolicies(response: AxiosResponse): Promise<SlaPolicyDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(SlaPolicyDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<SlaPolicyDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SlaPolicyDto[]>(null as any);
+    }
+
+    updatePolicy(id: number, request: UpdateSlaPolicyRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/sla/policies/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdatePolicy(_response);
+        });
+    }
+
+    protected processUpdatePolicy(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    getDomains( cancelToken?: CancelToken): Promise<SlaDomainDto[]> {
+        let url_ = this.baseUrl + "/api/portal/sla/domains";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetDomains(_response);
+        });
+    }
+
+    protected processGetDomains(response: AxiosResponse): Promise<SlaDomainDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(SlaDomainDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<SlaDomainDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SlaDomainDto[]>(null as any);
+    }
+
+    createDomain(request: CreateSlaDomainRequest, cancelToken?: CancelToken): Promise<SlaDomainDto> {
+        let url_ = this.baseUrl + "/api/portal/sla/domains";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreateDomain(_response);
+        });
+    }
+
+    protected processCreateDomain(response: AxiosResponse): Promise<SlaDomainDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = SlaDomainDto.fromJS(resultData201);
+            return Promise.resolve<SlaDomainDto>(result201);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SlaDomainDto>(null as any);
+    }
+
+    deleteDomain(id: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/sla/domains/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDeleteDomain(_response);
+        });
+    }
+
+    protected processDeleteDomain(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    getBusinessHours( cancelToken?: CancelToken): Promise<BusinessHoursDayDto[]> {
+        let url_ = this.baseUrl + "/api/portal/sla/business-hours";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetBusinessHours(_response);
+        });
+    }
+
+    protected processGetBusinessHours(response: AxiosResponse): Promise<BusinessHoursDayDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(BusinessHoursDayDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<BusinessHoursDayDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<BusinessHoursDayDto[]>(null as any);
+    }
+
+    updateBusinessHours(request: UpdateBusinessHoursRequest, cancelToken?: CancelToken): Promise<BusinessHoursDayDto[]> {
+        let url_ = this.baseUrl + "/api/portal/sla/business-hours";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdateBusinessHours(_response);
+        });
+    }
+
+    protected processUpdateBusinessHours(response: AxiosResponse): Promise<BusinessHoursDayDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(BusinessHoursDayDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<BusinessHoursDayDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<BusinessHoursDayDto[]>(null as any);
     }
 }
 
@@ -1087,6 +2893,574 @@ export class UsersClient {
         }
         return Promise.resolve<UserSummaryDto[]>(null as any);
     }
+
+    createUser(request: CreateUserRequest, cancelToken?: CancelToken): Promise<UserAdminDto> {
+        let url_ = this.baseUrl + "/api/portal/users";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreateUser(_response);
+        });
+    }
+
+    protected processCreateUser(response: AxiosResponse): Promise<UserAdminDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = UserAdminDto.fromJS(resultData201);
+            return Promise.resolve<UserAdminDto>(result201);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<UserAdminDto>(null as any);
+    }
+
+    getAllUsers( cancelToken?: CancelToken): Promise<UserAdminDto[]> {
+        let url_ = this.baseUrl + "/api/portal/users/all";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetAllUsers(_response);
+        });
+    }
+
+    protected processGetAllUsers(response: AxiosResponse): Promise<UserAdminDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(UserAdminDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<UserAdminDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<UserAdminDto[]>(null as any);
+    }
+
+    updateUser(id: number, request: UpdateUserRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/users/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdateUser(_response);
+        });
+    }
+
+    protected processUpdateUser(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    deactivateUser(id: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/users/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDeactivateUser(_response);
+        });
+    }
+
+    protected processDeactivateUser(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+}
+
+export class ApiKeyDto implements IApiKeyDto {
+    id?: number;
+    name?: string;
+    lastUsedAt?: Date | undefined;
+    expiresAt?: Date | undefined;
+    isActive?: boolean;
+    createdAt?: Date;
+
+    constructor(data?: IApiKeyDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.lastUsedAt = _data["lastUsedAt"] ? new Date(_data["lastUsedAt"].toString()) : undefined as any;
+            this.expiresAt = _data["expiresAt"] ? new Date(_data["expiresAt"].toString()) : undefined as any;
+            this.isActive = _data["isActive"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): ApiKeyDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new ApiKeyDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["lastUsedAt"] = this.lastUsedAt ? this.lastUsedAt.toISOString() : undefined as any;
+        data["expiresAt"] = this.expiresAt ? this.expiresAt.toISOString() : undefined as any;
+        data["isActive"] = this.isActive;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IApiKeyDto {
+    id?: number;
+    name?: string;
+    lastUsedAt?: Date | undefined;
+    expiresAt?: Date | undefined;
+    isActive?: boolean;
+    createdAt?: Date;
+}
+
+export class CreateApiKeyResponse implements ICreateApiKeyResponse {
+    apiKey?: ApiKeyDto;
+    plainKey?: string;
+
+    constructor(data?: ICreateApiKeyResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.apiKey = _data["apiKey"] ? ApiKeyDto.fromJS(_data["apiKey"]) : undefined as any;
+            this.plainKey = _data["plainKey"];
+        }
+    }
+
+    static fromJS(data: any): CreateApiKeyResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateApiKeyResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["apiKey"] = this.apiKey ? this.apiKey.toJSON() : undefined as any;
+        data["plainKey"] = this.plainKey;
+        return data;
+    }
+}
+
+export interface ICreateApiKeyResponse {
+    apiKey?: ApiKeyDto;
+    plainKey?: string;
+}
+
+export class CreateApiKeyRequest implements ICreateApiKeyRequest {
+    name?: string;
+    expiresAt?: Date | undefined;
+
+    constructor(data?: ICreateApiKeyRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.expiresAt = _data["expiresAt"] ? new Date(_data["expiresAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): CreateApiKeyRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateApiKeyRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["expiresAt"] = this.expiresAt ? this.expiresAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface ICreateApiKeyRequest {
+    name?: string;
+    expiresAt?: Date | undefined;
+}
+
+export class ProblemDetails implements IProblemDetails {
+    type?: string | undefined;
+    title?: string | undefined;
+    status?: number | undefined;
+    detail?: string | undefined;
+    instance?: string | undefined;
+
+    [key: string]: any;
+
+    constructor(data?: IProblemDetails) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+            this.type = _data["type"];
+            this.title = _data["title"];
+            this.status = _data["status"];
+            this.detail = _data["detail"];
+            this.instance = _data["instance"];
+        }
+    }
+
+    static fromJS(data: any): ProblemDetails {
+        data = typeof data === 'object' ? data : {};
+        let result = new ProblemDetails();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        data["type"] = this.type;
+        data["title"] = this.title;
+        data["status"] = this.status;
+        data["detail"] = this.detail;
+        data["instance"] = this.instance;
+        return data;
+    }
+}
+
+export interface IProblemDetails {
+    type?: string | undefined;
+    title?: string | undefined;
+    status?: number | undefined;
+    detail?: string | undefined;
+    instance?: string | undefined;
+
+    [key: string]: any;
+}
+
+export class PagedResultOfAuditLogDto implements IPagedResultOfAuditLogDto {
+    items?: AuditLogDto[];
+    page?: number;
+    pageSize?: number;
+    totalCount?: number;
+    totalPages?: number;
+
+    constructor(data?: IPagedResultOfAuditLogDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(AuditLogDto.fromJS(item));
+            }
+            this.page = _data["page"];
+            this.pageSize = _data["pageSize"];
+            this.totalCount = _data["totalCount"];
+            this.totalPages = _data["totalPages"];
+        }
+    }
+
+    static fromJS(data: any): PagedResultOfAuditLogDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new PagedResultOfAuditLogDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        data["page"] = this.page;
+        data["pageSize"] = this.pageSize;
+        data["totalCount"] = this.totalCount;
+        data["totalPages"] = this.totalPages;
+        return data;
+    }
+}
+
+export interface IPagedResultOfAuditLogDto {
+    items?: AuditLogDto[];
+    page?: number;
+    pageSize?: number;
+    totalCount?: number;
+    totalPages?: number;
+}
+
+export class AuditLogDto implements IAuditLogDto {
+    id?: number;
+    userId?: number | undefined;
+    userName?: string | undefined;
+    entityType?: string;
+    entityId?: number;
+    action?: string;
+    oldValue?: string | undefined;
+    newValue?: string | undefined;
+    createdAt?: Date;
+
+    constructor(data?: IAuditLogDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.userId = _data["userId"];
+            this.userName = _data["userName"];
+            this.entityType = _data["entityType"];
+            this.entityId = _data["entityId"];
+            this.action = _data["action"];
+            this.oldValue = _data["oldValue"];
+            this.newValue = _data["newValue"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): AuditLogDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new AuditLogDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["userId"] = this.userId;
+        data["userName"] = this.userName;
+        data["entityType"] = this.entityType;
+        data["entityId"] = this.entityId;
+        data["action"] = this.action;
+        data["oldValue"] = this.oldValue;
+        data["newValue"] = this.newValue;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IAuditLogDto {
+    id?: number;
+    userId?: number | undefined;
+    userName?: string | undefined;
+    entityType?: string;
+    entityId?: number;
+    action?: string;
+    oldValue?: string | undefined;
+    newValue?: string | undefined;
+    createdAt?: Date;
 }
 
 export class LoginResponse implements ILoginResponse {
@@ -1185,70 +3559,6 @@ export interface IUserDto {
     role?: string;
 }
 
-export class ProblemDetails implements IProblemDetails {
-    type?: string | undefined;
-    title?: string | undefined;
-    status?: number | undefined;
-    detail?: string | undefined;
-    instance?: string | undefined;
-
-    [key: string]: any;
-
-    constructor(data?: IProblemDetails) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.type = _data["type"];
-            this.title = _data["title"];
-            this.status = _data["status"];
-            this.detail = _data["detail"];
-            this.instance = _data["instance"];
-        }
-    }
-
-    static fromJS(data: any): ProblemDetails {
-        data = typeof data === 'object' ? data : {};
-        let result = new ProblemDetails();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["type"] = this.type;
-        data["title"] = this.title;
-        data["status"] = this.status;
-        data["detail"] = this.detail;
-        data["instance"] = this.instance;
-        return data;
-    }
-}
-
-export interface IProblemDetails {
-    type?: string | undefined;
-    title?: string | undefined;
-    status?: number | undefined;
-    detail?: string | undefined;
-    instance?: string | undefined;
-
-    [key: string]: any;
-}
-
 export class LoginRequest implements ILoginRequest {
     email?: string;
     password?: string;
@@ -1329,6 +3639,562 @@ export interface IRefreshRequest {
     refreshToken?: string;
 }
 
+export class CannedResponseFolderDto implements ICannedResponseFolderDto {
+    id?: number;
+    name?: string;
+    categoryId?: number | undefined;
+    categoryName?: string | undefined;
+    displayOrder?: number;
+
+    constructor(data?: ICannedResponseFolderDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.categoryId = _data["categoryId"];
+            this.categoryName = _data["categoryName"];
+            this.displayOrder = _data["displayOrder"];
+        }
+    }
+
+    static fromJS(data: any): CannedResponseFolderDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new CannedResponseFolderDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["categoryId"] = this.categoryId;
+        data["categoryName"] = this.categoryName;
+        data["displayOrder"] = this.displayOrder;
+        return data;
+    }
+}
+
+export interface ICannedResponseFolderDto {
+    id?: number;
+    name?: string;
+    categoryId?: number | undefined;
+    categoryName?: string | undefined;
+    displayOrder?: number;
+}
+
+export class CreateCannedResponseFolderRequest implements ICreateCannedResponseFolderRequest {
+    name?: string;
+    categoryId?: number | undefined;
+    displayOrder?: number;
+
+    constructor(data?: ICreateCannedResponseFolderRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.categoryId = _data["categoryId"];
+            this.displayOrder = _data["displayOrder"];
+        }
+    }
+
+    static fromJS(data: any): CreateCannedResponseFolderRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateCannedResponseFolderRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["categoryId"] = this.categoryId;
+        data["displayOrder"] = this.displayOrder;
+        return data;
+    }
+}
+
+export interface ICreateCannedResponseFolderRequest {
+    name?: string;
+    categoryId?: number | undefined;
+    displayOrder?: number;
+}
+
+export class UpdateCannedResponseFolderRequest implements IUpdateCannedResponseFolderRequest {
+    name?: string;
+    categoryId?: number | undefined;
+    displayOrder?: number;
+
+    constructor(data?: IUpdateCannedResponseFolderRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.categoryId = _data["categoryId"];
+            this.displayOrder = _data["displayOrder"];
+        }
+    }
+
+    static fromJS(data: any): UpdateCannedResponseFolderRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateCannedResponseFolderRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["categoryId"] = this.categoryId;
+        data["displayOrder"] = this.displayOrder;
+        return data;
+    }
+}
+
+export interface IUpdateCannedResponseFolderRequest {
+    name?: string;
+    categoryId?: number | undefined;
+    displayOrder?: number;
+}
+
+export class CannedResponseDto implements ICannedResponseDto {
+    id?: number;
+    folderId?: number;
+    title?: string;
+    body?: string;
+    isActive?: boolean;
+    createdById?: number;
+    createdByName?: string;
+    createdAt?: Date;
+
+    constructor(data?: ICannedResponseDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.folderId = _data["folderId"];
+            this.title = _data["title"];
+            this.body = _data["body"];
+            this.isActive = _data["isActive"];
+            this.createdById = _data["createdById"];
+            this.createdByName = _data["createdByName"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): CannedResponseDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new CannedResponseDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["folderId"] = this.folderId;
+        data["title"] = this.title;
+        data["body"] = this.body;
+        data["isActive"] = this.isActive;
+        data["createdById"] = this.createdById;
+        data["createdByName"] = this.createdByName;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface ICannedResponseDto {
+    id?: number;
+    folderId?: number;
+    title?: string;
+    body?: string;
+    isActive?: boolean;
+    createdById?: number;
+    createdByName?: string;
+    createdAt?: Date;
+}
+
+export class CreateCannedResponseRequest implements ICreateCannedResponseRequest {
+    folderId?: number;
+    title?: string;
+    body?: string;
+
+    constructor(data?: ICreateCannedResponseRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.folderId = _data["folderId"];
+            this.title = _data["title"];
+            this.body = _data["body"];
+        }
+    }
+
+    static fromJS(data: any): CreateCannedResponseRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateCannedResponseRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["folderId"] = this.folderId;
+        data["title"] = this.title;
+        data["body"] = this.body;
+        return data;
+    }
+}
+
+export interface ICreateCannedResponseRequest {
+    folderId?: number;
+    title?: string;
+    body?: string;
+}
+
+export class UpdateCannedResponseRequest implements IUpdateCannedResponseRequest {
+    title?: string;
+    body?: string;
+    isActive?: boolean;
+
+    constructor(data?: IUpdateCannedResponseRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.title = _data["title"];
+            this.body = _data["body"];
+            this.isActive = _data["isActive"];
+        }
+    }
+
+    static fromJS(data: any): UpdateCannedResponseRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateCannedResponseRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["title"] = this.title;
+        data["body"] = this.body;
+        data["isActive"] = this.isActive;
+        return data;
+    }
+}
+
+export interface IUpdateCannedResponseRequest {
+    title?: string;
+    body?: string;
+    isActive?: boolean;
+}
+
+export class CategoryDto implements ICategoryDto {
+    id?: number;
+    name?: string;
+    parentId?: number | undefined;
+    children?: CategoryDto[];
+
+    constructor(data?: ICategoryDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.parentId = _data["parentId"];
+            if (Array.isArray(_data["children"])) {
+                this.children = [] as any;
+                for (let item of _data["children"])
+                    this.children!.push(CategoryDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): CategoryDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new CategoryDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["parentId"] = this.parentId;
+        if (Array.isArray(this.children)) {
+            data["children"] = [];
+            for (let item of this.children)
+                data["children"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface ICategoryDto {
+    id?: number;
+    name?: string;
+    parentId?: number | undefined;
+    children?: CategoryDto[];
+}
+
+export class CreateCategoryRequest implements ICreateCategoryRequest {
+    name?: string;
+    parentId?: number | undefined;
+
+    constructor(data?: ICreateCategoryRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.parentId = _data["parentId"];
+        }
+    }
+
+    static fromJS(data: any): CreateCategoryRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateCategoryRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["parentId"] = this.parentId;
+        return data;
+    }
+}
+
+export interface ICreateCategoryRequest {
+    name?: string;
+    parentId?: number | undefined;
+}
+
+export class UpdateCategoryRequest implements IUpdateCategoryRequest {
+    name?: string;
+    parentId?: number | undefined;
+
+    constructor(data?: IUpdateCategoryRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.parentId = _data["parentId"];
+        }
+    }
+
+    static fromJS(data: any): UpdateCategoryRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateCategoryRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["parentId"] = this.parentId;
+        return data;
+    }
+}
+
+export interface IUpdateCategoryRequest {
+    name?: string;
+    parentId?: number | undefined;
+}
+
+export class ClickUpConfigDto implements IClickUpConfigDto {
+    isConfigured?: boolean;
+    apiKeyMasked?: string | undefined;
+    workspaceId?: string | undefined;
+    updatedAt?: Date | undefined;
+
+    constructor(data?: IClickUpConfigDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.isConfigured = _data["isConfigured"];
+            this.apiKeyMasked = _data["apiKeyMasked"];
+            this.workspaceId = _data["workspaceId"];
+            this.updatedAt = _data["updatedAt"] ? new Date(_data["updatedAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): ClickUpConfigDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new ClickUpConfigDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["isConfigured"] = this.isConfigured;
+        data["apiKeyMasked"] = this.apiKeyMasked;
+        data["workspaceId"] = this.workspaceId;
+        data["updatedAt"] = this.updatedAt ? this.updatedAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IClickUpConfigDto {
+    isConfigured?: boolean;
+    apiKeyMasked?: string | undefined;
+    workspaceId?: string | undefined;
+    updatedAt?: Date | undefined;
+}
+
+export class UpdateClickUpConfigRequest implements IUpdateClickUpConfigRequest {
+    apiKey?: string;
+    workspaceId?: string;
+
+    constructor(data?: IUpdateClickUpConfigRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.apiKey = _data["apiKey"];
+            this.workspaceId = _data["workspaceId"];
+        }
+    }
+
+    static fromJS(data: any): UpdateClickUpConfigRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateClickUpConfigRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["apiKey"] = this.apiKey;
+        data["workspaceId"] = this.workspaceId;
+        return data;
+    }
+}
+
+export interface IUpdateClickUpConfigRequest {
+    apiKey?: string;
+    workspaceId?: string;
+}
+
+export class TestClickUpConnectionResponse implements ITestClickUpConnectionResponse {
+    success?: boolean;
+    message?: string;
+
+    constructor(data?: ITestClickUpConnectionResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.success = _data["success"];
+            this.message = _data["message"];
+        }
+    }
+
+    static fromJS(data: any): TestClickUpConnectionResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new TestClickUpConnectionResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["success"] = this.success;
+        data["message"] = this.message;
+        return data;
+    }
+}
+
+export interface ITestClickUpConnectionResponse {
+    success?: boolean;
+    message?: string;
+}
+
 export class NotificationDto implements INotificationDto {
     id?: number;
     ticketId?: number | undefined;
@@ -1393,6 +4259,490 @@ export enum NotificationTrigger {
     StatusChanged = "StatusChanged",
     SlaWarning = "SlaWarning",
     SlaBreached = "SlaBreached",
+}
+
+export class NotificationPreferenceDto implements INotificationPreferenceDto {
+    triggerType?: NotificationTrigger;
+    isEnabled?: boolean;
+
+    constructor(data?: INotificationPreferenceDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.triggerType = _data["triggerType"];
+            this.isEnabled = _data["isEnabled"];
+        }
+    }
+
+    static fromJS(data: any): NotificationPreferenceDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new NotificationPreferenceDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["triggerType"] = this.triggerType;
+        data["isEnabled"] = this.isEnabled;
+        return data;
+    }
+}
+
+export interface INotificationPreferenceDto {
+    triggerType?: NotificationTrigger;
+    isEnabled?: boolean;
+}
+
+export class UpdateNotificationPreferencesRequest implements IUpdateNotificationPreferencesRequest {
+    preferences?: NotificationPreferenceDto[];
+
+    constructor(data?: IUpdateNotificationPreferencesRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["preferences"])) {
+                this.preferences = [] as any;
+                for (let item of _data["preferences"])
+                    this.preferences!.push(NotificationPreferenceDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): UpdateNotificationPreferencesRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateNotificationPreferencesRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.preferences)) {
+            data["preferences"] = [];
+            for (let item of this.preferences)
+                data["preferences"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IUpdateNotificationPreferencesRequest {
+    preferences?: NotificationPreferenceDto[];
+}
+
+export class RoleDto implements IRoleDto {
+    id?: number;
+    name?: UserRole;
+
+    constructor(data?: IRoleDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+        }
+    }
+
+    static fromJS(data: any): RoleDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new RoleDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        return data;
+    }
+}
+
+export interface IRoleDto {
+    id?: number;
+    name?: UserRole;
+}
+
+export enum UserRole {
+    MasterAdmin = "MasterAdmin",
+    Admin = "Admin",
+    Agent = "Agent",
+    Viewer = "Viewer",
+}
+
+export class EmailSettingsDto implements IEmailSettingsDto {
+    smtpHost?: string;
+    smtpPort?: number;
+    apiBaseUrl?: string;
+    pollIntervalSeconds?: number;
+    fromAddress?: string;
+
+    constructor(data?: IEmailSettingsDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.smtpHost = _data["smtpHost"];
+            this.smtpPort = _data["smtpPort"];
+            this.apiBaseUrl = _data["apiBaseUrl"];
+            this.pollIntervalSeconds = _data["pollIntervalSeconds"];
+            this.fromAddress = _data["fromAddress"];
+        }
+    }
+
+    static fromJS(data: any): EmailSettingsDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new EmailSettingsDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["smtpHost"] = this.smtpHost;
+        data["smtpPort"] = this.smtpPort;
+        data["apiBaseUrl"] = this.apiBaseUrl;
+        data["pollIntervalSeconds"] = this.pollIntervalSeconds;
+        data["fromAddress"] = this.fromAddress;
+        return data;
+    }
+}
+
+export interface IEmailSettingsDto {
+    smtpHost?: string;
+    smtpPort?: number;
+    apiBaseUrl?: string;
+    pollIntervalSeconds?: number;
+    fromAddress?: string;
+}
+
+export class SlaPolicyDto implements ISlaPolicyDto {
+    id?: number;
+    name?: string;
+    priority?: TicketPriority;
+    isDefault?: boolean;
+    businessHoursOnly?: boolean;
+    responseTimeMinutes?: number;
+    resolutionTimeMinutes?: number;
+
+    constructor(data?: ISlaPolicyDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.priority = _data["priority"];
+            this.isDefault = _data["isDefault"];
+            this.businessHoursOnly = _data["businessHoursOnly"];
+            this.responseTimeMinutes = _data["responseTimeMinutes"];
+            this.resolutionTimeMinutes = _data["resolutionTimeMinutes"];
+        }
+    }
+
+    static fromJS(data: any): SlaPolicyDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new SlaPolicyDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["priority"] = this.priority;
+        data["isDefault"] = this.isDefault;
+        data["businessHoursOnly"] = this.businessHoursOnly;
+        data["responseTimeMinutes"] = this.responseTimeMinutes;
+        data["resolutionTimeMinutes"] = this.resolutionTimeMinutes;
+        return data;
+    }
+}
+
+export interface ISlaPolicyDto {
+    id?: number;
+    name?: string;
+    priority?: TicketPriority;
+    isDefault?: boolean;
+    businessHoursOnly?: boolean;
+    responseTimeMinutes?: number;
+    resolutionTimeMinutes?: number;
+}
+
+export enum TicketPriority {
+    Low = "Low",
+    Medium = "Medium",
+    High = "High",
+    Urgent = "Urgent",
+}
+
+export class UpdateSlaPolicyRequest implements IUpdateSlaPolicyRequest {
+    responseTimeMinutes?: number;
+    resolutionTimeMinutes?: number;
+    businessHoursOnly?: boolean;
+
+    constructor(data?: IUpdateSlaPolicyRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.responseTimeMinutes = _data["responseTimeMinutes"];
+            this.resolutionTimeMinutes = _data["resolutionTimeMinutes"];
+            this.businessHoursOnly = _data["businessHoursOnly"];
+        }
+    }
+
+    static fromJS(data: any): UpdateSlaPolicyRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateSlaPolicyRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["responseTimeMinutes"] = this.responseTimeMinutes;
+        data["resolutionTimeMinutes"] = this.resolutionTimeMinutes;
+        data["businessHoursOnly"] = this.businessHoursOnly;
+        return data;
+    }
+}
+
+export interface IUpdateSlaPolicyRequest {
+    responseTimeMinutes?: number;
+    resolutionTimeMinutes?: number;
+    businessHoursOnly?: boolean;
+}
+
+export class SlaDomainDto implements ISlaDomainDto {
+    id?: number;
+    slaPolicyId?: number;
+    slaPolicyName?: string;
+    emailDomain?: string;
+
+    constructor(data?: ISlaDomainDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.slaPolicyId = _data["slaPolicyId"];
+            this.slaPolicyName = _data["slaPolicyName"];
+            this.emailDomain = _data["emailDomain"];
+        }
+    }
+
+    static fromJS(data: any): SlaDomainDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new SlaDomainDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["slaPolicyId"] = this.slaPolicyId;
+        data["slaPolicyName"] = this.slaPolicyName;
+        data["emailDomain"] = this.emailDomain;
+        return data;
+    }
+}
+
+export interface ISlaDomainDto {
+    id?: number;
+    slaPolicyId?: number;
+    slaPolicyName?: string;
+    emailDomain?: string;
+}
+
+export class CreateSlaDomainRequest implements ICreateSlaDomainRequest {
+    slaPolicyId?: number;
+    emailDomain?: string;
+
+    constructor(data?: ICreateSlaDomainRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.slaPolicyId = _data["slaPolicyId"];
+            this.emailDomain = _data["emailDomain"];
+        }
+    }
+
+    static fromJS(data: any): CreateSlaDomainRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateSlaDomainRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["slaPolicyId"] = this.slaPolicyId;
+        data["emailDomain"] = this.emailDomain;
+        return data;
+    }
+}
+
+export interface ICreateSlaDomainRequest {
+    slaPolicyId?: number;
+    emailDomain?: string;
+}
+
+export class BusinessHoursDayDto implements IBusinessHoursDayDto {
+    dayOfWeek?: DayOfWeek;
+    isEnabled?: boolean;
+    startTime?: string | undefined;
+    endTime?: string | undefined;
+
+    constructor(data?: IBusinessHoursDayDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.dayOfWeek = _data["dayOfWeek"];
+            this.isEnabled = _data["isEnabled"];
+            this.startTime = _data["startTime"];
+            this.endTime = _data["endTime"];
+        }
+    }
+
+    static fromJS(data: any): BusinessHoursDayDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new BusinessHoursDayDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["dayOfWeek"] = this.dayOfWeek;
+        data["isEnabled"] = this.isEnabled;
+        data["startTime"] = this.startTime;
+        data["endTime"] = this.endTime;
+        return data;
+    }
+}
+
+export interface IBusinessHoursDayDto {
+    dayOfWeek?: DayOfWeek;
+    isEnabled?: boolean;
+    startTime?: string | undefined;
+    endTime?: string | undefined;
+}
+
+export enum DayOfWeek {
+    Sunday = "Sunday",
+    Monday = "Monday",
+    Tuesday = "Tuesday",
+    Wednesday = "Wednesday",
+    Thursday = "Thursday",
+    Friday = "Friday",
+    Saturday = "Saturday",
+}
+
+export class UpdateBusinessHoursRequest implements IUpdateBusinessHoursRequest {
+    days?: BusinessHoursDayDto[];
+
+    constructor(data?: IUpdateBusinessHoursRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["days"])) {
+                this.days = [] as any;
+                for (let item of _data["days"])
+                    this.days!.push(BusinessHoursDayDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): UpdateBusinessHoursRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateBusinessHoursRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.days)) {
+            data["days"] = [];
+            for (let item of this.days)
+                data["days"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IUpdateBusinessHoursRequest {
+    days?: BusinessHoursDayDto[];
 }
 
 export class PagedResultOfTicketListItemDto implements IPagedResultOfTicketListItemDto {
@@ -1557,13 +4907,6 @@ export enum TicketStatus {
     Pending = "Pending",
     Resolved = "Resolved",
     Closed = "Closed",
-}
-
-export enum TicketPriority {
-    Low = "Low",
-    Medium = "Medium",
-    High = "High",
-    Urgent = "Urgent",
 }
 
 export class TicketDetailDto implements ITicketDetailDto {
@@ -2107,6 +5450,162 @@ export interface IUserSummaryDto {
     fullName?: string;
     email?: string;
     role?: string;
+}
+
+export class UserAdminDto implements IUserAdminDto {
+    id?: number;
+    email?: string;
+    fullName?: string;
+    roleId?: number;
+    roleName?: UserRole;
+    isActive?: boolean;
+    createdAt?: Date;
+    lastLoginAt?: Date | undefined;
+
+    constructor(data?: IUserAdminDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.email = _data["email"];
+            this.fullName = _data["fullName"];
+            this.roleId = _data["roleId"];
+            this.roleName = _data["roleName"];
+            this.isActive = _data["isActive"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.lastLoginAt = _data["lastLoginAt"] ? new Date(_data["lastLoginAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): UserAdminDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new UserAdminDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["email"] = this.email;
+        data["fullName"] = this.fullName;
+        data["roleId"] = this.roleId;
+        data["roleName"] = this.roleName;
+        data["isActive"] = this.isActive;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["lastLoginAt"] = this.lastLoginAt ? this.lastLoginAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IUserAdminDto {
+    id?: number;
+    email?: string;
+    fullName?: string;
+    roleId?: number;
+    roleName?: UserRole;
+    isActive?: boolean;
+    createdAt?: Date;
+    lastLoginAt?: Date | undefined;
+}
+
+export class CreateUserRequest implements ICreateUserRequest {
+    email?: string;
+    fullName?: string;
+    roleId?: number;
+    password?: string;
+
+    constructor(data?: ICreateUserRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.email = _data["email"];
+            this.fullName = _data["fullName"];
+            this.roleId = _data["roleId"];
+            this.password = _data["password"];
+        }
+    }
+
+    static fromJS(data: any): CreateUserRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateUserRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["email"] = this.email;
+        data["fullName"] = this.fullName;
+        data["roleId"] = this.roleId;
+        data["password"] = this.password;
+        return data;
+    }
+}
+
+export interface ICreateUserRequest {
+    email?: string;
+    fullName?: string;
+    roleId?: number;
+    password?: string;
+}
+
+export class UpdateUserRequest implements IUpdateUserRequest {
+    fullName?: string;
+    roleId?: number;
+    isActive?: boolean;
+
+    constructor(data?: IUpdateUserRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.fullName = _data["fullName"];
+            this.roleId = _data["roleId"];
+            this.isActive = _data["isActive"];
+        }
+    }
+
+    static fromJS(data: any): UpdateUserRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateUserRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["fullName"] = this.fullName;
+        data["roleId"] = this.roleId;
+        data["isActive"] = this.isActive;
+        return data;
+    }
+}
+
+export interface IUpdateUserRequest {
+    fullName?: string;
+    roleId?: number;
+    isActive?: boolean;
 }
 
 export class SwaggerException extends Error {

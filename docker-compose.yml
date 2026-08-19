@@ -22,12 +22,18 @@ services:
       retries: 5
 
   # ── Backend (ASP.NET Core) ───────────────────────────────
+  # NE indítsd routinból! Lásd CLAUDE.md "Dev stack" szakasz:
+  # a backend/frontend konténerek végtelen restart-loopba kerülhetnek
+  # (pl. ha a nginx nem éri el a backendet), ami WSL2 crash-t okozott.
+  # Backend helyileg fut: dotnet run. Csak explicit profile-lal indítható:
+  #   docker compose --profile full up -d
   backend:
+    profiles: ["full"]
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: sp_backend
-    restart: unless-stopped
+    restart: "no"
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ConnectionStrings__Default: ${DB_CONNECTION}
@@ -54,12 +60,16 @@ services:
       - .docker-data/attachments:/app/attachments
 
   # ── Frontend (Nginx + React build) ──────────────────────
+  # NE indítsd rutinból! Lásd fenti megjegyzés a backendnél.
+  # Frontend helyileg fut: npm run dev. Csak explicit profile-lal indítható:
+  #   docker compose --profile full up -d
   frontend:
+    profiles: ["full"]
     build:
       context: .
       dockerfile: frontend/Dockerfile
     container_name: sp_frontend
-    restart: unless-stopped
+    restart: "no"
     ports:
       - "80:80"
     depends_on:

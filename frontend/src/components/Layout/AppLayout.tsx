@@ -96,13 +96,15 @@ export function AppLayout() {
             <span className={styles.navIcon}><TicketsIcon /></span>
             Jegyek
           </NavLink>
-          <NavLink
-            to="/settings"
-            className={({ isActive }) => `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}
-          >
-            <span className={styles.navIcon}><SettingsIcon /></span>
-            Beállítások
-          </NavLink>
+          {(user?.role === 'MasterAdmin' || user?.role === 'Admin') && (
+            <NavLink
+              to="/settings"
+              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}
+            >
+              <span className={styles.navIcon}><SettingsIcon /></span>
+              Beállítások
+            </NavLink>
+          )}
         </nav>
       </aside>
 

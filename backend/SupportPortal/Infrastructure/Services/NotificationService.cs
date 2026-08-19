@@ -133,6 +133,47 @@ public class NotificationService(IServiceScopeFactory scopeFactory, ILogger<Noti
             .ExecuteUpdateAsync(setters => setters.SetProperty(n => n.IsRead, true));
     }
 
+    public async Task<IReadOnlyList<NotificationPreferenceDto>> GetPreferencesAsync(int userId)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var existing = await db.NotificationPreferences
+            .AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .ToDictionaryAsync(p => p.TriggerType);
+
+        return Enum.GetValues<NotificationTrigger>()
+            .Select(t => new NotificationPreferenceDto(t, !existing.TryGetValue(t, out var p) || p.IsEnabled))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<NotificationPreferenceDto>> UpdatePreferencesAsync(int userId, UpdateNotificationPreferencesRequest request)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var existing = await db.NotificationPreferences
+            .Where(p => p.UserId == userId)
+            .ToDictionaryAsync(p => p.TriggerType);
+
+        foreach (var pref in request.Preferences)
+        {
+            if (existing.TryGetValue(pref.TriggerType, out var row))
+                row.IsEnabled = pref.IsEnabled;
+            else
+                db.NotificationPreferences.Add(new NotificationPreference
+                {
+                    UserId = userId,
+                    TriggerType = pref.TriggerType,
+                    IsEnabled = pref.IsEnabled,
+                });
+        }
+
+        await db.SaveChangesAsync();
+        return await GetPreferencesAsync(userId);
+    }
+
     private static string ToEventType(NotificationTrigger trigger) => trigger switch
     {
         NotificationTrigger.NewTicket => "new_ticket",

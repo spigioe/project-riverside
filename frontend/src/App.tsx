@@ -2,8 +2,17 @@ import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom'
 import { LoginPage } from './pages/LoginPage'
 import { TicketsPage } from './pages/TicketsPage'
 import { TicketDetailPage } from './pages/TicketDetailPage'
+import { SettingsUsersPage } from './pages/settings/SettingsUsersPage'
+import { SettingsSlaPage } from './pages/settings/SettingsSlaPage'
+import { SettingsEmailPage } from './pages/settings/SettingsEmailPage'
+import { SettingsNotificationsPage } from './pages/settings/SettingsNotificationsPage'
+import { SettingsTicketsPage } from './pages/settings/SettingsTicketsPage'
+import { SettingsIntegrationPage } from './pages/settings/SettingsIntegrationPage'
+import { SettingsSystemPage } from './pages/settings/SettingsSystemPage'
 import { AppLayout } from './components/Layout/AppLayout'
 import { RequireAuth } from './components/Layout/RequireAuth'
+import { RequireRole } from './components/Layout/RequireRole'
+import { SettingsLayout } from './components/Layout/SettingsLayout'
 
 function App() {
   return (
@@ -14,6 +23,20 @@ function App() {
           <Route element={<AppLayout />}>
             <Route path="/tickets" element={<TicketsPage />} />
             <Route path="/tickets/:id" element={<TicketDetailPage />} />
+            <Route element={<RequireRole roles={['MasterAdmin', 'Admin']} />}>
+              <Route element={<SettingsLayout />}>
+                <Route path="/settings" element={<Navigate to="/settings/users" replace />} />
+                <Route path="/settings/users" element={<SettingsUsersPage />} />
+                <Route path="/settings/sla" element={<SettingsSlaPage />} />
+                <Route path="/settings/email" element={<SettingsEmailPage />} />
+                <Route path="/settings/notifications" element={<SettingsNotificationsPage />} />
+                <Route path="/settings/tickets" element={<SettingsTicketsPage />} />
+                <Route path="/settings/integration" element={<SettingsIntegrationPage />} />
+                <Route element={<RequireRole roles={['MasterAdmin']} />}>
+                  <Route path="/settings/system" element={<SettingsSystemPage />} />
+                </Route>
+              </Route>
+            </Route>
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/tickets" replace />} />
