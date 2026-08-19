@@ -2,15 +2,19 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  ticketAiClient,
   ticketClient,
   usersClient,
+  AiClassifyResponse,
   AssignTicketRequest,
   ClickUpLinkDto,
   CreateClickUpLinkRequest,
   CreateTicketMessageRequest,
   MessageDirection,
+  TicketDetailDto,
   TicketSource,
   TicketStatus,
+  UpdateTicketRequest,
   UpdateTicketStatusRequest,
 } from '../api'
 import { Modal } from '../components/Modal/Modal'
@@ -42,6 +46,7 @@ const SOURCE_LABELS: Record<TicketSource, string> = {
   [TicketSource.Email]: 'Email',
   [TicketSource.Portal]: 'Portál',
   [TicketSource.Manual]: 'Kézi',
+  [TicketSource.Api]: 'API',
 }
 
 const STATUS_OPTIONS: { value: TicketStatus; label: string }[] = [
@@ -268,12 +273,129 @@ export function TicketDetailPage() {
           </div>
         </div>
 
+        <AiSection ticket={ticket} onSuggestedReply={(body) => { setReplyBody(body); setIsInternalNote(false) }} />
+
         <ClickUpSection ticketId={ticketId} />
 
         <div className={styles.card}>
           <div className={styles.panelHeader}>Egyéni mezők</div>
           <div className={styles.emptyState}>Nincsenek egyéni mezők definiálva.</div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function AiSection({
+  ticket, onSuggestedReply,
+}: { ticket: TicketDetailDto; onSuggestedReply: (body: string) => void }) {
+  const queryClient = useQueryClient()
+  const ticketId = ticket.id!
+  const [summary, setSummary] = useState<string | null>(null)
+  const [classification, setClassification] = useState<AiClassifyResponse | null>(null)
+
+  const summarizeMutation = useMutation({
+    mutationFn: () => ticketAiClient.summarize(ticketId),
+    onSuccess: (result) => setSummary(result.summary ?? null),
+  })
+
+  const suggestReplyMutation = useMutation({
+    mutationFn: () => ticketAiClient.suggestReply(ticketId),
+    onSuccess: (result) => {
+      if (result.suggestedReply) onSuggestedReply(result.suggestedReply)
+    },
+  })
+
+  const classifyMutation = useMutation({
+    mutationFn: () => ticketAiClient.classify(ticketId),
+    onSuccess: (result) => setClassification(result),
+  })
+
+  const applyClassificationMutation = useMutation({
+    mutationFn: () =>
+      ticketClient.updateTicket(ticketId, new UpdateTicketRequest({
+        subject: ticket.subject,
+        body: ticket.body,
+        priority: classification!.suggestedPriority,
+        categoryId: classification?.suggestedCategoryId ?? undefined,
+        requesterEmail: ticket.requesterEmail,
+        requesterName: ticket.requesterName,
+      })),
+    onSuccess: () => {
+      setClassification(null)
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+    },
+  })
+
+  function errorText(error: unknown) {
+    return getErrorMessage(error, 'Az AI szolgáltatás jelenleg nem érhető el.')
+  }
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.panelHeader}>AI asszisztens</div>
+      <div className={styles.aiPanelBody}>
+        <div className={styles.aiButtonRow}>
+          <button
+            type="button"
+            className={styles.aiButton}
+            disabled={summarizeMutation.isPending}
+            onClick={() => summarizeMutation.mutate()}
+          >
+            {summarizeMutation.isPending ? 'Összefoglalás…' : 'Összefoglaló'}
+          </button>
+          <button
+            type="button"
+            className={styles.aiButton}
+            disabled={suggestReplyMutation.isPending}
+            onClick={() => suggestReplyMutation.mutate()}
+          >
+            {suggestReplyMutation.isPending ? 'Javaslat…' : 'Válasz javaslat'}
+          </button>
+          <button
+            type="button"
+            className={styles.aiButton}
+            disabled={classifyMutation.isPending}
+            onClick={() => classifyMutation.mutate()}
+          >
+            {classifyMutation.isPending ? 'Kategorizálás…' : 'Kategorizálás'}
+          </button>
+        </div>
+
+        {summarizeMutation.isError && <div className={styles.aiError}>{errorText(summarizeMutation.error)}</div>}
+        {summary && <div className={styles.aiResult}>{summary}</div>}
+
+        {suggestReplyMutation.isError && <div className={styles.aiError}>{errorText(suggestReplyMutation.error)}</div>}
+        {suggestReplyMutation.isSuccess && (
+          <div className={styles.aiResult}>A válasz javaslat betöltve a válasz szövegdobozba — szerkesztheted küldés előtt.</div>
+        )}
+
+        {classifyMutation.isError && <div className={styles.aiError}>{errorText(classifyMutation.error)}</div>}
+        {classification && (
+          <div className={styles.aiResult}>
+            <div className={styles.aiClassificationRow}>
+              <span>Javasolt kategória:</span>
+              <strong>{classification.suggestedCategoryName ?? 'nincs javaslat'}</strong>
+            </div>
+            <div className={styles.aiClassificationRow}>
+              <span>Javasolt prioritás:</span>
+              <PriorityBadge priority={classification.suggestedPriority!} />
+            </div>
+            <div className={styles.clickUpActions}>
+              <button
+                type="button"
+                className={shared.primaryButton}
+                disabled={applyClassificationMutation.isPending}
+                onClick={() => applyClassificationMutation.mutate()}
+              >
+                {applyClassificationMutation.isPending ? 'Alkalmazás…' : 'Elfogadás'}
+              </button>
+              <button type="button" className={shared.secondaryButton} onClick={() => setClassification(null)}>
+                Elvetés
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -2207,6 +2207,215 @@ export class SlaClient {
     }
 }
 
+export class TicketAiClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    summarize(id: number, cancelToken?: CancelToken): Promise<AiSummaryResponse> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/ai/summarize";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSummarize(_response);
+        });
+    }
+
+    protected processSummarize(response: AxiosResponse): Promise<AiSummaryResponse> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = AiSummaryResponse.fromJS(resultData200);
+            return Promise.resolve<AiSummaryResponse>(result200);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status === 503) {
+            const _responseText = response.data;
+            let result503: any = null;
+            let resultData503  = _responseText;
+            result503 = ProblemDetails.fromJS(resultData503);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result503);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AiSummaryResponse>(null as any);
+    }
+
+    suggestReply(id: number, cancelToken?: CancelToken): Promise<AiSuggestReplyResponse> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/ai/suggest-reply";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSuggestReply(_response);
+        });
+    }
+
+    protected processSuggestReply(response: AxiosResponse): Promise<AiSuggestReplyResponse> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = AiSuggestReplyResponse.fromJS(resultData200);
+            return Promise.resolve<AiSuggestReplyResponse>(result200);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status === 503) {
+            const _responseText = response.data;
+            let result503: any = null;
+            let resultData503  = _responseText;
+            result503 = ProblemDetails.fromJS(resultData503);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result503);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AiSuggestReplyResponse>(null as any);
+    }
+
+    classify(id: number, cancelToken?: CancelToken): Promise<AiClassifyResponse> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/ai/classify";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processClassify(_response);
+        });
+    }
+
+    protected processClassify(response: AxiosResponse): Promise<AiClassifyResponse> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = AiClassifyResponse.fromJS(resultData200);
+            return Promise.resolve<AiClassifyResponse>(result200);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status === 503) {
+            const _responseText = response.data;
+            let result503: any = null;
+            let resultData503  = _responseText;
+            result503 = ProblemDetails.fromJS(resultData503);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result503);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AiClassifyResponse>(null as any);
+    }
+}
+
 export class TicketClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -4992,6 +5201,122 @@ export class UpdateBusinessHoursRequest implements IUpdateBusinessHoursRequest {
 
 export interface IUpdateBusinessHoursRequest {
     days?: BusinessHoursDayDto[];
+}
+
+export class AiSummaryResponse implements IAiSummaryResponse {
+    summary?: string;
+
+    constructor(data?: IAiSummaryResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.summary = _data["summary"];
+        }
+    }
+
+    static fromJS(data: any): AiSummaryResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new AiSummaryResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["summary"] = this.summary;
+        return data;
+    }
+}
+
+export interface IAiSummaryResponse {
+    summary?: string;
+}
+
+export class AiSuggestReplyResponse implements IAiSuggestReplyResponse {
+    suggestedReply?: string;
+
+    constructor(data?: IAiSuggestReplyResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.suggestedReply = _data["suggestedReply"];
+        }
+    }
+
+    static fromJS(data: any): AiSuggestReplyResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new AiSuggestReplyResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["suggestedReply"] = this.suggestedReply;
+        return data;
+    }
+}
+
+export interface IAiSuggestReplyResponse {
+    suggestedReply?: string;
+}
+
+export class AiClassifyResponse implements IAiClassifyResponse {
+    suggestedCategoryId?: number | undefined;
+    suggestedCategoryName?: string | undefined;
+    suggestedPriority?: TicketPriority;
+
+    constructor(data?: IAiClassifyResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.suggestedCategoryId = _data["suggestedCategoryId"];
+            this.suggestedCategoryName = _data["suggestedCategoryName"];
+            this.suggestedPriority = _data["suggestedPriority"];
+        }
+    }
+
+    static fromJS(data: any): AiClassifyResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new AiClassifyResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["suggestedCategoryId"] = this.suggestedCategoryId;
+        data["suggestedCategoryName"] = this.suggestedCategoryName;
+        data["suggestedPriority"] = this.suggestedPriority;
+        return data;
+    }
+}
+
+export interface IAiClassifyResponse {
+    suggestedCategoryId?: number | undefined;
+    suggestedCategoryName?: string | undefined;
+    suggestedPriority?: TicketPriority;
 }
 
 export class PagedResultOfTicketListItemDto implements IPagedResultOfTicketListItemDto {

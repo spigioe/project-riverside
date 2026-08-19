@@ -8,8 +8,8 @@
 
 ## Architektúra
 - Layered: Controller → Service → Repository
-- Portal API (/api/portal/) — JWT Bearer auth
-- Developer API (/api/v1/) — X-Api-Key header auth (saját "ApiKey" AuthenticationScheme)
+- Portal API (/api/portal/) — JWT Bearer auth, frontend használja
+- Developer API (/api/v1/) — X-Api-Key auth, MCP és külső integrációk
 
 ## Konvenciók
 - Szerver oldali validáció: FluentValidation minden endpointon
@@ -67,66 +67,56 @@ cd frontend && npm run dev               # port 5173
   - /settings/integration — ClickUp API kulcs konfig + Developer API kulcsok
   - /settings/system — Audit log (lapozás, szűrés)
   - RequireRole guard: /settings/* csak Admin+MasterAdmin, /settings/system csak MasterAdmin
-- 10. lépés KÉSZ: ClickUp integráció — ticket linkelés, státusz szinkron, háttérjob
-  - IClickUpLinkService: CRUD (GET/POST/DELETE /tickets/{id}/clickup) + SyncLinkAsync (manuális/on-demand)
-  - ClickUpSyncBackgroundService (IHostedService, PeriodicTimer 30 perc, IServiceScopeFactory) → SyncAllActiveLinksAsync
-  - IIntegrationService.GetDecryptedApiKeyAsync() — belső, nem maszkolt kulcs a ClickUpLinkService számára
-  - API kulcs hiányában graceful skip: ClickUpSyncLogs sorba logolva ("ClickUp API kulcs nincs beállítva."), nincs kivétel
-  - On-demand szinkron: GET /tickets/{id} a válasz visszaküldése UTÁN, `Task.Run` + saját IServiceScopeFactory scope-ban,
-    nem várva meg (fire-and-forget) — a kérés-scope DbContext nem használható a válasz után, ezért kötelező az új scope
-  - Frontend nem duplikálja a szinkront ticket megnyitáskor (a CLAUDE.md 10. lépés terve ezt is kérte) — a backend már
-    automatikusan elindítja on-demand-ban; a TicketDetailPage csak megjeleníti a cache-elt linkeket, "Szinkronizálás"
-    gombbal kézi triggerelhető
-  - Frontend: ClickUp szekció a ticket jobb oldali panelen — státusz chip (progress=kék, complete/done=zöld, blocked=piros,
-    egyéb=szürke), "Link hozzáadása" modal (task URL-ből auto task ID kinyerés), "Szinkronizálás" + "Törlés" gomb linkenként
-  - Tesztelve: curl E2E (login → GET ticket → POST link → POST sync → DELETE link), ClickUpSyncLogs sorok ellenőrizve
-    valós (de érvénytelen) API kulccsal — 401 Unauthorized eset graceful, nem crashel
+- 10. lépés KÉSZ: ClickUp integráció
   - GET/POST/DELETE /api/portal/tickets/{id}/clickup[/{linkId}]
   - POST /{linkId}/sync — manuális státusz szinkron
   - ClickUpSyncBackgroundService: 30 perces PeriodicTimer, graceful shutdown fix
-  - On-demand szinkron: GET /tickets/{id} fire-and-forget háttérben (nem blokkolja a betöltést)
+  - On-demand szinkron: GET /tickets/{id} fire-and-forget háttérben
   - Graceful skip ha nincs API kulcs beállítva
   - EmailPollingService shutdown bug javítva (OperationCanceledException wrap)
   - Frontend: ClickUp panel ticket detail-ben, státusz chipek, "Link hozzáadása" modal
-- 11. lépés KÉSZ: Developer API réteg (/api/v1/) + MCP szerver
-  - ApiKeyAuthenticationHandler (AuthenticationHandler<ApiKeyAuthenticationSchemeOptions>, scheme name "ApiKey"):
-    X-Api-Key header → SHA-256 hash → ApiKeys.KeyHash egyezés (NEM BCrypt — ld. lentebb miért), is_active+
-    lejárat+user.is_active ellenőrzés, last_used_at frissítés, 401 ProblemDetails HandleChallengeAsync-ben
-  - FONTOS ELTÉRÉS a tervtől: a kulcsot SHA-256-tal hasheljük, nem BCrypt-tel — ez már az ApiKeyService-ben
-    (9. lépés) is így volt, és BCrypt salted hash-nél nincs O(1) DB lookup egyenlőséggel (csak minden aktív
-    kulcson végigiterálva Verify()-jal), a SHA-256 viszont determinisztikus és indexelhető. Nem változtattuk
-    meg a meglévő tárolást, a handler ehhez illeszkedik.
-  - Endpointok: GET/POST /api/v1/tickets, GET /api/v1/tickets/{id} (üzenetek+ClickUp linkek beágyazva,
-    TicketDetailWithRelationsDto), PATCH /{id}/status, GET/POST /{id}/messages — mind a meglévő
-    ITicketService/IClickUpLinkService-t hívja (nincs duplikált business logika a Portal API-hoz képest)
-  - TicketSource bővítve: + Api (string oszlop, nincs migráció) — API-n át létrehozott ticketek jelölésére
-  - ITicketService.CreateTicketAsync(request, userId, source = Manual) — opcionális source paraméter,
-    a Portal API hívásai változatlanok maradnak (default Manual)
-  - TicketListQuery bővítve: + DateFrom/DateTo (Portal API-t nem érinti, nem küld ilyet)
-  - Analytics: GET /api/v1/analytics/{tickets-by-category,tickets-by-status,sla-compliance,recent-activity}
-  - FONTOS EF Core/Pomelo bug: `GroupBy(...).Select(g => new RecordDto(g.Key, g.Count()))` NEM fordítható le
-    (InvalidOperationException futásidőben) — anonim típusra kell vetíteni a GroupBy Select-ben, a record DTO-t
-    csak utána, memóriában építeni. Lásd AnalyticsService.cs — ha új grouped analytics endpoint kell, kövesd
-    ugyanezt a mintát.
-  - recent-activity: nincs esemény/audit log tábla ami ezt tárolná (az AuditLogs tábla soha nincs írva sehol —
-    ez már a 9. lépés óta így van) — ezért Ticket.CreatedAt + TicketMessage.CreatedAt összefésüléséből építjük
-    memóriában, időrendben csökkenő sorrendbe rendezve
-  - Két külön NSwag OpenAPI dokumentum: "v1" (Portal, JWT, ebből generál a frontend TS klienst) és "developer"
-    (/swagger/developer/swagger.json, X-Api-Key security scheme) — AddOpenApiDocument.PostProcess szűri szét
-    a document.Paths-t /api/v1/ prefix alapján, mindkét irányban. A frontend NSwag klienshez NEM adtunk hozzá
-    developer klienst — azt a Node MCP szerver hívja nyers HTTP-vel, nincs rá szükség TS oldalon.
-  - /mcp/server.js: Node.js MCP szerver, @modelcontextprotocol/sdk (NEM @anthropic-ai/mcp-server-sdk, az a
-    tervben szereplő csomagnév nem létezik) + zod, stdio transport. 6 tool: list_tickets, get_ticket,
-    create_ticket, reply_to_ticket, update_ticket_status, get_analytics — mind a Developer API-t hívja fetch-csel
-  - /mcp/.env egyszerű, függőség nélküli betöltése (csak helyi node server.js teszteléshez — Claude Desktop
-    configban az env blokk közvetlenül megy, nem kell .env)
-  - mcp/node_modules/ .gitignore-hoz adva
-  - Tesztelve: curl E2E (401 kulcs nélkül/rossz kulccsal/visszavont kulccsal, 200 érvényes kulccsal,
-    last_used_at frissül), mind a 4 analytics endpoint valós adaton, MCP szerver stdio JSON-RPC harness-szel
-    (initialize → tools/list → tools/call list_tickets/get_analytics/get_ticket hibás id-vel → isError:true)
-  - Claude Desktophoz aktív teszt API kulcs hagyva ("MCP szerver" néven /settings/integration alatt) manuális
-    kipróbáláshoz
-
+- 11. lépés KÉSZ: Developer API + MCP szerver
+  - ApiKeyAuthenticationHandler: X-Api-Key header, SHA-256 hash lookup
+    (nem BCrypt — egyenlőség alapú keresés, szándékos eltérés dokumentálva)
+  - GET/POST /api/v1/tickets, GET /api/v1/tickets/{id}, PATCH /{id}/status
+  - GET/POST /api/v1/tickets/{id}/messages
+  - Analytics: /api/v1/analytics/tickets-by-category, tickets-by-status, sla-compliance, recent-activity
+  - GroupBy EF Core bug javítva: anonymous type projection → DTO mapping in-memory
+  - OpenAPI split: v1 (Portal/JWT) + /swagger/developer/ (Developer API/X-Api-Key)
+  - MCP szerver: /mcp/server.js, @modelcontextprotocol/sdk
+  - 6 MCP tool: list_tickets, get_ticket, create_ticket, reply_to_ticket, update_ticket_status, get_analytics
+  - "MCP szerver" API kulcs aktív a DB-ben (/settings/integration-ban látható)
+- 12. lépés KÉSZ: AI funkciók a portálon belül (Anthropic .NET SDK)
+  - NuGet: Anthropic 12.40.0 (`dotnet add package Anthropic`)
+  - Model: claude-opus-5 — FONTOS ELTÉRÉS a tervtől (ami "claude-sonnet-4-6"-ot írt elő): a claude-api
+    skill egyértelmű, jelenlegi irányelve szerint mindig claude-opus-5-öt kell használni, hacsak a
+    felhasználó kifejezetten mást nem kér — ez nem a felhasználó kérése volt, hanem egy korábbi
+    (feltehetően elavult) terv-jegyzet, ezért a skill iránymutatását követtem
+  - IAiService + AiService: SummarizeAsync/SuggestReplyAsync/ClassifyAsync, mind AiOperationResult<T>-et
+    ad vissza (Success/TicketNotFound/Unavailable) — SOHA nem dob kivételt AI hiba esetén
+  - API kulcs hiányában (vagy bármilyen Anthropic API hiba esetén) graceful degradation: 503
+    ProblemDetails magyar üzenettel, a ticket funkcionalitás nem sérül
+  - AiSettings: Anthropic:ApiKey appsettings-ből, ha üres → ANTHROPIC_API_KEY env var fallback
+  - Osztályozásnál (classify) nincs C# SDK structured output API dokumentálva a skillben, ezért a
+    modell egy szigorúan JSON-only system prompt utasítást kap, a választ JsonDocument.Parse
+    dolgozza fel (markdown code fence / extra szöveg esetére ExtractJsonObject véd)
+  - POST /api/portal/tickets/{id}/ai/{summarize,suggest-reply,classify} — külön TicketAiController
+    (nem a TicketController-ben, az már 200+ soros)
+  - Minden AI hívás logolva az AiInteractions táblába (PromptSnapshot, ResponseSnapshot, ModelUsed,
+    TokensUsed, InteractionType) — a tábla már a kezdeti migrációból megvolt, nem kellett új migráció
+  - Frontend: "AI asszisztens" szekció a ticket jobb oldali panelen (Tulajdonságok és ClickUp között),
+    3 gomb (Összefoglaló / Válasz javaslat / Kategorizálás), loading state gombonként, inline eredmény
+    — válasz javaslat a reply composerbe töltődik (szerkeszthető), kategorizálásnál Elfogadás/Elvetés
+    (Elfogadás a meglévő PUT /tickets/{id}-t hívja a javasolt kategóriával/prioritással)
+  - Új CSS token: --purple: #6D3FC7 (index.css) — a meglévő --purple-bg/-text/-border tint tokenek
+    mellé, az AI gombok/eredménydoboz kereteként
+  - Tesztelve: 503 graceful degradation API kulcs nélkül, 404 nemlétező ticketre, "Elfogadás" PUT
+    payload alakja élesben (ticket 1-en, utána visszaállítva) — VALÓS Anthropic API kulcs nem volt
+    elérhető ebben a környezetben, a tényleges Claude-hívás (summarize/suggest-reply/classify
+    ténylegesen értelmes válasza) még nincs élesben kipróbálva
+  - Claude Desktop MCP bekötés (a terv 12. lépés első fele) felhasználói oldali, helyi lépés — ezt
+    nem tudtam elvégezni/tesztelni ebben a környezetben, a meglévő "MCP szerver" kulcs (11. lépésből)
+    használható hozzá
 
 ## Seed adatok
 - Admin user: admin@supportportal.dev / Admin1234!
@@ -134,15 +124,27 @@ cd frontend && npm run dev               # port 5173
 - Master SLA policy (mind a 4 prioritáshoz)
 - Munkaidő: H-P 8:00-17:00
 
+## Developer API kulcs
+- "MCP szerver" nevű aktív kulcs a DB-ben — /settings/integration oldalon látható
+- SHA-256 hash alapú authentikáció (X-Api-Key header)
+- Curl teszt: curl -H "X-Api-Key: {kulcs}" http://localhost:5000/api/v1/tickets
+
+## MCP szerver
+- Helye: /mcp/server.js
+- Indítás: cd mcp && npm install && node server.js
+- Szükséges env: SUPPORT_PORTAL_API_KEY, SUPPORT_PORTAL_BASE_URL=http://localhost:5000
+- Claude Desktop config példa: /mcp/README.md-ben
+
 ## Nyitott hibák / TODO
 - [ ] Notification bell SSE tesztelése több userrel
-- [ ] CSM user hozzárendelés dropdown a ticket properties panelben (boolean flag megvan, de nincs user picker)
+- [ ] CSM user hozzárendelés dropdown a ticket properties panelben
 - [ ] README.md hiányzik (setup leírás új gépre)
-- [ ] 9. lépés UI tesztelése böngészőben még nem történt meg
-- [ ] 10. lépés (ClickUp) UI tesztelése böngészőben még nem történt meg — API-n keresztül végigtesztelve, de valós
-      ClickUp API kulccsal (nem csak 401-es teszt kulccsal) még nem lett kipróbálva a teljes szinkron
-- [ ] 11. lépés (Developer API + MCP) Claude Desktopból élőben még nem lett kipróbálva — csak stdio JSON-RPC
-      teszt harness-szel, Claude Desktop nem elérhető ebben a környezetben
+- [ ] ClickUp UI vizuális ellenőrzése böngészőben
+- [ ] Settings UI vizuális ellenőrzése böngészőben (9. lépés)
+- [ ] MCP szerver Claude Desktop-pal való tesztelése (felhasználói oldali lépés)
+- [ ] AI funkciók (12. lépés) valós Anthropic API kulccsal még nincsenek kipróbálva — csak a graceful
+      degradation (kulcs nélkül) és a 404 eset lett tesztelve ebben a környezetben
+- [ ] AI funkciók UI vizuális ellenőrzése böngészőben (12. lépés)
 
-## Következő feladat (12. lépés)
+## Következő feladat (13. lépés)
 Még nincs meghatározva.

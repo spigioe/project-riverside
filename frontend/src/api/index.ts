@@ -9,6 +9,7 @@ import {
   RolesClient,
   SettingsClient,
   SlaClient,
+  TicketAiClient,
   TicketClient,
   UsersClient,
 } from './generated-client'
@@ -19,6 +20,7 @@ export { httpClient, baseURL }
 
 export const authClient = new AuthClient(baseURL, httpClient)
 export const ticketClient = new TicketClient(baseURL, httpClient)
+export const ticketAiClient = new TicketAiClient(baseURL, httpClient)
 export const usersClient = new UsersClient(baseURL, httpClient)
 export const notificationsClient = new NotificationsClient(baseURL, httpClient)
 export const rolesClient = new RolesClient(baseURL, httpClient)

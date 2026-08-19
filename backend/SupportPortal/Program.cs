@@ -46,6 +46,16 @@ builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("Mail"
 builder.Services.Configure<EncryptionSettings>(builder.Configuration.GetSection("Encryption"));
 builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
 
+// ── AI (Anthropic) ─────────────────────────────────────────────────────────────
+// Az API kulcs elsődlegesen az appsettings "Anthropic:ApiKey" alól jön, de ha az üres,
+// az ANTHROPIC_API_KEY környezeti változó a fallback. Ha egyik sincs beállítva, az AiService
+// graceful degradation-nel működik (nem dob kivételt, csak "nem elérhető" választ ad).
+builder.Services.Configure<AiSettings>(options =>
+{
+    builder.Configuration.GetSection("Anthropic").Bind(options);
+    options.ApiKey ??= Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+});
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, _ => { })
     .AddJwtBearer(options =>
@@ -98,6 +108,7 @@ builder.Services.AddScoped<ICannedResponseService, CannedResponseService>();
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<IAiService, AiService>();
 builder.Services.AddHttpClient<IIntegrationService, IntegrationService>(client =>
     client.BaseAddress = new Uri("https://api.clickup.com/api/v2/"));
 builder.Services.AddHttpClient<IClickUpLinkService, ClickUpLinkService>(client =>

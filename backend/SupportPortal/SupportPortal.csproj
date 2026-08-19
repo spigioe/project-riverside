@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Anthropic" Version="12.40.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
     <PackageReference Include="MailKit" Version="4.17.0" />
@@ -32,19 +33,11 @@
     enélkül a generálás úgyis meghiúsulna, ez csak elkerüli a felesleges hibaüzenetet.
   -->
   <Target Name="GenerateApiClient" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
-    <Exec Command="curl -sf -o /dev/null http://localhost:5000/swagger/v1/swagger.json"
-          IgnoreExitCode="true"
-          StandardOutputImportance="low"
-          StandardErrorImportance="low">
+    <Exec Command="curl -sf -o /dev/null http://localhost:5000/swagger/v1/swagger.json" IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low">
       <Output TaskParameter="ExitCode" PropertyName="NSwagBackendCheckExitCode" />
     </Exec>
-    <Message Importance="high"
-              Condition="'$(NSwagBackendCheckExitCode)' != '0'"
-              Text="NSwag: a backend nem érhető el a http://localhost:5000 címen — a TypeScript API kliens generálása kimarad." />
-    <Exec Command="$(NSwagExe_Net90) run nswag.json /variables:Configuration=$(Configuration)"
-          WorkingDirectory="$(MSBuildProjectDirectory)"
-          Condition="'$(NSwagBackendCheckExitCode)' == '0'"
-          ContinueOnError="WarnAndContinue" />
+    <Message Importance="high" Condition="'$(NSwagBackendCheckExitCode)' != '0'" Text="NSwag: a backend nem érhető el a http://localhost:5000 címen — a TypeScript API kliens generálása kimarad." />
+    <Exec Command="$(NSwagExe_Net90) run nswag.json /variables:Configuration=$(Configuration)" WorkingDirectory="$(MSBuildProjectDirectory)" Condition="'$(NSwagBackendCheckExitCode)' == '0'" ContinueOnError="WarnAndContinue" />
   </Target>
 
 </Project>
