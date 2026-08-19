@@ -46,7 +46,7 @@ export function TicketsPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['tickets', status, priority, search, page],
     queryFn: () =>
-      ticketClient.getTickets(status, priority, undefined, search || undefined, page, PAGE_SIZE),
+      ticketClient.getTickets(status, priority, undefined, search || undefined, undefined, undefined, page, PAGE_SIZE),
   })
 
   const tickets = data?.items ?? []
