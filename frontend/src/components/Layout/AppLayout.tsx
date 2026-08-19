@@ -19,6 +19,17 @@ function getInitials(fullName: string): string {
   return initials.map((p) => p[0]?.toUpperCase() ?? '').join('')
 }
 
+function DashboardIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="1.5" width="5" height="5" rx="1" />
+      <rect x="7.5" y="1.5" width="5" height="3.5" rx="1" />
+      <rect x="7.5" y="7" width="5" height="5.5" rx="1" />
+      <rect x="1.5" y="8.5" width="5" height="4" rx="1" />
+    </svg>
+  )
+}
+
 function TicketsIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -90,6 +101,13 @@ export function AppLayout() {
         <nav className={styles.nav}>
           <div className={styles.navSection}>Menü</div>
           <NavLink
+            to="/dashboard"
+            className={({ isActive }) => `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}
+          >
+            <span className={styles.navIcon}><DashboardIcon /></span>
+            Dashboard
+          </NavLink>
+          <NavLink
             to="/tickets"
             className={({ isActive }) => `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}
           >
@@ -132,6 +150,13 @@ export function AppLayout() {
                 </button>
                 {isUserMenuOpen && (
                   <div className={styles.userDropdown}>
+                    <button
+                      type="button"
+                      className={styles.userDropdownItemNeutral}
+                      onClick={() => { setIsUserMenuOpen(false); navigate('/preferences') }}
+                    >
+                      Preferenciák
+                    </button>
                     <button
                       type="button"
                       className={styles.userDropdownItem}

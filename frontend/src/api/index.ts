@@ -4,7 +4,10 @@ import {
   AuthClient,
   CannedResponsesClient,
   CategoriesClient,
+  CsmClient,
+  DashboardClient,
   IntegrationClient,
+  MeClient,
   NotificationsClient,
   RolesClient,
   SettingsClient,
@@ -31,3 +34,6 @@ export const cannedResponsesClient = new CannedResponsesClient(baseURL, httpClie
 export const integrationClient = new IntegrationClient(baseURL, httpClient)
 export const apiKeysClient = new ApiKeysClient(baseURL, httpClient)
 export const auditLogClient = new AuditLogClient(baseURL, httpClient)
+export const csmClient = new CsmClient(baseURL, httpClient)
+export const dashboardClient = new DashboardClient(baseURL, httpClient)
+export const meClient = new MeClient(baseURL, httpClient)

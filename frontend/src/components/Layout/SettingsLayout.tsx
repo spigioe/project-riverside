@@ -8,6 +8,7 @@ const MENU_ITEMS = [
   { to: '/settings/email', label: 'Email konfiguráció' },
   { to: '/settings/notifications', label: 'Értesítések' },
   { to: '/settings/tickets', label: 'Ticket beállítások' },
+  { to: '/settings/csm', label: 'CSM kezelés' },
   { to: '/settings/integration', label: 'Integráció' },
 ]
 

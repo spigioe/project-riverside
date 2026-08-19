@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  meClient,
   ticketAiClient,
   ticketClient,
   usersClient,
@@ -113,6 +114,45 @@ export function TicketDetailPage() {
   const csmMutation = useMutation({
     mutationFn: () => ticketClient.toggleCsm(ticketId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] }),
+  })
+
+  // "Ticket tulajdonságok automatikus mentése" preferencia: ha ki van kapcsolva, a Felelős/Státusz
+  // mezők nem mentenek azonnal onChange-kor, hanem helyi draft állapotba kerülnek, és csak a
+  // "Mentés" gombra kattintva íródnak ki (két külön hívással, csak azt ami valóban változott).
+  const preferencesQuery = useQuery({
+    queryKey: ['user-preferences'],
+    queryFn: () => meClient.getPreferences(),
+  })
+  const autosave = preferencesQuery.data?.ticketPropertiesAutosave ?? true
+
+  const [draftAssignedToId, setDraftAssignedToId] = useState<number | undefined>(undefined)
+  const [draftStatus, setDraftStatus] = useState<TicketStatus | undefined>(undefined)
+  const [propertiesDirty, setPropertiesDirty] = useState(false)
+
+  useEffect(() => {
+    if (ticketQuery.data) {
+      setDraftAssignedToId(ticketQuery.data.assignedToId)
+      setDraftStatus(ticketQuery.data.status)
+      setPropertiesDirty(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticketQuery.data?.id])
+
+  const savePropertiesMutation = useMutation({
+    mutationFn: async () => {
+      const tasks: Promise<unknown>[] = []
+      if (draftAssignedToId !== ticketQuery.data?.assignedToId) {
+        tasks.push(ticketClient.assignTicket(ticketId, new AssignTicketRequest({ assignedToId: draftAssignedToId })))
+      }
+      if (draftStatus !== ticketQuery.data?.status) {
+        tasks.push(ticketClient.updateStatus(ticketId, new UpdateTicketStatusRequest({ status: draftStatus! })))
+      }
+      await Promise.all(tasks)
+    },
+    onSuccess: () => {
+      setPropertiesDirty(false)
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+    },
   })
 
   if (ticketQuery.isLoading) {
@@ -228,10 +268,12 @@ export function TicketDetailPage() {
             <div className={styles.field}>
               <label>Felelős</label>
               <select
-                value={ticket.assignedToId ?? ''}
-                onChange={(e) =>
-                  assignMutation.mutate(e.target.value ? Number(e.target.value) : undefined)
-                }
+                value={(autosave ? ticket.assignedToId : draftAssignedToId) ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value ? Number(e.target.value) : undefined
+                  if (autosave) assignMutation.mutate(value)
+                  else { setDraftAssignedToId(value); setPropertiesDirty(true) }
+                }}
               >
                 <option value="">Nincs hozzárendelve</option>
                 {users.map((u) => (
@@ -242,14 +284,30 @@ export function TicketDetailPage() {
             <div className={styles.field}>
               <label>Státusz</label>
               <select
-                value={ticket.status}
-                onChange={(e) => statusMutation.mutate(e.target.value as TicketStatus)}
+                value={autosave ? ticket.status : draftStatus}
+                onChange={(e) => {
+                  const value = e.target.value as TicketStatus
+                  if (autosave) statusMutation.mutate(value)
+                  else { setDraftStatus(value); setPropertiesDirty(true) }
+                }}
               >
                 {STATUS_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </div>
+            {!autosave && (
+              <div className={shared.formActions} style={{ marginTop: 0 }}>
+                <button
+                  type="button"
+                  className={shared.primaryButton}
+                  disabled={!propertiesDirty || savePropertiesMutation.isPending}
+                  onClick={() => savePropertiesMutation.mutate()}
+                >
+                  {savePropertiesMutation.isPending ? 'Mentés…' : 'Mentés'}
+                </button>
+              </div>
+            )}
             <div className={styles.toggleRow}>
               <div>
                 <div className={styles.toggleLabel}>

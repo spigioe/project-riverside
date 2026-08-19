@@ -167,6 +167,65 @@ cd frontend && npm run dev               # port 5173
   - NEM készült el (explicit felhasználói kérésre, 13b lesz): /settings/csm frontend oldal, dashboard
     widget UI, user preferences UI, ticket lista card nézet ami a requesterCompany/lastMessage-t
     megjelenítené — a mezők megvannak a backend válaszban, de a frontend még nem használja őket
+- 13b. lépés KÉSZ: Frontend — CSM, dashboard widgets, user preferences UI
+  - Pontosan a 13a. lépés "NEM készült el" listájának 4 pontja + egy tudatos scope-bővítés (lásd lent)
+  - /settings/csm oldal (SettingsCsmPage): CSM tábla (név, email, domain chip-ek), Hozzáadás/Szerkesztés
+    modal, Törlés (confirm + 409 "aktív ticket miatt nem törölhető" hibaüzenet megjelenítve).
+    Domainek beviteli mezője: egyetlen vesszővel elválasztott text input (nem dinamikus chip-input
+    komponens) — a meglévő minta (pl. CreateApiKeyModal) sem használ ennél összetettebb widgetet,
+    nem indokolt itt egyedi komponenst építeni
+  - Új top-level route-ok (App.tsx, AppLayout Outlet alatt, NEM /settings alatt, mert nem admin-only):
+    /dashboard, /preferences. Sidebar nav: "Dashboard" link a "Jegyek" elé; user dropdown: "Preferenciák"
+    a "Kijelentkezés" fölé (AppLayout.module.css: .userDropdownItemNeutral — a meglévő .userDropdownItem
+    pirosra van hardcode-olva a kijelentkezéshez, semleges színű variánsra volt szükség)
+  - Dashboard widget UI (DashboardPage): FONTOS SCOPE-DÖNTÉS — a widget típusok közül csak 6 (Unresolved,
+    Overdue, DueToday, Open, Unassigned, SlaCompliance) jelenik meg választhatóként/renderelhetőként.
+    A TrendChart és RecentActivity NINCS bekötve, mert nincs hozzá Portal API adatforrás — a
+    /api/v1/analytics/* endpointok (11. lépés) csak a Developer API-n, X-Api-Key authentikációval
+    érhetők el, a JWT-s Portal frontend nem hívhatja őket. Ezt nem próbáltam megkerülni (pl. újra
+    implementálni Portal oldalon), mert az explicit kérésen túlmutatna
+  - Widget pozicionálás: EGYSZERŰ, egysoros, sorrend szerinti auto-pozíció (checkbox be/kikapcsolás →
+    PositionX = index a bejelölt lista sorrendjében, PositionY=0, Width/Height=1 mindig) — NINCS
+    drag-and-drop grid szerkesztő, bár a backend séma (PositionX/Y/Width/Height) ezt lehetővé tenné.
+    MVP-döntés: a "widget UI" követelmény egy működő, konfigurálható nézetet jelent, nem feltétlenül
+    egy teljes grid-builder-t; utóbbi jelentős többletmunka lenne, nyitva hagyva egy jövőbeli lépésnek
+  - Preferences UI (PreferencesPage): TicketPropertiesAutosave checkbox + TicketListView select, mentés
+    gombbal (PUT /me/preferences). React state derived-during-render mintával épült (nincs useEffect a
+    kezdeti szinkronizáláshoz) — az oxlint react(set-state-in-effect) warningja miatt, amit egy korábbi,
+    effect-alapú verzió generált; a végleges megoldás draft state-et null-ról indít és a lekérdezett
+    adatra esik vissza amíg a user nem érint egy mezőt sem
+  - A két preferencia TÉNYLEGESEN be van kötve, nem csak elmenthető/megjeleníthető:
+    - ticketListView: a TicketsPage a preferenciából inicializálja az induló nézetet (táblázat/kártya),
+      a user a nézetváltó gombokkal a munkamenetben szabadon módosíthatja, de csak a Preferenciák oldalon
+      keresztüli mentés perzisztálja — a TicketsPage-en való váltás NEM ír vissza automatikusan a
+      preferenciákba (szándékos: elkerüli a meglepetésszerű "minden kattintás ment" viselkedést)
+    - ticketPropertiesAutosave: EZ SZÁNDÉKOS SCOPE-BŐVÍTÉS a 4 listázott ponton túl — ha kikapcsolva,
+      a TicketDetailPage "Tulajdonságok" panelén a Felelős/Státusz mezők nem mentenek azonnal
+      onChange-kor, hanem draft állapotba kerülnek, "Mentés" gomb jelenik meg (csak akkor aktív, ha
+      tényleg változott valami), és csak a ténylegesen módosult mező(ke)t küldi el (assign/status külön
+      endpoint, csak azt hívja ami eltér az eredetitől). Indoklás: egy preferencia, aminek sehol nincs
+      tényleges hatása, hiányos deliverable lenne — a mező neve ("ticket_properties_autosave") egyértelmű
+      szándékot fejez ki. A CSM jelölés toggle gomb TUDATOSAN NINCS ennek alávetve — egy single-click
+      boolean toggle-nél nincs értelme "staged" módnak, azonnali marad autosave állapottól függetlenül
+  - Ticket lista kártya nézet (TicketsPage): requesterCompany + lastMessageBody/lastMessageAt
+    megjelenítve kártyánként (subject 2 sorra clamp-elve, utolsó üzenet 140 karakterre vágva). A
+    táblázat nézet változatlan, a kártya nézet egy teljesen külön render ág, nem közös komponens —
+    elég egyszerű minta ahhoz, hogy a duplikáció ne érje meg az absztrakciót
+  - NEM érintett (explicit kívül esik a 13b hatókörén, külön TODO tétel marad): ticket properties panel
+    CSM megjelenítés/kézi felülírás — a TicketDetailDto (backend) jelenleg nem tartalmazza a CsmId/CsmName
+    mezőket, ennek hozzáadása backend-változás lenne, ami túlmutat egy "csak frontend" lépésen
+  - Tesztelve: `tsc -b` és `npm run build` tiszta (production build is), `oxlint` az érintett fájlokon
+    tiszta (0 új warning — a 2 meglévő react(set-state-in-effect) warning a SettingsSlaPage/
+    SettingsNotificationsPage-ben előzőleg is megvolt, nem ehhez a lépéshez tartozik). Minden új frontend
+    oldal által hívott endpoint curl-lel újra ellenőrizve élő adaton (CSM lista, dashboard widgets/stats,
+    preferences, ticket lista requesterCompany/lastMessage mezők) — a válasz alakja pontosan egyezik
+    azzal, amit a frontend kód vár. BÖNGÉSZŐS vizuális/interakciós tesztelés NEM történt — nincs
+    böngésző-automatizálási eszköz elérhető ebben a környezetben, ezt a felhasználónak kézzel kell
+    ellenőriznie
+  - Dev DB takarítás: a 13a. lépés teszteléséből visszamaradt user preferences (autosave=false,
+    listView=Card) és dashboard widgets (SlaCompliance+TrendChart) VISSZAÁLLÍTVA alapértelmezettre
+    (autosave=true, listView=Table; widgets=Unresolved/Overdue/Open/Unassigned), hogy tiszta állapotból
+    induljon a manuális tesztelés
 
 ## Seed adatok
 - Admin user: admin@supportportal.dev / Admin1234!
@@ -187,8 +246,8 @@ cd frontend && npm run dev               # port 5173
 
 ## Nyitott hibák / TODO
 - [ ] Notification bell SSE tesztelése több userrel
-- [ ] ~~CSM user hozzárendelés dropdown a ticket properties panelben~~ — backend (13a) kész, frontend
-      UI (13b) még hátravan: /settings/csm oldal, ticket properties panel CSM megjelenítés/kézi felülírás
+- [ ] CSM megjelenítés/kézi felülírás a ticket properties panelben — a CsmId/CsmName nincs a
+      TicketDetailDto-ban, backend-változás kellene hozzá (kimaradt a 13b-ből, ld. 13b összefoglaló)
 - [ ] README.md hiányzik (setup leírás új gépre)
 - [ ] ClickUp UI vizuális ellenőrzése böngészőben
 - [ ] Settings UI vizuális ellenőrzése böngészőben (9. lépés)
@@ -196,13 +255,15 @@ cd frontend && npm run dev               # port 5173
 - [ ] AI funkciók (12. lépés) valós Anthropic API kulccsal még nincsenek kipróbálva — csak a graceful
       degradation (kulcs nélkül) és a 404 eset lett tesztelve ebben a környezetben
 - [ ] AI funkciók UI vizuális ellenőrzése böngészőben (12. lépés)
-- [ ] 13a. lépés backend UI vizuális ellenőrzése nem releváns (nincs frontend rész ebben a lépésben)
+- [ ] 13b. lépés UI vizuális/interakciós ellenőrzése böngészőben MÉG NEM TÖRTÉNT MEG — nincs
+      böngésző-automatizálási eszköz ebben a környezetben; curl-lel csak a backend kontraktusok lettek
+      ellenőrizve, a React render/interakció (pl. draft mentés flow, widget checkbox, kártya nézet
+      layout) manuális kipróbálást igényel
+- [ ] Dashboard widget drag-and-drop pozicionálás nincs implementálva — jelenleg csak be/kikapcsolható
+      widget lista, auto-sorrendben (ld. 13b összefoglaló, szándékos MVP-döntés)
 - [ ] Teszt adatok: ticket #12, #13 és CSM "Kovács Anna Módosítva" (id=1) a 13a. lépés teszteléséből
       bent maradtak a dev DB-ben (nem törölhetők FK constraint miatt Notifications tábla felől) —
       ártalmatlanok, de ha tiszta demo state kell, kézzel törlendők vagy DB reseteld
 
-## Következő feladat (13b. lépés)
-Frontend — CSM, dashboard widgets, user preferences UI (a 13a. lépés backendjéhez).
-Még nincs részletezve — a 13a. lépés "NEM készült el" listája (fentebb, az elvégzett lépéseknél)
-tartalmazza a pontos hatókört, amiből ez a lépés kiindulhat: /settings/csm oldal, dashboard widget UI,
-user preferences UI, ticket lista card nézet (requesterCompany/lastMessage megjelenítéssel).
+## Következő feladat (14. lépés)
+Még nincs meghatározva.

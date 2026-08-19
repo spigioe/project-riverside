@@ -192,6 +192,11 @@
   background: var(--bg-alt);
 }
 
+.userDropdownItemNeutral {
+  composes: userDropdownItem;
+  color: var(--text);
+}
+
 .avatar {
   width: 32px;
   height: 32px;
