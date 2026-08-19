@@ -17,25 +17,33 @@ public class EmailPollingService(
         var interval = TimeSpan.FromSeconds(mailOptions.Value.PollIntervalSeconds);
         using var timer = new PeriodicTimer(interval);
 
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+        try
         {
-            try
+            while (await timer.WaitForNextTickAsync(stoppingToken))
             {
-                using var scope = scopeFactory.CreateScope();
-                var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-                var processor = scope.ServiceProvider.GetRequiredService<ITicketEmailProcessor>();
-
-                var emails = await emailService.FetchNewAsync();
-                if (emails.Count > 0)
+                try
                 {
-                    await processor.ProcessAsync(emails);
-                    logger.LogInformation("{Count} új email feldolgozva.", emails.Count);
+                    using var scope = scopeFactory.CreateScope();
+                    var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                    var processor = scope.ServiceProvider.GetRequiredService<ITicketEmailProcessor>();
+
+                    var emails = await emailService.FetchNewAsync();
+                    if (emails.Count > 0)
+                    {
+                        await processor.ProcessAsync(emails);
+                        logger.LogInformation("{Count} új email feldolgozva.", emails.Count);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Hiba történt az email lekérdezés (IMAP polling) során.");
                 }
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Hiba történt az email lekérdezés (IMAP polling) során.");
-            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Normál leállás (a host stoppingToken-je jelezte) — a PeriodicTimer ilyenkor
+            // OperationCanceledException-t dob a WaitForNextTickAsync-ból, ez nem hiba.
         }
     }
 }
