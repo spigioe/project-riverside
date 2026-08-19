@@ -83,6 +83,17 @@ public class IntegrationService(AppDbContext db, IEncryptionService encryptionSe
         }
     }
 
+    public async Task<string?> GetDecryptedApiKeyAsync()
+    {
+        var setting = await db.IntegrationSettings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.IntegrationType == IntegrationType);
+
+        if (setting is null) return null;
+
+        return Decode(setting.Config).ApiKey;
+    }
+
     private string Encode(ClickUpSecrets secrets) =>
         encryptionService.Encrypt(JsonSerializer.Serialize(secrets));
 

@@ -5,17 +5,38 @@ import {
   ticketClient,
   usersClient,
   AssignTicketRequest,
+  ClickUpLinkDto,
+  CreateClickUpLinkRequest,
   CreateTicketMessageRequest,
   MessageDirection,
   TicketSource,
   TicketStatus,
   UpdateTicketStatusRequest,
 } from '../api'
+import { Modal } from '../components/Modal/Modal'
 import { StatusBadge } from '../components/Badge/StatusBadge'
 import { PriorityBadge } from '../components/Badge/PriorityBadge'
 import badgeStyles from '../components/Badge/Badge.module.css'
+import shared from '../components/Settings/SettingsShared.module.css'
+import { getErrorMessage } from '../lib/errors'
 import { formatDateTime, formatTicketId } from '../lib/format'
 import styles from './TicketDetailPage.module.css'
+
+function extractClickUpTaskId(url: string): string {
+  const match = url.match(/\/t\/([a-zA-Z0-9]+)/)
+  if (match) return match[1]
+  const segments = url.split('/').filter(Boolean)
+  return segments[segments.length - 1] ?? ''
+}
+
+function clickUpStatusVariant(status: string | undefined): string {
+  if (!status) return badgeStyles.gray
+  const s = status.toLowerCase()
+  if (s.includes('progress')) return badgeStyles.primary
+  if (s.includes('complete') || s.includes('done') || s.includes('closed')) return badgeStyles.green
+  if (s.includes('block')) return badgeStyles.red
+  return badgeStyles.gray
+}
 
 const SOURCE_LABELS: Record<TicketSource, string> = {
   [TicketSource.Email]: 'Email',
@@ -247,10 +268,7 @@ export function TicketDetailPage() {
           </div>
         </div>
 
-        <div className={styles.card}>
-          <div className={styles.panelHeader}>ClickUp feladatok</div>
-          <div className={styles.emptyState}>Nincs összekapcsolt ClickUp feladat.</div>
-        </div>
+        <ClickUpSection ticketId={ticketId} />
 
         <div className={styles.card}>
           <div className={styles.panelHeader}>Egyéni mezők</div>
@@ -258,5 +276,153 @@ export function TicketDetailPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function ClickUpSection({ ticketId }: { ticketId: number }) {
+  const queryClient = useQueryClient()
+  const [addOpen, setAddOpen] = useState(false)
+
+  const linksQuery = useQuery({
+    queryKey: ['ticket-clickup', ticketId],
+    queryFn: () => ticketClient.getClickUpLinks(ticketId),
+    enabled: Number.isFinite(ticketId),
+  })
+
+  const links = linksQuery.data ?? []
+
+  const syncMutation = useMutation({
+    mutationFn: (linkId: number) => ticketClient.syncClickUpLink(ticketId, linkId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket-clickup', ticketId] }),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (linkId: number) => ticketClient.deleteClickUpLink(ticketId, linkId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket-clickup', ticketId] }),
+  })
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.panelHeader} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>ClickUp feladatok</span>
+        <button type="button" className={shared.linkButton} style={{ padding: 0 }} onClick={() => setAddOpen(true)}>
+          + Link hozzáadása
+        </button>
+      </div>
+
+      {links.length === 0 && <div className={styles.emptyState}>Nincs összekapcsolt ClickUp feladat.</div>}
+
+      {links.length > 0 && (
+        <div className={styles.clickUpList}>
+          {links.map((link: ClickUpLinkDto) => (
+            <div key={link.id} className={styles.clickUpItem}>
+              <div className={styles.clickUpItemHeader}>
+                <a href={link.clickUpTaskUrl} target="_blank" rel="noreferrer" className={styles.clickUpTaskLink}>
+                  {link.clickUpTaskTitle ?? link.clickUpTaskId}
+                </a>
+                <span className={`${badgeStyles.badge} ${clickUpStatusVariant(link.clickUpStatus)}`}>
+                  {link.clickUpStatus ?? 'nincs szinkronizálva'}
+                </span>
+              </div>
+              <div className={styles.clickUpMeta}>
+                {link.statusSyncedAt ? `Utoljára szinkronizálva: ${formatDateTime(link.statusSyncedAt)}` : 'Még nem szinkronizált'}
+              </div>
+              {link.notes && <div className={styles.clickUpMeta}>{link.notes}</div>}
+              <div className={styles.clickUpActions}>
+                <button
+                  type="button"
+                  className={shared.secondaryButton}
+                  disabled={syncMutation.isPending && syncMutation.variables === link.id}
+                  onClick={() => syncMutation.mutate(link.id!)}
+                >
+                  {syncMutation.isPending && syncMutation.variables === link.id ? 'Szinkronizálás…' : 'Szinkronizálás'}
+                </button>
+                <button
+                  type="button"
+                  className={shared.dangerButton}
+                  disabled={deleteMutation.isPending && deleteMutation.variables === link.id}
+                  onClick={() => {
+                    if (confirm('Biztosan törlöd ezt a ClickUp linket?')) deleteMutation.mutate(link.id!)
+                  }}
+                >
+                  Törlés
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {addOpen && <AddClickUpLinkModal ticketId={ticketId} onClose={() => setAddOpen(false)} />}
+    </div>
+  )
+}
+
+function AddClickUpLinkModal({ ticketId, onClose }: { ticketId: number; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const [taskUrl, setTaskUrl] = useState('')
+  const [taskId, setTaskId] = useState('')
+  const [notes, setNotes] = useState('')
+
+  const addMutation = useMutation({
+    mutationFn: () =>
+      ticketClient.addClickUpLink(
+        ticketId,
+        new CreateClickUpLinkRequest({
+          clickUpTaskId: taskId,
+          clickUpTaskUrl: taskUrl,
+          notes: notes || undefined,
+        }),
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket-clickup', ticketId] })
+      onClose()
+    },
+  })
+
+  function handleUrlChange(value: string) {
+    setTaskUrl(value)
+    if (!taskId) setTaskId(extractClickUpTaskId(value))
+  }
+
+  return (
+    <Modal title="ClickUp link hozzáadása" onClose={onClose}>
+      <form onSubmit={(e) => { e.preventDefault(); addMutation.mutate() }}>
+        {addMutation.isError && (
+          <div className={shared.formError}>{getErrorMessage(addMutation.error, 'Nem sikerült hozzáadni a linket.')}</div>
+        )}
+        <div className={shared.field}>
+          <label htmlFor="clickup-url">Task URL</label>
+          <input
+            id="clickup-url"
+            type="text"
+            placeholder="https://app.clickup.com/t/..."
+            value={taskUrl}
+            onChange={(e) => handleUrlChange(e.target.value)}
+            required
+          />
+        </div>
+        <div className={shared.field}>
+          <label htmlFor="clickup-task-id">Task ID</label>
+          <input
+            id="clickup-task-id"
+            type="text"
+            value={taskId}
+            onChange={(e) => setTaskId(e.target.value)}
+            required
+          />
+        </div>
+        <div className={shared.field}>
+          <label htmlFor="clickup-notes">Megjegyzés</label>
+          <textarea id="clickup-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+        <div className={shared.formActions}>
+          <button type="button" className={shared.secondaryButton} onClick={onClose}>Mégse</button>
+          <button type="submit" className={shared.primaryButton} disabled={addMutation.isPending || !taskUrl.trim() || !taskId.trim()}>
+            {addMutation.isPending ? 'Mentés…' : 'Hozzáadás'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }

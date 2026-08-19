@@ -2824,6 +2824,251 @@ export class TicketClient {
         }
         return Promise.resolve<TicketMessageDto>(null as any);
     }
+
+    getClickUpLinks(id: number, cancelToken?: CancelToken): Promise<ClickUpLinkDto[]> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/clickup";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetClickUpLinks(_response);
+        });
+    }
+
+    protected processGetClickUpLinks(response: AxiosResponse): Promise<ClickUpLinkDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(ClickUpLinkDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<ClickUpLinkDto[]>(result200);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ClickUpLinkDto[]>(null as any);
+    }
+
+    addClickUpLink(id: number, request: CreateClickUpLinkRequest, cancelToken?: CancelToken): Promise<ClickUpLinkDto> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/clickup";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processAddClickUpLink(_response);
+        });
+    }
+
+    protected processAddClickUpLink(response: AxiosResponse): Promise<ClickUpLinkDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = ClickUpLinkDto.fromJS(resultData201);
+            return Promise.resolve<ClickUpLinkDto>(result201);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ClickUpLinkDto>(null as any);
+    }
+
+    deleteClickUpLink(id: number, linkId: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/clickup/{linkId}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        if (linkId === undefined || linkId === null)
+            throw new globalThis.Error("The parameter 'linkId' must be defined.");
+        url_ = url_.replace("{linkId}", encodeURIComponent("" + linkId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDeleteClickUpLink(_response);
+        });
+    }
+
+    protected processDeleteClickUpLink(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    syncClickUpLink(id: number, linkId: number, cancelToken?: CancelToken): Promise<ClickUpLinkDto> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/clickup/{linkId}/sync";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        if (linkId === undefined || linkId === null)
+            throw new globalThis.Error("The parameter 'linkId' must be defined.");
+        url_ = url_.replace("{linkId}", encodeURIComponent("" + linkId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSyncClickUpLink(_response);
+        });
+    }
+
+    protected processSyncClickUpLink(response: AxiosResponse): Promise<ClickUpLinkDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = ClickUpLinkDto.fromJS(resultData200);
+            return Promise.resolve<ClickUpLinkDto>(result200);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ClickUpLinkDto>(null as any);
+    }
 }
 
 export class UsersClient {
@@ -5402,6 +5647,130 @@ export class CreateTicketMessageRequest implements ICreateTicketMessageRequest {
 export interface ICreateTicketMessageRequest {
     body?: string;
     isInternalNote?: boolean;
+}
+
+export class ClickUpLinkDto implements IClickUpLinkDto {
+    id?: number;
+    ticketId?: number;
+    clickUpTaskId?: string;
+    clickUpTaskUrl?: string;
+    clickUpTaskTitle?: string | undefined;
+    clickUpStatus?: string | undefined;
+    statusSyncedAt?: Date | undefined;
+    notes?: string | undefined;
+    createdById?: number;
+    createdByName?: string | undefined;
+    createdAt?: Date;
+
+    constructor(data?: IClickUpLinkDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.ticketId = _data["ticketId"];
+            this.clickUpTaskId = _data["clickUpTaskId"];
+            this.clickUpTaskUrl = _data["clickUpTaskUrl"];
+            this.clickUpTaskTitle = _data["clickUpTaskTitle"];
+            this.clickUpStatus = _data["clickUpStatus"];
+            this.statusSyncedAt = _data["statusSyncedAt"] ? new Date(_data["statusSyncedAt"].toString()) : undefined as any;
+            this.notes = _data["notes"];
+            this.createdById = _data["createdById"];
+            this.createdByName = _data["createdByName"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): ClickUpLinkDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new ClickUpLinkDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["ticketId"] = this.ticketId;
+        data["clickUpTaskId"] = this.clickUpTaskId;
+        data["clickUpTaskUrl"] = this.clickUpTaskUrl;
+        data["clickUpTaskTitle"] = this.clickUpTaskTitle;
+        data["clickUpStatus"] = this.clickUpStatus;
+        data["statusSyncedAt"] = this.statusSyncedAt ? this.statusSyncedAt.toISOString() : undefined as any;
+        data["notes"] = this.notes;
+        data["createdById"] = this.createdById;
+        data["createdByName"] = this.createdByName;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IClickUpLinkDto {
+    id?: number;
+    ticketId?: number;
+    clickUpTaskId?: string;
+    clickUpTaskUrl?: string;
+    clickUpTaskTitle?: string | undefined;
+    clickUpStatus?: string | undefined;
+    statusSyncedAt?: Date | undefined;
+    notes?: string | undefined;
+    createdById?: number;
+    createdByName?: string | undefined;
+    createdAt?: Date;
+}
+
+export class CreateClickUpLinkRequest implements ICreateClickUpLinkRequest {
+    clickUpTaskId?: string;
+    clickUpTaskUrl?: string;
+    clickUpTaskTitle?: string | undefined;
+    notes?: string | undefined;
+
+    constructor(data?: ICreateClickUpLinkRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.clickUpTaskId = _data["clickUpTaskId"];
+            this.clickUpTaskUrl = _data["clickUpTaskUrl"];
+            this.clickUpTaskTitle = _data["clickUpTaskTitle"];
+            this.notes = _data["notes"];
+        }
+    }
+
+    static fromJS(data: any): CreateClickUpLinkRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateClickUpLinkRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["clickUpTaskId"] = this.clickUpTaskId;
+        data["clickUpTaskUrl"] = this.clickUpTaskUrl;
+        data["clickUpTaskTitle"] = this.clickUpTaskTitle;
+        data["notes"] = this.notes;
+        return data;
+    }
+}
+
+export interface ICreateClickUpLinkRequest {
+    clickUpTaskId?: string;
+    clickUpTaskUrl?: string;
+    clickUpTaskTitle?: string | undefined;
+    notes?: string | undefined;
 }
 
 export class UserSummaryDto implements IUserSummaryDto {

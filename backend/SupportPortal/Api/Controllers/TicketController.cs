@@ -4,13 +4,18 @@ using SupportPortal.Api.Extensions;
 using SupportPortal.Application.DTOs.Common;
 using SupportPortal.Application.DTOs.Tickets;
 using SupportPortal.Application.Interfaces;
+using SupportPortal.Domain.Enums;
 
 namespace SupportPortal.Api.Controllers;
 
 [ApiController]
 [Authorize]
 [Route("api/portal/tickets")]
-public class TicketController(ITicketService ticketService) : ControllerBase
+public class TicketController(
+    ITicketService ticketService,
+    IClickUpLinkService clickUpLinkService,
+    IServiceScopeFactory scopeFactory,
+    ILogger<TicketController> logger) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<TicketListItemDto>), StatusCodes.Status200OK)]
@@ -28,6 +33,10 @@ public class TicketController(ITicketService ticketService) : ControllerBase
         var ticket = await ticketService.GetTicketByIdAsync(id);
         if (ticket is null)
             return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
+
+        // Fire-and-forget: a ClickUp szinkron nem blokkolhatja a jegy betöltését. Saját scope-ban fut,
+        // hogy a kérés lezárása után se szűnjön meg a mögötte lévő DbContext idő előtt.
+        _ = TriggerOnDemandClickUpSyncAsync(id);
 
         return Ok(ticket);
     }
@@ -140,5 +149,70 @@ public class TicketController(ITicketService ticketService) : ControllerBase
             return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
 
         return CreatedAtAction(nameof(GetMessages), new { id }, message);
+    }
+
+    [HttpGet("{id:int}/clickup")]
+    [ProducesResponseType(typeof(IReadOnlyList<ClickUpLinkDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetClickUpLinks(int id)
+    {
+        var links = await clickUpLinkService.GetLinksAsync(id);
+        if (links is null)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
+
+        return Ok(links);
+    }
+
+    [HttpPost("{id:int}/clickup")]
+    [ProducesResponseType(typeof(ClickUpLinkDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddClickUpLink(int id, [FromBody] CreateClickUpLinkRequest request)
+    {
+        var link = await clickUpLinkService.AddLinkAsync(id, request, User.GetUserId());
+        if (link is null)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
+
+        return CreatedAtAction(nameof(GetClickUpLinks), new { id }, link);
+    }
+
+    [HttpDelete("{id:int}/clickup/{linkId:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteClickUpLink(int id, int linkId)
+    {
+        var success = await clickUpLinkService.DeleteLinkAsync(id, linkId);
+        if (!success)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A ClickUp link nem található.");
+
+        return NoContent();
+    }
+
+    [HttpPost("{id:int}/clickup/{linkId:int}/sync")]
+    [ProducesResponseType(typeof(ClickUpLinkDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SyncClickUpLink(int id, int linkId)
+    {
+        var link = await clickUpLinkService.SyncLinkAsync(id, linkId, ClickUpSyncTrigger.UserOpen);
+        if (link is null)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A ClickUp link nem található.");
+
+        return Ok(link);
+    }
+
+    private Task TriggerOnDemandClickUpSyncAsync(int ticketId)
+    {
+        return Task.Run(async () =>
+        {
+            using var scope = scopeFactory.CreateScope();
+            try
+            {
+                var scopedClickUpLinkService = scope.ServiceProvider.GetRequiredService<IClickUpLinkService>();
+                await scopedClickUpLinkService.SyncTicketLinksAsync(ticketId, ClickUpSyncTrigger.UserOpen);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "ClickUp on-demand szinkron sikertelen a(z) #{TicketId} jegynél.", ticketId);
+            }
+        });
     }
 }
