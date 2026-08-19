@@ -103,6 +103,24 @@ public class TicketController(
         return Ok(new ToggleCsmResponse(isCsmFlagged.Value));
     }
 
+    [HttpPatch("{id:int}/csm-assign")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AssignCsm(int id, [FromBody] CsmAssignRequest request)
+    {
+        var result = await ticketService.AssignCsmAsync(id, request.CsmId);
+        return result switch
+        {
+            TicketCsmAssignResult.Success => NoContent(),
+            TicketCsmAssignResult.TicketNotFound =>
+                Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található."),
+            TicketCsmAssignResult.CsmNotFound =>
+                Problem(statusCode: StatusCodes.Status400BadRequest, title: "A megadott CSM nem található."),
+            _ => Problem(statusCode: StatusCodes.Status500InternalServerError),
+        };
+    }
+
     [HttpPost("{id:int}/merge")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

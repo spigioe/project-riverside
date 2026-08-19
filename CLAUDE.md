@@ -226,6 +226,65 @@ cd frontend && npm run dev               # port 5173
     listView=Card) és dashboard widgets (SlaCompliance+TrendChart) VISSZAÁLLÍTVA alapértelmezettre
     (autosave=true, listView=Table; widgets=Unresolved/Overdue/Open/Unassigned), hogy tiszta állapotból
     induljon a manuális tesztelés
+- 14. lépés KÉSZ: CSM dropdown a ticket properties panelben + custom field-ek (backend + settings UI +
+  ticket detail UI)
+  - Backend, CSM assign: `TicketDetailDto` kiegészítve `CsmId`/`CsmName`-mel (a korábban a 13b TODO
+    listáján hagyott hiányosság). `PATCH /api/portal/tickets/{id}/csm-assign` (`CsmAssignRequest{ CsmId }`)
+    — `TicketService.AssignCsmAsync`: 404 ha a ticket nem létezik, 400 `CsmNotFound` ha a megadott CsmId
+    nem szerepel a `csm_managers` táblában (nem FluentValidation-ban, mert DB-lookup kell hozzá — ugyanaz
+    a minta, mint a `TicketMergeResult`/`TicketAssignResult` service-szintű enumoknál)
+  - Backend, custom field-ek: `CustomFieldDefinitionsController` (`/api/portal/custom-fields/definitions`,
+    CRUD, Admin+MasterAdmin a mutáló endpointokon) + `TicketCustomFieldsController`
+    (`/api/portal/tickets/{id}/custom-fields`, GET+PUT). `CustomFieldService`:
+    - `FieldKey` auto-generálás a névből (ékezet-eltávolítás + slugify, pl. "Súlyosság" → "sulyossag"),
+      ütközésnél `-2`, `-3`, … suffix; explicit megadott `FieldKey`-nél 409 helyett 409 `FieldKeyTaken`
+      (ütközés esetén)
+    - `CustomFieldValue` entitás EntityType/EntityId polimorf kulcspárt használ (jelenleg mindig
+      "ticket"+TicketId) — ezt használtuk lookup kulcsként, NEM a `CustomFieldValue.TicketId` shadow FK-t
+      (ami a kezdeti migrációból megmaradt, nem ehhez a relációhoz tervezve) — lásd kommentet a
+      `CustomFieldService.cs` tetején
+    - `UpdateValuesAsync`: batch upsert, üres/null érték → törli a sort (nincs "üres string" mint állapot
+      a DB-ben); Select típusnál a service ellenőrzi, hogy az érték szerepel-e az `Options` listában (400
+      `InvalidOptionValue` ha nem)
+    - `CustomFieldType` enum már eleve tartalmazott `Number`/`Date` értéket is a `Text/Boolean/Select`
+      mellett (a terv csak ez utóbbi hármat kérte a UI-hoz) — a create/edit modal típusválasztója
+      szándékosan csak a három kért típust kínálja fel, de a tábla/renderelés minden enum-értékre felkészült
+      (label van rá), ha valaha DB-ből mégis bekerülne Number/Date
+  - Developer API (`GET /api/v1/tickets/{id}`): `TicketDetailWithRelationsDto` kiegészítve
+    `CustomFields: CustomFieldSummaryDto[]`-vel (fieldKey/name/fieldType/value — redukált alak, nincs
+    benne definitionId/options, AI-nak átadható formátum a terv szerint)
+  - NSwag újragenerálva (`nswag run nswag.json`, a helyi `dotnet run`-nal futó backend swagger.json-jából) —
+    `generated-client.ts` tartalmazza az összes új típust/klienst, bekötve `api/index.ts`-be
+    (`customFieldDefinitionsClient`, `ticketCustomFieldsClient`)
+  - Frontend, ticket detail: a "CSM jelölés" toggle MELLÉ (nem helyett) került egy "CSM felelős" dropdown
+    a Tulajdonságok panelben, ugyanazt az autosave/draft mintát követve, mint a Felelős/Státusz mezők
+    (`draftCsmId`, `ticketClient.assignCsm`). Az "Egyéni mezők" panel a `GetValues` válasz alapján
+    típus szerint renderel (Text→input, Select→select, Boolean→a meglévő toggle komponens újrafelhasználva).
+    Az egyéni mező értékek EGY közös local state-ben (`customFieldValues`) élnek autosave alatt IS — nem
+    csak draft módban —, mert különben gépelés közben az input "visszaugrana" a debounce-olt PUT
+    válaszára várva; autosave=true esetén mezőnkénti 500ms debounce (`setTimeout` per `definitionId`,
+    `customFieldTimers` ref-ben tárolva) küld PUT-ot, autosave=false esetén a meglévő "Mentés" gombhoz
+    csatlakozik (a `savePropertiesMutation` most a CSM-et és a ténylegesen megváltozott egyéni mezőket is
+    elküldi, csak azt ami eltér a szerver állapottól) — a "Mentés" gomb MEGJELENIK az Egyéni mezők panelen
+    is (nem csak a Tulajdonságok panelen), hogy egyértelmű legyen, hogy onnan is menthető, bár ugyanazt a
+    mutation-t hívja
+  - Frontend, `/settings/tickets`: új "Egyéni mezők" szekció a Kategóriák és Válaszsablonok alatt,
+    ugyanazt a tábla+modal mintát követve, mint a `/settings/csm` oldal — lista (név, típus badge,
+    kötelező, sorrend, műveletek) + "+ Új mező" modal (típus szerint feltételesen megjelenő opciók input)
+    + "Deaktiválás" gomb (a DELETE endpoint soft-delete-et csinál: `IsActive=false`, a definíció NEM tűnik
+    el a DB-ből, csak a listákból)
+  - Tesztelve curl-lel élő adaton: custom field definition CRUD (Text+Select létrehozás, GET lista,
+    UTF-8 ékezetes slug), ticket custom-fields GET (üres érték=null) + PUT (siker + 400 invalid Select
+    opció), csm-assign PATCH (siker + 404 nemlétező ticket + 400 nemlétező CsmId), GET ticket válaszban
+    csmId/csmName jelen van. Minden teszt adat (2 teszt custom field definition, ticket #1 csm-assign)
+    utólag visszaállítva/deaktiválva, tiszta állapotból indulhat a böngészős tesztelés. A Developer API
+    v1 `customFields` mezőt NEM teszteltem curl-lel — nem volt elérhető plaintext Developer API kulcs
+    ebben a környezetben (a kulcs SHA-256 hash-elve tárolódik, csak létrehozáskor látható egyszer a
+    Settings/Integration oldalon) — csak kód-review-val ellenőriztem
+  - `tsc -b` és `npm run build` tiszta, `oxlint` az érintett fájlokon (`TicketDetailPage.tsx`,
+    `SettingsTicketsPage.tsx`, `api/index.ts`) 0 warning
+  - BÖNGÉSZŐS vizuális/interakciós tesztelés NEM történt ehhez a lépéshez sem — nincs
+    böngésző-automatizálási eszköz ebben a környezetben (ld. TODO lista)
 
 ## Seed adatok
 - Admin user: admin@supportportal.dev / Admin1234!
@@ -246,9 +305,11 @@ cd frontend && npm run dev               # port 5173
 
 ## Nyitott hibák / TODO
 - [ ] Notification bell SSE tesztelése több userrel
-- [ ] CSM megjelenítés/kézi felülírás a ticket properties panelben — a CsmId/CsmName nincs a
-      TicketDetailDto-ban, backend-változás kellene hozzá (kimaradt a 13b-ből, ld. 13b összefoglaló)
 - [ ] README.md hiányzik (setup leírás új gépre)
+- [ ] 14. lépés UI vizuális/interakciós ellenőrzése böngészőben MÉG NEM TÖRTÉNT MEG (CSM dropdown,
+      egyéni mezők a ticket detail panelen, Custom field-ek szekció a /settings/tickets oldalon)
+- [ ] Developer API v1 `GET /api/v1/tickets/{id}` `customFields` mezője NEM lett curl-lel tesztelve
+      (nem volt elérhető plaintext Developer API kulcs ebben a környezetben — csak kód-review történt)
 - [ ] ClickUp UI vizuális ellenőrzése böngészőben
 - [ ] Settings UI vizuális ellenőrzése böngészőben (9. lépés)
 - [ ] MCP szerver Claude Desktop-pal való tesztelése (felhasználói oldali lépés)
@@ -265,5 +326,5 @@ cd frontend && npm run dev               # port 5173
       bent maradtak a dev DB-ben (nem törölhetők FK constraint miatt Notifications tábla felől) —
       ártalmatlanok, de ha tiszta demo state kell, kézzel törlendők vagy DB reseteld
 
-## Következő feladat (14. lépés)
+## Következő feladat (15. lépés)
 Még nincs meghatározva.

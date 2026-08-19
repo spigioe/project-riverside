@@ -18,6 +18,8 @@ public record TicketDetailDto(
     string RequesterName,
     TicketSource Source,
     bool IsCsmFlagged,
+    int? CsmId,
+    string? CsmName,
     bool IsMerged,
     int? MergedIntoTicketId,
     DateTime? SlaDueAt,

@@ -1,20 +1,26 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  csmClient,
   meClient,
   ticketAiClient,
   ticketClient,
+  ticketCustomFieldsClient,
   usersClient,
   AiClassifyResponse,
   AssignTicketRequest,
   ClickUpLinkDto,
   CreateClickUpLinkRequest,
   CreateTicketMessageRequest,
+  CsmAssignRequest,
+  CustomFieldType,
+  CustomFieldValueDto,
   MessageDirection,
   TicketDetailDto,
   TicketSource,
   TicketStatus,
+  UpdateCustomFieldValueItem,
   UpdateTicketRequest,
   UpdateTicketStatusRequest,
 } from '../api'
@@ -116,6 +122,27 @@ export function TicketDetailPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] }),
   })
 
+  const csmListQuery = useQuery({
+    queryKey: ['settings-csm'],
+    queryFn: () => csmClient.getAll(),
+  })
+
+  const csmAssignMutation = useMutation({
+    mutationFn: (csmId: number | undefined) => ticketClient.assignCsm(ticketId, new CsmAssignRequest({ csmId })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] }),
+  })
+
+  const customFieldsQuery = useQuery({
+    queryKey: ['ticket-custom-fields', ticketId],
+    queryFn: () => ticketCustomFieldsClient.getValues(ticketId),
+    enabled: Number.isFinite(ticketId),
+  })
+
+  const customFieldMutation = useMutation({
+    mutationFn: (item: UpdateCustomFieldValueItem) => ticketCustomFieldsClient.updateValues(ticketId, [item]),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket-custom-fields', ticketId] }),
+  })
+
   // "Ticket tulajdonságok automatikus mentése" preferencia: ha ki van kapcsolva, a Felelős/Státusz
   // mezők nem mentenek azonnal onChange-kor, hanem helyi draft állapotba kerülnek, és csak a
   // "Mentés" gombra kattintva íródnak ki (két külön hívással, csak azt ami valóban változott).
@@ -127,16 +154,45 @@ export function TicketDetailPage() {
 
   const [draftAssignedToId, setDraftAssignedToId] = useState<number | undefined>(undefined)
   const [draftStatus, setDraftStatus] = useState<TicketStatus | undefined>(undefined)
+  const [draftCsmId, setDraftCsmId] = useState<number | undefined>(undefined)
   const [propertiesDirty, setPropertiesDirty] = useState(false)
 
   useEffect(() => {
     if (ticketQuery.data) {
       setDraftAssignedToId(ticketQuery.data.assignedToId)
       setDraftStatus(ticketQuery.data.status)
+      setDraftCsmId(ticketQuery.data.csmId)
       setPropertiesDirty(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketQuery.data?.id])
+
+  // Az egyéni mező értékek mindig ebben a local state-ben élnek (autosave alatt is) — így gépelés
+  // közben nem "ugrik vissza" az input a debounce-olt mentés lezárultáig tartó szerver-válaszra várva.
+  const [customFieldValues, setCustomFieldValues] = useState<Record<number, string | undefined>>({})
+  const customFieldsInitRef = useRef<number | null>(null)
+  const customFieldTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
+
+  useEffect(() => {
+    if (customFieldsQuery.data && customFieldsInitRef.current !== ticketId) {
+      const values: Record<number, string | undefined> = {}
+      customFieldsQuery.data.forEach((f) => { values[f.definitionId!] = f.value ?? undefined })
+      setCustomFieldValues(values)
+      customFieldsInitRef.current = ticketId
+    }
+  }, [customFieldsQuery.data, ticketId])
+
+  function handleCustomFieldChange(definitionId: number, value: string | undefined) {
+    setCustomFieldValues((prev) => ({ ...prev, [definitionId]: value }))
+    if (autosave) {
+      clearTimeout(customFieldTimers.current[definitionId])
+      customFieldTimers.current[definitionId] = setTimeout(() => {
+        customFieldMutation.mutate(new UpdateCustomFieldValueItem({ definitionId, value }))
+      }, 500)
+    } else {
+      setPropertiesDirty(true)
+    }
+  }
 
   const savePropertiesMutation = useMutation({
     mutationFn: async () => {
@@ -147,11 +203,21 @@ export function TicketDetailPage() {
       if (draftStatus !== ticketQuery.data?.status) {
         tasks.push(ticketClient.updateStatus(ticketId, new UpdateTicketStatusRequest({ status: draftStatus! })))
       }
+      if (draftCsmId !== ticketQuery.data?.csmId) {
+        tasks.push(ticketClient.assignCsm(ticketId, new CsmAssignRequest({ csmId: draftCsmId })))
+      }
+      const changedCustomFields = (customFieldsQuery.data ?? [])
+        .filter((f) => (customFieldValues[f.definitionId!] ?? '') !== (f.value ?? ''))
+        .map((f) => new UpdateCustomFieldValueItem({ definitionId: f.definitionId, value: customFieldValues[f.definitionId!] }))
+      if (changedCustomFields.length > 0) {
+        tasks.push(ticketCustomFieldsClient.updateValues(ticketId, changedCustomFields))
+      }
       await Promise.all(tasks)
     },
     onSuccess: () => {
       setPropertiesDirty(false)
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-custom-fields', ticketId] })
     },
   })
 
@@ -328,6 +394,22 @@ export function TicketDetailPage() {
                 <span className={styles.toggleKnob} />
               </button>
             </div>
+            <div className={styles.field}>
+              <label>CSM felelős</label>
+              <select
+                value={(autosave ? ticket.csmId : draftCsmId) ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value ? Number(e.target.value) : undefined
+                  if (autosave) csmAssignMutation.mutate(value)
+                  else { setDraftCsmId(value); setPropertiesDirty(true) }
+                }}
+              >
+                <option value="">Nincs hozzárendelve</option>
+                {(csmListQuery.data ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -337,9 +419,81 @@ export function TicketDetailPage() {
 
         <div className={styles.card}>
           <div className={styles.panelHeader}>Egyéni mezők</div>
-          <div className={styles.emptyState}>Nincsenek egyéni mezők definiálva.</div>
+          <div className={styles.panelBody}>
+            {customFieldsQuery.isLoading && <div className={styles.emptyState}>Betöltés…</div>}
+            {!customFieldsQuery.isLoading && (customFieldsQuery.data ?? []).length === 0 && (
+              <div className={styles.emptyState}>Nincsenek egyéni mezők definiálva.</div>
+            )}
+            {(customFieldsQuery.data ?? []).map((field) => (
+              <CustomFieldField
+                key={field.definitionId}
+                field={field}
+                value={customFieldValues[field.definitionId!]}
+                onChange={(value) => handleCustomFieldChange(field.definitionId!, value)}
+              />
+            ))}
+            {!autosave && (customFieldsQuery.data ?? []).length > 0 && (
+              <div className={shared.formActions} style={{ marginTop: 0 }}>
+                <button
+                  type="button"
+                  className={shared.primaryButton}
+                  disabled={!propertiesDirty || savePropertiesMutation.isPending}
+                  onClick={() => savePropertiesMutation.mutate()}
+                >
+                  {savePropertiesMutation.isPending ? 'Mentés…' : 'Mentés'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function CustomFieldField({
+  field, value, onChange,
+}: { field: CustomFieldValueDto; value: string | undefined; onChange: (value: string | undefined) => void }) {
+  if (field.fieldType === CustomFieldType.Boolean) {
+    const checked = value === 'true'
+    return (
+      <div className={styles.toggleRow}>
+        <div className={styles.toggleLabel}>{field.name}</div>
+        <button
+          type="button"
+          className={`${styles.toggle} ${checked ? styles.toggleOn : ''}`}
+          onClick={() => onChange(checked ? 'false' : 'true')}
+          aria-pressed={checked}
+          aria-label={field.name}
+        >
+          <span className={styles.toggleKnob} />
+        </button>
+      </div>
+    )
+  }
+
+  if (field.fieldType === CustomFieldType.Select) {
+    return (
+      <div className={styles.field}>
+        <label>{field.name}</label>
+        <select value={value ?? ''} onChange={(e) => onChange(e.target.value || undefined)}>
+          <option value="">— válassz —</option>
+          {(field.options ?? []).map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      </div>
+    )
+  }
+
+  return (
+    <div className={styles.field}>
+      <label>{field.name}</label>
+      <input
+        type="text"
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value || undefined)}
+      />
     </div>
   )
 }

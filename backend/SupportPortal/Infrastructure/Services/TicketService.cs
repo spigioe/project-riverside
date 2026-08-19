@@ -98,7 +98,8 @@ public class TicketService(
                 t.AssignedToId, t.AssignedTo != null ? t.AssignedTo.FullName : null,
                 t.CreatedById, t.CreatedBy != null ? t.CreatedBy.FullName : null,
                 t.RequesterEmail, t.RequesterName, t.Source,
-                t.IsCsmFlagged, t.IsMerged, t.MergedIntoTicketId,
+                t.IsCsmFlagged, t.CsmId, t.Csm != null ? t.Csm.Name : null,
+                t.IsMerged, t.MergedIntoTicketId,
                 t.SlaDueAt, t.SlaBreach,
                 t.CreatedAt, t.UpdatedAt))
             .FirstOrDefaultAsync();
@@ -221,6 +222,24 @@ public class TicketService(
         }
 
         return ticket.IsCsmFlagged;
+    }
+
+    public async Task<TicketCsmAssignResult> AssignCsmAsync(int id, int? csmId)
+    {
+        var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
+        if (ticket is null) return TicketCsmAssignResult.TicketNotFound;
+
+        if (csmId.HasValue)
+        {
+            var csmExists = await db.CsmManagers.AnyAsync(c => c.Id == csmId.Value);
+            if (!csmExists) return TicketCsmAssignResult.CsmNotFound;
+        }
+
+        ticket.CsmId = csmId;
+        ticket.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        return TicketCsmAssignResult.Success;
     }
 
     public async Task<TicketMergeResult> MergeAsync(int id, int targetTicketId)

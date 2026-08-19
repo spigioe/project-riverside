@@ -3,17 +3,37 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cannedResponsesClient,
   categoriesClient,
+  customFieldDefinitionsClient,
   CannedResponseDto,
   CategoryDto,
   CreateCannedResponseFolderRequest,
   CreateCannedResponseRequest,
   CreateCategoryRequest,
+  CreateCustomFieldDefinitionRequest,
+  CustomFieldDefinitionDto,
+  CustomFieldType,
   UpdateCannedResponseRequest,
   UpdateCategoryRequest,
+  UpdateCustomFieldDefinitionRequest,
 } from '../../api'
 import { Modal } from '../../components/Modal/Modal'
+import badgeStyles from '../../components/Badge/Badge.module.css'
 import { getErrorMessage } from '../../lib/errors'
 import shared from '../../components/Settings/SettingsShared.module.css'
+
+const CUSTOM_FIELD_TYPE_OPTIONS: { value: CustomFieldType; label: string }[] = [
+  { value: CustomFieldType.Text, label: 'Szöveg' },
+  { value: CustomFieldType.Select, label: 'Legördülő' },
+  { value: CustomFieldType.Boolean, label: 'Jelölőnégyzet' },
+]
+
+const CUSTOM_FIELD_TYPE_LABELS: Record<CustomFieldType, string> = {
+  [CustomFieldType.Text]: 'SZÖVEG',
+  [CustomFieldType.Number]: 'SZÁM',
+  [CustomFieldType.Date]: 'DÁTUM',
+  [CustomFieldType.Boolean]: 'JELÖLŐNÉGYZET',
+  [CustomFieldType.Select]: 'LEGÖRDÜLŐ',
+}
 
 export function SettingsTicketsPage() {
   return (
@@ -21,12 +41,13 @@ export function SettingsTicketsPage() {
       <div className={shared.header}>
         <div>
           <h1 className={shared.title}>Ticket beállítások</h1>
-          <div className={shared.subtitle}>Kategóriák és válaszsablonok kezelése</div>
+          <div className={shared.subtitle}>Kategóriák, válaszsablonok és egyéni mezők kezelése</div>
         </div>
       </div>
 
       <CategoriesSection />
       <CannedResponsesSection />
+      <CustomFieldsSection />
     </div>
   )
 }
@@ -355,6 +376,200 @@ function ResponseModal({
         <div className={shared.formActions}>
           <button type="button" className={shared.secondaryButton} onClick={onClose}>Mégse</button>
           <button type="submit" className={shared.primaryButton} disabled={saveMutation.isPending}>
+            {saveMutation.isPending ? 'Mentés…' : 'Mentés'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function CustomFieldsSection() {
+  const queryClient = useQueryClient()
+  const definitionsQuery = useQuery({
+    queryKey: ['custom-field-definitions'],
+    queryFn: () => customFieldDefinitionsClient.getDefinitions(),
+  })
+  const [modalState, setModalState] = useState<{ mode: 'create' | 'edit'; field?: CustomFieldDefinitionDto } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const definitions = definitionsQuery.data ?? []
+
+  const deactivateMutation = useMutation({
+    mutationFn: (id: number) => customFieldDefinitionsClient.deactivateDefinition(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['custom-field-definitions'] }),
+    onError: (err) => setError(getErrorMessage(err, 'Nem sikerült deaktiválni a mezőt.')),
+  })
+
+  return (
+    <div className={shared.card}>
+      <div className={shared.cardHeader}>
+        <span className={shared.cardHeaderTitle}>Egyéni mezők</span>
+        <button type="button" className={shared.primaryButton} onClick={() => setModalState({ mode: 'create' })}>
+          + Új mező
+        </button>
+      </div>
+      {error && <div className={shared.formError} style={{ margin: '12px 16px 0' }}>{error}</div>}
+      <div className={shared.tableScroll}>
+        <table className={shared.table}>
+          <thead>
+            <tr>
+              <th>Név</th>
+              <th>Típus</th>
+              <th>Kötelező</th>
+              <th>Sorrend</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {definitionsQuery.isLoading && (
+              <tr><td colSpan={5} className={shared.emptyState}>Betöltés…</td></tr>
+            )}
+            {!definitionsQuery.isLoading && definitions.length === 0 && (
+              <tr><td colSpan={5} className={shared.emptyState}>Nincs egyéni mező definiálva.</td></tr>
+            )}
+            {definitions.map((f) => (
+              <tr key={f.id}>
+                <td>{f.name}</td>
+                <td>
+                  <span className={`${badgeStyles.badge} ${badgeStyles.gray}`}>{CUSTOM_FIELD_TYPE_LABELS[f.fieldType!]}</span>
+                </td>
+                <td className={shared.muted}>{f.isRequired ? 'Igen' : 'Nem'}</td>
+                <td className={shared.mono}>{f.displayOrder}</td>
+                <td>
+                  <div className={shared.actionsCell}>
+                    <button type="button" className={shared.linkButton} onClick={() => setModalState({ mode: 'edit', field: f })}>
+                      Szerkesztés
+                    </button>
+                    <button
+                      type="button"
+                      className={shared.dangerButton}
+                      disabled={deactivateMutation.isPending}
+                      onClick={() => {
+                        setError(null)
+                        if (confirm(`Biztosan deaktiválod a(z) "${f.name}" mezőt?`)) deactivateMutation.mutate(f.id!)
+                      }}
+                    >
+                      Deaktiválás
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {modalState && (
+        <CustomFieldModal
+          mode={modalState.mode}
+          field={modalState.field}
+          onClose={() => setModalState(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function CustomFieldModal({
+  mode, field, onClose,
+}: { mode: 'create' | 'edit'; field?: CustomFieldDefinitionDto; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const [name, setName] = useState(field?.name ?? '')
+  const [fieldType, setFieldType] = useState<CustomFieldType>(field?.fieldType ?? CustomFieldType.Text)
+  const [optionsInput, setOptionsInput] = useState((field?.options ?? []).join(', '))
+  const [isRequired, setIsRequired] = useState(field?.isRequired ?? false)
+  const [displayOrder, setDisplayOrder] = useState(field?.displayOrder ?? 0)
+
+  const options = optionsInput.split(',').map((o) => o.trim()).filter(Boolean)
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (mode === 'create') {
+        await customFieldDefinitionsClient.createDefinition(new CreateCustomFieldDefinitionRequest({
+          name,
+          fieldKey: undefined,
+          fieldType,
+          isRequired,
+          options: fieldType === CustomFieldType.Select ? options : undefined,
+          displayOrder,
+        }))
+        return
+      }
+      await customFieldDefinitionsClient.updateDefinition(field!.id!, new UpdateCustomFieldDefinitionRequest({
+        name,
+        fieldType,
+        isRequired,
+        options: fieldType === CustomFieldType.Select ? options : undefined,
+        displayOrder,
+      }))
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['custom-field-definitions'] })
+      onClose()
+    },
+  })
+
+  return (
+    <Modal title={mode === 'create' ? 'Új egyéni mező' : `${field?.name} szerkesztése`} onClose={onClose}>
+      <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate() }}>
+        {saveMutation.isError && (
+          <div className={shared.formError}>{getErrorMessage(saveMutation.error, 'Nem sikerült menteni az egyéni mezőt.')}</div>
+        )}
+        <div className={shared.field}>
+          <label htmlFor="cf-name">Név</label>
+          <input id="cf-name" type="text" value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+        <div className={shared.field}>
+          <label htmlFor="cf-type">Típus</label>
+          <select
+            id="cf-type"
+            value={fieldType}
+            onChange={(e) => setFieldType(e.target.value as CustomFieldType)}
+          >
+            {CUSTOM_FIELD_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        {fieldType === CustomFieldType.Select && (
+          <div className={shared.field}>
+            <label htmlFor="cf-options">Opciók (vesszővel elválasztva)</label>
+            <input
+              id="cf-options"
+              type="text"
+              placeholder="Alacsony, Közepes, Magas"
+              value={optionsInput}
+              onChange={(e) => setOptionsInput(e.target.value)}
+            />
+          </div>
+        )}
+        <div className={shared.field}>
+          <label htmlFor="cf-order">Sorrend</label>
+          <input
+            id="cf-order"
+            type="number"
+            min={0}
+            value={displayOrder}
+            onChange={(e) => setDisplayOrder(Number(e.target.value))}
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            id="cf-required"
+            type="checkbox"
+            checked={isRequired}
+            onChange={(e) => setIsRequired(e.target.checked)}
+          />
+          <label htmlFor="cf-required" style={{ margin: 0 }}>Kötelező mező</label>
+        </div>
+        <div className={shared.formActions}>
+          <button type="button" className={shared.secondaryButton} onClick={onClose}>Mégse</button>
+          <button
+            type="submit"
+            className={shared.primaryButton}
+            disabled={saveMutation.isPending || !name.trim() || (fieldType === CustomFieldType.Select && options.length === 0)}
+          >
             {saveMutation.isPending ? 'Mentés…' : 'Mentés'}
           </button>
         </div>

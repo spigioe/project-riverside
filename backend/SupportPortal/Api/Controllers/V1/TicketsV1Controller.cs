@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SupportPortal.Api.Extensions;
 using SupportPortal.Application.DTOs.Common;
+using SupportPortal.Application.DTOs.CustomFields;
 using SupportPortal.Application.DTOs.Tickets;
 using SupportPortal.Application.Interfaces;
 using SupportPortal.Domain.Enums;
@@ -15,7 +16,10 @@ namespace SupportPortal.Api.Controllers.V1;
 [Authorize(AuthenticationSchemes = ApiKeyAuthenticationHandler.SchemeName)]
 [ApiExplorerSettings(GroupName = "developer")]
 [Route("api/v1/tickets")]
-public class TicketsV1Controller(ITicketService ticketService, IClickUpLinkService clickUpLinkService) : ControllerBase
+public class TicketsV1Controller(
+    ITicketService ticketService,
+    IClickUpLinkService clickUpLinkService,
+    ICustomFieldService customFieldService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<TicketListItemDto>), StatusCodes.Status200OK)]
@@ -35,8 +39,12 @@ public class TicketsV1Controller(ITicketService ticketService, IClickUpLinkServi
 
         var messages = await ticketService.GetMessagesAsync(id) ?? [];
         var clickUpLinks = await clickUpLinkService.GetLinksAsync(id) ?? [];
+        var customFieldValues = await customFieldService.GetValuesAsync(id) ?? [];
+        var customFields = customFieldValues
+            .Select(v => new CustomFieldSummaryDto(v.FieldKey, v.Name, v.FieldType, v.Value))
+            .ToList();
 
-        return Ok(new TicketDetailWithRelationsDto(ticket, messages, clickUpLinks));
+        return Ok(new TicketDetailWithRelationsDto(ticket, messages, clickUpLinks, customFields));
     }
 
     [HttpPost]

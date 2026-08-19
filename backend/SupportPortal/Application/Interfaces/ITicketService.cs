@@ -8,6 +8,8 @@ public enum TicketAssignResult { Success, TicketNotFound, UserNotFound }
 
 public enum TicketMergeResult { Success, TicketNotFound, TargetNotFound, SelfMerge, SourceAlreadyMerged, TargetAlreadyMerged }
 
+public enum TicketCsmAssignResult { Success, TicketNotFound, CsmNotFound }
+
 public interface ITicketService
 {
     Task<PagedResult<TicketListItemDto>> GetTicketsAsync(TicketListQuery query);
@@ -17,6 +19,7 @@ public interface ITicketService
     Task<bool> UpdateStatusAsync(int id, TicketStatus status, int currentUserId);
     Task<TicketAssignResult> AssignAsync(int id, int? assignedToId, int currentUserId);
     Task<bool?> ToggleCsmAsync(int id, int currentUserId);
+    Task<TicketCsmAssignResult> AssignCsmAsync(int id, int? csmId);
     Task<TicketMergeResult> MergeAsync(int id, int targetTicketId);
     Task<IReadOnlyList<TicketMessageDto>?> GetMessagesAsync(int ticketId);
     Task<TicketMessageDto?> AddMessageAsync(int ticketId, CreateTicketMessageRequest request, int currentUserId);

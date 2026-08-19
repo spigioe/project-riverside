@@ -5,6 +5,7 @@ import {
   CannedResponsesClient,
   CategoriesClient,
   CsmClient,
+  CustomFieldDefinitionsClient,
   DashboardClient,
   IntegrationClient,
   MeClient,
@@ -14,6 +15,7 @@ import {
   SlaClient,
   TicketAiClient,
   TicketClient,
+  TicketCustomFieldsClient,
   UsersClient,
 } from './generated-client'
 import { baseURL, httpClient } from './httpClient'
@@ -37,3 +39,5 @@ export const auditLogClient = new AuditLogClient(baseURL, httpClient)
 export const csmClient = new CsmClient(baseURL, httpClient)
 export const dashboardClient = new DashboardClient(baseURL, httpClient)
 export const meClient = new MeClient(baseURL, httpClient)
+export const customFieldDefinitionsClient = new CustomFieldDefinitionsClient(baseURL, httpClient)
+export const ticketCustomFieldsClient = new TicketCustomFieldsClient(baseURL, httpClient)

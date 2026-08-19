@@ -1479,6 +1479,246 @@ export class CsmClient {
     }
 }
 
+export class CustomFieldDefinitionsClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getDefinitions( cancelToken?: CancelToken): Promise<CustomFieldDefinitionDto[]> {
+        let url_ = this.baseUrl + "/api/portal/custom-fields/definitions";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetDefinitions(_response);
+        });
+    }
+
+    protected processGetDefinitions(response: AxiosResponse): Promise<CustomFieldDefinitionDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CustomFieldDefinitionDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<CustomFieldDefinitionDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CustomFieldDefinitionDto[]>(null as any);
+    }
+
+    createDefinition(request: CreateCustomFieldDefinitionRequest, cancelToken?: CancelToken): Promise<CustomFieldDefinitionDto> {
+        let url_ = this.baseUrl + "/api/portal/custom-fields/definitions";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreateDefinition(_response);
+        });
+    }
+
+    protected processCreateDefinition(response: AxiosResponse): Promise<CustomFieldDefinitionDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = CustomFieldDefinitionDto.fromJS(resultData201);
+            return Promise.resolve<CustomFieldDefinitionDto>(result201);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CustomFieldDefinitionDto>(null as any);
+    }
+
+    updateDefinition(id: number, request: UpdateCustomFieldDefinitionRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/custom-fields/definitions/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdateDefinition(_response);
+        });
+    }
+
+    protected processUpdateDefinition(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    deactivateDefinition(id: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/custom-fields/definitions/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDeactivateDefinition(_response);
+        });
+    }
+
+    protected processDeactivateDefinition(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+}
+
 export class DashboardClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -3442,6 +3682,71 @@ export class TicketClient {
         return Promise.resolve<ToggleCsmResponse>(null as any);
     }
 
+    assignCsm(id: number, request: CsmAssignRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/csm-assign";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PATCH",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processAssignCsm(_response);
+        });
+    }
+
+    protected processAssignCsm(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
     mergeTicket(id: number, request: MergeTicketRequest, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/portal/tickets/{id}/merge";
         if (id === undefined || id === null)
@@ -3877,6 +4182,161 @@ export class TicketClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<ClickUpLinkDto>(null as any);
+    }
+}
+
+export class TicketCustomFieldsClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getValues(id: number, cancelToken?: CancelToken): Promise<CustomFieldValueDto[]> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/custom-fields";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetValues(_response);
+        });
+    }
+
+    protected processGetValues(response: AxiosResponse): Promise<CustomFieldValueDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CustomFieldValueDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<CustomFieldValueDto[]>(result200);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CustomFieldValueDto[]>(null as any);
+    }
+
+    updateValues(id: number, values: UpdateCustomFieldValueItem[], cancelToken?: CancelToken): Promise<CustomFieldValueDto[]> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/custom-fields";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(values);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdateValues(_response);
+        });
+    }
+
+    protected processUpdateValues(response: AxiosResponse): Promise<CustomFieldValueDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CustomFieldValueDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<CustomFieldValueDto[]>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CustomFieldValueDto[]>(null as any);
     }
 }
 
@@ -5329,6 +5789,210 @@ export interface ICsmSuggestionDto {
     csmEmail?: string | undefined;
 }
 
+export class CustomFieldDefinitionDto implements ICustomFieldDefinitionDto {
+    id?: number;
+    name?: string;
+    fieldKey?: string;
+    fieldType?: CustomFieldType;
+    isRequired?: boolean;
+    options?: string[] | undefined;
+    displayOrder?: number;
+    isActive?: boolean;
+
+    constructor(data?: ICustomFieldDefinitionDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.fieldKey = _data["fieldKey"];
+            this.fieldType = _data["fieldType"];
+            this.isRequired = _data["isRequired"];
+            if (Array.isArray(_data["options"])) {
+                this.options = [] as any;
+                for (let item of _data["options"])
+                    this.options!.push(item);
+            }
+            this.displayOrder = _data["displayOrder"];
+            this.isActive = _data["isActive"];
+        }
+    }
+
+    static fromJS(data: any): CustomFieldDefinitionDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new CustomFieldDefinitionDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["fieldKey"] = this.fieldKey;
+        data["fieldType"] = this.fieldType;
+        data["isRequired"] = this.isRequired;
+        if (Array.isArray(this.options)) {
+            data["options"] = [];
+            for (let item of this.options)
+                data["options"].push(item);
+        }
+        data["displayOrder"] = this.displayOrder;
+        data["isActive"] = this.isActive;
+        return data;
+    }
+}
+
+export interface ICustomFieldDefinitionDto {
+    id?: number;
+    name?: string;
+    fieldKey?: string;
+    fieldType?: CustomFieldType;
+    isRequired?: boolean;
+    options?: string[] | undefined;
+    displayOrder?: number;
+    isActive?: boolean;
+}
+
+export enum CustomFieldType {
+    Text = "Text",
+    Number = "Number",
+    Date = "Date",
+    Boolean = "Boolean",
+    Select = "Select",
+}
+
+export class CreateCustomFieldDefinitionRequest implements ICreateCustomFieldDefinitionRequest {
+    name?: string;
+    fieldKey?: string | undefined;
+    fieldType?: CustomFieldType;
+    isRequired?: boolean;
+    options?: string[] | undefined;
+    displayOrder?: number;
+
+    constructor(data?: ICreateCustomFieldDefinitionRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.fieldKey = _data["fieldKey"];
+            this.fieldType = _data["fieldType"];
+            this.isRequired = _data["isRequired"];
+            if (Array.isArray(_data["options"])) {
+                this.options = [] as any;
+                for (let item of _data["options"])
+                    this.options!.push(item);
+            }
+            this.displayOrder = _data["displayOrder"];
+        }
+    }
+
+    static fromJS(data: any): CreateCustomFieldDefinitionRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateCustomFieldDefinitionRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["fieldKey"] = this.fieldKey;
+        data["fieldType"] = this.fieldType;
+        data["isRequired"] = this.isRequired;
+        if (Array.isArray(this.options)) {
+            data["options"] = [];
+            for (let item of this.options)
+                data["options"].push(item);
+        }
+        data["displayOrder"] = this.displayOrder;
+        return data;
+    }
+}
+
+export interface ICreateCustomFieldDefinitionRequest {
+    name?: string;
+    fieldKey?: string | undefined;
+    fieldType?: CustomFieldType;
+    isRequired?: boolean;
+    options?: string[] | undefined;
+    displayOrder?: number;
+}
+
+export class UpdateCustomFieldDefinitionRequest implements IUpdateCustomFieldDefinitionRequest {
+    name?: string;
+    fieldType?: CustomFieldType;
+    isRequired?: boolean;
+    options?: string[] | undefined;
+    displayOrder?: number;
+
+    constructor(data?: IUpdateCustomFieldDefinitionRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.fieldType = _data["fieldType"];
+            this.isRequired = _data["isRequired"];
+            if (Array.isArray(_data["options"])) {
+                this.options = [] as any;
+                for (let item of _data["options"])
+                    this.options!.push(item);
+            }
+            this.displayOrder = _data["displayOrder"];
+        }
+    }
+
+    static fromJS(data: any): UpdateCustomFieldDefinitionRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateCustomFieldDefinitionRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["fieldType"] = this.fieldType;
+        data["isRequired"] = this.isRequired;
+        if (Array.isArray(this.options)) {
+            data["options"] = [];
+            for (let item of this.options)
+                data["options"].push(item);
+        }
+        data["displayOrder"] = this.displayOrder;
+        return data;
+    }
+}
+
+export interface IUpdateCustomFieldDefinitionRequest {
+    name?: string;
+    fieldType?: CustomFieldType;
+    isRequired?: boolean;
+    options?: string[] | undefined;
+    displayOrder?: number;
+}
+
 export class DashboardWidgetDto implements IDashboardWidgetDto {
     id?: number;
     widgetType?: DashboardWidgetType;
@@ -6627,6 +7291,8 @@ export class TicketDetailDto implements ITicketDetailDto {
     requesterName?: string;
     source?: TicketSource;
     isCsmFlagged?: boolean;
+    csmId?: number | undefined;
+    csmName?: string | undefined;
     isMerged?: boolean;
     mergedIntoTicketId?: number | undefined;
     slaDueAt?: Date | undefined;
@@ -6660,6 +7326,8 @@ export class TicketDetailDto implements ITicketDetailDto {
             this.requesterName = _data["requesterName"];
             this.source = _data["source"];
             this.isCsmFlagged = _data["isCsmFlagged"];
+            this.csmId = _data["csmId"];
+            this.csmName = _data["csmName"];
             this.isMerged = _data["isMerged"];
             this.mergedIntoTicketId = _data["mergedIntoTicketId"];
             this.slaDueAt = _data["slaDueAt"] ? new Date(_data["slaDueAt"].toString()) : undefined as any;
@@ -6693,6 +7361,8 @@ export class TicketDetailDto implements ITicketDetailDto {
         data["requesterName"] = this.requesterName;
         data["source"] = this.source;
         data["isCsmFlagged"] = this.isCsmFlagged;
+        data["csmId"] = this.csmId;
+        data["csmName"] = this.csmName;
         data["isMerged"] = this.isMerged;
         data["mergedIntoTicketId"] = this.mergedIntoTicketId;
         data["slaDueAt"] = this.slaDueAt ? this.slaDueAt.toISOString() : undefined as any;
@@ -6719,6 +7389,8 @@ export interface ITicketDetailDto {
     requesterName?: string;
     source?: TicketSource;
     isCsmFlagged?: boolean;
+    csmId?: number | undefined;
+    csmName?: string | undefined;
     isMerged?: boolean;
     mergedIntoTicketId?: number | undefined;
     slaDueAt?: Date | undefined;
@@ -6956,6 +7628,42 @@ export class ToggleCsmResponse implements IToggleCsmResponse {
 
 export interface IToggleCsmResponse {
     isCsmFlagged?: boolean;
+}
+
+export class CsmAssignRequest implements ICsmAssignRequest {
+    csmId?: number | undefined;
+
+    constructor(data?: ICsmAssignRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.csmId = _data["csmId"];
+        }
+    }
+
+    static fromJS(data: any): CsmAssignRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CsmAssignRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["csmId"] = this.csmId;
+        return data;
+    }
+}
+
+export interface ICsmAssignRequest {
+    csmId?: number | undefined;
 }
 
 export class MergeTicketRequest implements IMergeTicketRequest {
@@ -7229,6 +7937,110 @@ export interface ICreateClickUpLinkRequest {
     clickUpTaskUrl?: string;
     clickUpTaskTitle?: string | undefined;
     notes?: string | undefined;
+}
+
+export class CustomFieldValueDto implements ICustomFieldValueDto {
+    definitionId?: number;
+    fieldKey?: string;
+    name?: string;
+    fieldType?: CustomFieldType;
+    value?: string | undefined;
+    options?: string[] | undefined;
+
+    constructor(data?: ICustomFieldValueDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.definitionId = _data["definitionId"];
+            this.fieldKey = _data["fieldKey"];
+            this.name = _data["name"];
+            this.fieldType = _data["fieldType"];
+            this.value = _data["value"];
+            if (Array.isArray(_data["options"])) {
+                this.options = [] as any;
+                for (let item of _data["options"])
+                    this.options!.push(item);
+            }
+        }
+    }
+
+    static fromJS(data: any): CustomFieldValueDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new CustomFieldValueDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["definitionId"] = this.definitionId;
+        data["fieldKey"] = this.fieldKey;
+        data["name"] = this.name;
+        data["fieldType"] = this.fieldType;
+        data["value"] = this.value;
+        if (Array.isArray(this.options)) {
+            data["options"] = [];
+            for (let item of this.options)
+                data["options"].push(item);
+        }
+        return data;
+    }
+}
+
+export interface ICustomFieldValueDto {
+    definitionId?: number;
+    fieldKey?: string;
+    name?: string;
+    fieldType?: CustomFieldType;
+    value?: string | undefined;
+    options?: string[] | undefined;
+}
+
+export class UpdateCustomFieldValueItem implements IUpdateCustomFieldValueItem {
+    definitionId?: number;
+    value?: string | undefined;
+
+    constructor(data?: IUpdateCustomFieldValueItem) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.definitionId = _data["definitionId"];
+            this.value = _data["value"];
+        }
+    }
+
+    static fromJS(data: any): UpdateCustomFieldValueItem {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateCustomFieldValueItem();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["definitionId"] = this.definitionId;
+        data["value"] = this.value;
+        return data;
+    }
+}
+
+export interface IUpdateCustomFieldValueItem {
+    definitionId?: number;
+    value?: string | undefined;
 }
 
 export class UserSummaryDto implements IUserSummaryDto {
@@ -7627,6 +8439,7 @@ export class TicketDetailWithRelationsDto implements ITicketDetailWithRelationsD
     ticket?: TicketDetailDto;
     messages?: TicketMessageDto[];
     clickUpLinks?: ClickUpLinkDto[];
+    customFields?: CustomFieldSummaryDto[];
 
     constructor(data?: ITicketDetailWithRelationsDto) {
         if (data) {
@@ -7649,6 +8462,11 @@ export class TicketDetailWithRelationsDto implements ITicketDetailWithRelationsD
                 this.clickUpLinks = [] as any;
                 for (let item of _data["clickUpLinks"])
                     this.clickUpLinks!.push(ClickUpLinkDto.fromJS(item));
+            }
+            if (Array.isArray(_data["customFields"])) {
+                this.customFields = [] as any;
+                for (let item of _data["customFields"])
+                    this.customFields!.push(CustomFieldSummaryDto.fromJS(item));
             }
         }
     }
@@ -7673,6 +8491,11 @@ export class TicketDetailWithRelationsDto implements ITicketDetailWithRelationsD
             for (let item of this.clickUpLinks)
                 data["clickUpLinks"].push(item ? item.toJSON() : undefined as any);
         }
+        if (Array.isArray(this.customFields)) {
+            data["customFields"] = [];
+            for (let item of this.customFields)
+                data["customFields"].push(item ? item.toJSON() : undefined as any);
+        }
         return data;
     }
 }
@@ -7681,6 +8504,55 @@ export interface ITicketDetailWithRelationsDto {
     ticket?: TicketDetailDto;
     messages?: TicketMessageDto[];
     clickUpLinks?: ClickUpLinkDto[];
+    customFields?: CustomFieldSummaryDto[];
+}
+
+export class CustomFieldSummaryDto implements ICustomFieldSummaryDto {
+    fieldKey?: string;
+    name?: string;
+    fieldType?: CustomFieldType;
+    value?: string | undefined;
+
+    constructor(data?: ICustomFieldSummaryDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.fieldKey = _data["fieldKey"];
+            this.name = _data["name"];
+            this.fieldType = _data["fieldType"];
+            this.value = _data["value"];
+        }
+    }
+
+    static fromJS(data: any): CustomFieldSummaryDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new CustomFieldSummaryDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["fieldKey"] = this.fieldKey;
+        data["name"] = this.name;
+        data["fieldType"] = this.fieldType;
+        data["value"] = this.value;
+        return data;
+    }
+}
+
+export interface ICustomFieldSummaryDto {
+    fieldKey?: string;
+    name?: string;
+    fieldType?: CustomFieldType;
+    value?: string | undefined;
 }
 
 export class SwaggerException extends Error {
