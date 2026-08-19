@@ -2220,7 +2220,7 @@ export class TicketClient {
 
     }
 
-    getTickets(status?: TicketStatus | null | undefined, priority?: TicketPriority | null | undefined, categoryId?: number | null | undefined, search?: string | null | undefined, page?: number | undefined, pageSize?: number | undefined, cancelToken?: CancelToken): Promise<PagedResultOfTicketListItemDto> {
+    getTickets(status?: TicketStatus | null | undefined, priority?: TicketPriority | null | undefined, categoryId?: number | null | undefined, search?: string | null | undefined, dateFrom?: Date | null | undefined, dateTo?: Date | null | undefined, page?: number | undefined, pageSize?: number | undefined, cancelToken?: CancelToken): Promise<PagedResultOfTicketListItemDto> {
         let url_ = this.baseUrl + "/api/portal/tickets?";
         if (status !== undefined && status !== null)
             url_ += "Status=" + encodeURIComponent("" + status) + "&";
@@ -2230,6 +2230,10 @@ export class TicketClient {
             url_ += "CategoryId=" + encodeURIComponent("" + categoryId) + "&";
         if (search !== undefined && search !== null)
             url_ += "Search=" + encodeURIComponent("" + search) + "&";
+        if (dateFrom !== undefined && dateFrom !== null)
+            url_ += "DateFrom=" + encodeURIComponent(dateFrom ? "" + dateFrom.toISOString() : "") + "&";
+        if (dateTo !== undefined && dateTo !== null)
+            url_ += "DateTo=" + encodeURIComponent(dateTo ? "" + dateTo.toISOString() : "") + "&";
         if (page === null)
             throw new globalThis.Error("The parameter 'page' cannot be null.");
         else if (page !== undefined)
@@ -5274,6 +5278,7 @@ export enum TicketSource {
     Email = "Email",
     Portal = "Portal",
     Manual = "Manual",
+    Api = "Api",
 }
 
 export class CreateTicketRequest implements ICreateTicketRequest {
@@ -5975,6 +5980,254 @@ export interface IUpdateUserRequest {
     fullName?: string;
     roleId?: number;
     isActive?: boolean;
+}
+
+export class TicketsByCategoryDto implements ITicketsByCategoryDto {
+    categoryId?: number | undefined;
+    categoryName?: string;
+    count?: number;
+
+    constructor(data?: ITicketsByCategoryDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.categoryId = _data["categoryId"];
+            this.categoryName = _data["categoryName"];
+            this.count = _data["count"];
+        }
+    }
+
+    static fromJS(data: any): TicketsByCategoryDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new TicketsByCategoryDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["categoryId"] = this.categoryId;
+        data["categoryName"] = this.categoryName;
+        data["count"] = this.count;
+        return data;
+    }
+}
+
+export interface ITicketsByCategoryDto {
+    categoryId?: number | undefined;
+    categoryName?: string;
+    count?: number;
+}
+
+export class TicketsByStatusDto implements ITicketsByStatusDto {
+    status?: TicketStatus;
+    count?: number;
+
+    constructor(data?: ITicketsByStatusDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.status = _data["status"];
+            this.count = _data["count"];
+        }
+    }
+
+    static fromJS(data: any): TicketsByStatusDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new TicketsByStatusDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["status"] = this.status;
+        data["count"] = this.count;
+        return data;
+    }
+}
+
+export interface ITicketsByStatusDto {
+    status?: TicketStatus;
+    count?: number;
+}
+
+export class SlaComplianceDto implements ISlaComplianceDto {
+    totalWithSla?: number;
+    compliant?: number;
+    breached?: number;
+    compliancePercentage?: number;
+
+    constructor(data?: ISlaComplianceDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.totalWithSla = _data["totalWithSla"];
+            this.compliant = _data["compliant"];
+            this.breached = _data["breached"];
+            this.compliancePercentage = _data["compliancePercentage"];
+        }
+    }
+
+    static fromJS(data: any): SlaComplianceDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new SlaComplianceDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["totalWithSla"] = this.totalWithSla;
+        data["compliant"] = this.compliant;
+        data["breached"] = this.breached;
+        data["compliancePercentage"] = this.compliancePercentage;
+        return data;
+    }
+}
+
+export interface ISlaComplianceDto {
+    totalWithSla?: number;
+    compliant?: number;
+    breached?: number;
+    compliancePercentage?: number;
+}
+
+export class RecentActivityItemDto implements IRecentActivityItemDto {
+    eventType?: string;
+    ticketId?: number;
+    ticketSubject?: string;
+    actorName?: string | undefined;
+    description?: string;
+    occurredAt?: Date;
+
+    constructor(data?: IRecentActivityItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.eventType = _data["eventType"];
+            this.ticketId = _data["ticketId"];
+            this.ticketSubject = _data["ticketSubject"];
+            this.actorName = _data["actorName"];
+            this.description = _data["description"];
+            this.occurredAt = _data["occurredAt"] ? new Date(_data["occurredAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): RecentActivityItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new RecentActivityItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["eventType"] = this.eventType;
+        data["ticketId"] = this.ticketId;
+        data["ticketSubject"] = this.ticketSubject;
+        data["actorName"] = this.actorName;
+        data["description"] = this.description;
+        data["occurredAt"] = this.occurredAt ? this.occurredAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IRecentActivityItemDto {
+    eventType?: string;
+    ticketId?: number;
+    ticketSubject?: string;
+    actorName?: string | undefined;
+    description?: string;
+    occurredAt?: Date;
+}
+
+export class TicketDetailWithRelationsDto implements ITicketDetailWithRelationsDto {
+    ticket?: TicketDetailDto;
+    messages?: TicketMessageDto[];
+    clickUpLinks?: ClickUpLinkDto[];
+
+    constructor(data?: ITicketDetailWithRelationsDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.ticket = _data["ticket"] ? TicketDetailDto.fromJS(_data["ticket"]) : undefined as any;
+            if (Array.isArray(_data["messages"])) {
+                this.messages = [] as any;
+                for (let item of _data["messages"])
+                    this.messages!.push(TicketMessageDto.fromJS(item));
+            }
+            if (Array.isArray(_data["clickUpLinks"])) {
+                this.clickUpLinks = [] as any;
+                for (let item of _data["clickUpLinks"])
+                    this.clickUpLinks!.push(ClickUpLinkDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): TicketDetailWithRelationsDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new TicketDetailWithRelationsDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["ticket"] = this.ticket ? this.ticket.toJSON() : undefined as any;
+        if (Array.isArray(this.messages)) {
+            data["messages"] = [];
+            for (let item of this.messages)
+                data["messages"].push(item ? item.toJSON() : undefined as any);
+        }
+        if (Array.isArray(this.clickUpLinks)) {
+            data["clickUpLinks"] = [];
+            for (let item of this.clickUpLinks)
+                data["clickUpLinks"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface ITicketDetailWithRelationsDto {
+    ticket?: TicketDetailDto;
+    messages?: TicketMessageDto[];
+    clickUpLinks?: ClickUpLinkDto[];
 }
 
 export class SwaggerException extends Error {

@@ -1,3 +1,3 @@
 namespace SupportPortal.Domain.Enums;
 
-public enum TicketSource { Email, Portal, Manual }
+public enum TicketSource { Email, Portal, Manual, Api }

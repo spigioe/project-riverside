@@ -7,6 +7,8 @@ public record TicketListQuery(
     TicketPriority? Priority = null,
     int? CategoryId = null,
     string? Search = null,
+    DateTime? DateFrom = null,
+    DateTime? DateTo = null,
     int Page = 1,
     int PageSize = 20
 );

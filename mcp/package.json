@@ -1,0 +1,14 @@
+{
+  "name": "support-portal-mcp",
+  "version": "1.0.0",
+  "description": "MCP szerver a Support Portál Developer API-jához (ticket lista/létrehozás/válasz, analitika).",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^3.24.1"
+  }
+}

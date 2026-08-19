@@ -34,6 +34,12 @@ public class TicketService(
         if (query.CategoryId.HasValue)
             ticketsQuery = ticketsQuery.Where(t => t.CategoryId == query.CategoryId.Value);
 
+        if (query.DateFrom.HasValue)
+            ticketsQuery = ticketsQuery.Where(t => t.CreatedAt >= query.DateFrom.Value);
+
+        if (query.DateTo.HasValue)
+            ticketsQuery = ticketsQuery.Where(t => t.CreatedAt <= query.DateTo.Value);
+
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var search = query.Search.Trim();
@@ -79,7 +85,7 @@ public class TicketService(
             .FirstOrDefaultAsync();
     }
 
-    public async Task<TicketDetailDto> CreateTicketAsync(CreateTicketRequest request, int currentUserId)
+    public async Task<TicketDetailDto> CreateTicketAsync(CreateTicketRequest request, int currentUserId, TicketSource source = TicketSource.Manual)
     {
         var ticket = new Ticket
         {
@@ -92,7 +98,7 @@ public class TicketService(
             CreatedById = currentUserId,
             RequesterEmail = request.RequesterEmail,
             RequesterName = request.RequesterName,
-            Source = TicketSource.Manual,
+            Source = source,
         };
 
         db.Tickets.Add(ticket);

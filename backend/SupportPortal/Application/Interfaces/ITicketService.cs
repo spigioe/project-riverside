@@ -12,7 +12,7 @@ public interface ITicketService
 {
     Task<PagedResult<TicketListItemDto>> GetTicketsAsync(TicketListQuery query);
     Task<TicketDetailDto?> GetTicketByIdAsync(int id);
-    Task<TicketDetailDto> CreateTicketAsync(CreateTicketRequest request, int currentUserId);
+    Task<TicketDetailDto> CreateTicketAsync(CreateTicketRequest request, int currentUserId, TicketSource source = TicketSource.Manual);
     Task<bool> UpdateTicketAsync(int id, UpdateTicketRequest request);
     Task<bool> UpdateStatusAsync(int id, TicketStatus status, int currentUserId);
     Task<TicketAssignResult> AssignAsync(int id, int? assignedToId, int currentUserId);

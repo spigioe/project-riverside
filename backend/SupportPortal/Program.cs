@@ -47,6 +47,7 @@ builder.Services.Configure<EncryptionSettings>(builder.Configuration.GetSection(
 builder.Services.AddSingleton<IEncryptionService, AesEncryptionService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, _ => { })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -96,6 +97,7 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ICannedResponseService, CannedResponseService>();
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddHttpClient<IIntegrationService, IntegrationService>(client =>
     client.BaseAddress = new Uri("https://api.clickup.com/api/v2/"));
 builder.Services.AddHttpClient<IClickUpLinkService, ClickUpLinkService>(client =>
@@ -119,6 +121,9 @@ builder.Services.Configure<MvcOptions>(options =>
     options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
 
 // ── OpenAPI / NSwag ────────────────────────────────────────────────────────────
+// Két külön dokumentum: "v1" a Portal API-hoz (JWT, ebből generál NSwag TS klienst a frontendnek),
+// "developer" a Developer API-hoz (X-Api-Key, /swagger/developer/swagger.json — külső integrációknak,
+// pl. az MCP szervernek; ebből NEM generálunk TS klienst, mert a frontend nem hívja).
 builder.Services.AddOpenApiDocument(config =>
 {
     config.DocumentName = "v1";
@@ -132,6 +137,32 @@ builder.Services.AddOpenApiDocument(config =>
         Description = "JWT Bearer token. Példa: \"Bearer {token}\""
     });
     config.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("JWT"));
+    config.PostProcess = document =>
+    {
+        foreach (var path in document.Paths.Keys.Where(p => p.StartsWith("/api/v1/")).ToList())
+            document.Paths.Remove(path);
+    };
+});
+
+builder.Services.AddOpenApiDocument(config =>
+{
+    config.DocumentName = "developer";
+    config.Title = "Support Portal Developer API";
+    config.Version = "v1";
+    config.Description = "Külső integrációknak (pl. MCP szerver) szánt réteg, X-Api-Key authentikációval.";
+    config.AddSecurity("ApiKey", [], new OpenApiSecurityScheme
+    {
+        Type = OpenApiSecuritySchemeType.ApiKey,
+        Name = "X-Api-Key",
+        In = OpenApiSecurityApiKeyLocation.Header,
+        Description = "Developer API kulcs. Példa header: X-Api-Key: {kulcs}"
+    });
+    config.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("ApiKey"));
+    config.PostProcess = document =>
+    {
+        foreach (var path in document.Paths.Keys.Where(p => !p.StartsWith("/api/v1/")).ToList())
+            document.Paths.Remove(path);
+    };
 });
 
 // ── CORS (dev) ─────────────────────────────────────────────────────────────────

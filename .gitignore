@@ -11,6 +11,7 @@ backend/.vs/
 # Node
 frontend/node_modules/
 frontend/dist/
+mcp/node_modules/
 
 # Docker volumes (lokális adat)
 .docker-data/
