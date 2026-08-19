@@ -13,8 +13,8 @@ public class UserPreferenceService(AppDbContext db) : IUserPreferenceService
     {
         var pref = await db.UserPreferences.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId);
         return pref is null
-            ? new UserPreferenceDto(true, TicketListView.Table)
-            : new UserPreferenceDto(pref.TicketPropertiesAutosave, pref.TicketListView);
+            ? new UserPreferenceDto(true, TicketListView.Table, TicketDetailView.Classic, false)
+            : new UserPreferenceDto(pref.TicketPropertiesAutosave, pref.TicketListView, pref.TicketDetailView, pref.TicketDetailSplitReversed);
     }
 
     public async Task<UserPreferenceDto> UpdateAsync(int userId, UpdateUserPreferenceRequest request)
@@ -28,8 +28,10 @@ public class UserPreferenceService(AppDbContext db) : IUserPreferenceService
 
         pref.TicketPropertiesAutosave = request.TicketPropertiesAutosave;
         pref.TicketListView = request.TicketListView;
+        pref.TicketDetailView = request.TicketDetailView;
+        pref.TicketDetailSplitReversed = request.TicketDetailSplitReversed;
 
         await db.SaveChangesAsync();
-        return new UserPreferenceDto(pref.TicketPropertiesAutosave, pref.TicketListView);
+        return new UserPreferenceDto(pref.TicketPropertiesAutosave, pref.TicketListView, pref.TicketDetailView, pref.TicketDetailSplitReversed);
     }
 }

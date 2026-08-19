@@ -8,5 +8,6 @@ public class UpdateUserPreferenceRequestValidator : AbstractValidator<UpdateUser
     public UpdateUserPreferenceRequestValidator()
     {
         RuleFor(x => x.TicketListView).IsInEnum().WithMessage("Érvénytelen nézet típus.");
+        RuleFor(x => x.TicketDetailView).IsInEnum().WithMessage("Érvénytelen jegy nézet típus.");
     }
 }

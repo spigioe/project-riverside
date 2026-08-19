@@ -9,6 +9,7 @@ public class UserPreferenceConfiguration : IEntityTypeConfiguration<UserPreferen
     public void Configure(EntityTypeBuilder<UserPreference> builder)
     {
         builder.Property(p => p.TicketListView).HasConversion<string>();
+        builder.Property(p => p.TicketDetailView).HasConversion<string>();
 
         builder.HasIndex(p => p.UserId).IsUnique();
 

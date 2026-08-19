@@ -285,6 +285,89 @@ cd frontend && npm run dev               # port 5173
     `SettingsTicketsPage.tsx`, `api/index.ts`) 0 warning
   - BÖNGÉSZŐS vizuális/interakciós tesztelés NEM történt ehhez a lépéshez sem — nincs
     böngésző-automatizálási eszköz ebben a környezetben (ld. TODO lista)
+- 15. lépés KÉSZ: Ticket detail nézet átalakítás — Classic/Split nézet, TipTap rich text editor, CC/BCC
+  - Migráció: `AddTicketDetailViewAndMessageCcBcc` — `UserPreferences.TicketDetailView` (enum,
+    string-konverzió, default Classic) + `TicketDetailSplitReversed` (bool) + `TicketMessages.Cc`/`Bcc`
+    (nullable string). MySQL/Pomelo figyelmeztetést adott, hogy longtext oszlopon nem támogat konstans
+    DEFAULT-ot — a meglévő (dev DB-ben lévő) sorok emiatt üres stringet kaptak volna a
+    `TicketDetailView`-ra, ami érvénytelen lett volna az enum string-konverziónak; a migráció Up()-ja
+    ezért explicit `UPDATE ... SET TicketDetailView = 'Classic' WHERE ... = '' OR IS NULL` sorral zárul
+    — ez élesben (üres tábla esetén) no-op, csak a jelen dev DB-hez volt szükséges biztonsági háló
+  - Backend, `POST /tickets/{id}/messages`: `CreateTicketMessageRequest` kiegészítve `Cc`/`Bcc`
+    (nullable string, vesszővel elválasztott lista) mezőkkel. `CreateTicketMessageRequestValidator`:
+    `[GeneratedRegex]`-alapú email-lista validáció (`.Must(BeAValidEmailList)`, csak ha nem üres) —
+    nem `.EmailAddress()`-t használ, mert az egyetlen címre vonatkozik, itt vesszővel tagolt listát kell
+    ellenőrizni. `IEmailService.SendAsync` kiegészítve opcionális `cc`/`bcc` paraméterrel,
+    `EmailService`: `MimeMessage.Cc`/`Bcc` feltöltve (`AddAddresses` helper, vesszőnként `MailboxAddress.Parse`)
+  - Backend, email body formátum ELTÉRÉS: mivel a válasz composer mostantól TipTap-ból HTML-t ad, az
+    `EmailService.SendAsync` a body-t `TextPart("html")`-ként küldi ki (korábban `"plain"` volt) — ez a
+    teljes kimenő email tartalmára vonatkozik, nem csak az új mezőkre, de a terv nem tért ki rá explicit
+    módon, logikus következménye a rich text editor bevezetésének
+  - Backend, `TicketMessageDto` kiegészítve `Cc`/`Bcc`-vel — `TicketService.GetMessagesAsync` és
+    `AddMessageAsync` mindkét select-je frissítve
+  - Frontend: `@tiptap/react @tiptap/starter-kit @tiptap/extension-link @tiptap/extension-underline`
+    telepítve (pontosan a kért csomaglista) + `dompurify`/`@types/dompurify` (ÚJ, a terven felül) — a
+    beérkező (email eredetű) üzenetek body-ja tetszőleges külső HTML lehet (`EmailService.FetchNewAsync`
+    a `detail.HTML`-t is felhasználja fallbackként), sanitálás nélkül XSS-t engedne be a
+    `dangerouslySetInnerHTML`-lel renderelt buborékokba — a terv "sanitálva!" felkiáltása miatt ez
+    kötelező függőségnek számított, nem választásnak
+  - `components/RichTextEditor/RichTextEditor.tsx`: toolbar Bold|Italic|Underline|Bullet lista|Számozott
+    lista|Link|elválasztó|Sablon gomb|Törlés gomb (pontosan a terv szerinti sorrend/tartalom). Link
+    beszúrás `window.prompt`-tal (a projektben már használt egyszerű böngésző-dialógus minta, pl.
+    `confirm()` a törlés megerősítéseknél — nem indokolt emiatt egyedi modal). Placeholder szöveg NEM a
+    `@tiptap/extension-placeholder` csomaggal (az nem szerepelt a kért telepítési listában), hanem egy
+    saját, `editor.isEmpty` állapot alapján feltételesen renderelt, abszolút pozicionált overlay div-vel
+    — így nem került be extra függőség a terven felül. `content` prop külső (canned response, AI
+    javaslat, Törlés) frissítése `editor.commands.setContent(..., { emitUpdate: false })`-dal
+    szinkronizálva, csak ha ténylegesen eltér az aktuális `editor.getHTML()`-től (ne írja felül gépelés
+    közben)
+  - `lib/sanitizeHtml.ts` (DOMPurify wrapper) + `components/SafeHtml/SafeHtml.tsx` (memoizált sanitált
+    HTML render) — minden üzenet body ezen keresztül jelenik meg, mind a Classic, mind a Split nézetben
+  - `lib/htmlText.ts`: `plainTextToHtml` (soronként `<p>` — a canned response body és az AI válasz
+    javaslat plain textként jön a backendtől, ezt kell a TipTap editorba tölteni sortörés-megtartással)
+    + `isHtmlEmpty` (a Küldés gomb enabled állapotához, mivel a body immár HTML string, nem plain text)
+  - `pages/TicketDetail/ReplyComposer.tsx`: Válasz/Belső jegyzet tab (változatlan minta), Címzett mező
+    (ticket.requesterEmail, **readOnly**, nem szerkeszthető) + összecsukható CC/BCC (alapból csak a
+    Címzett látszik, "+ CC / BCC" gombra nyílik ki) — csak Válasz módban jelenik meg (Belső jegyzetnél
+    nincs email küldés). SCOPE-DÖNTÉS: a terv "Címzett... felülírható (input mező)" pontját NEM
+    implementáltam szerkeszthetőként, mert a backend `POST /messages` explicit mező-listája (terv
+    "Backend módosítások" szekció) KIZÁRÓLAG `cc`/`bcc`-t sorol fel, "to" mezőt nem — a tényleges
+    email címzett a `TicketService.SendReplyEmailAsync`-ben továbbra is mindig `ticket.RequesterEmail`.
+    Egy szerkeszthető, de a szerver által csendben figyelmen kívül hagyott mező megtévesztő UX lett
+    volna, ezért inkább read-only-vá tettem és itt dokumentálom az eltérést, mint hogy hamis
+    funkcionalitást mutassak
+  - `pages/TicketDetail/MessageThread.tsx`: közös `MessageBubble` komponens `detailed` prop-pal — Classic
+    nézetben `detailed=false` (a "jelenlegi buborék stílus" megtartva: avatar, név, idő, Belső badge,
+    sanitált HTML body), Split nézetben `detailed=true` (pluszban: irány ikon ↑/↓, feladó email,
+    Kimenőnél "Címzett:" sor, CC/BCC esetén összecsukható "Részletek" gomb) — a terv ezt a plusz
+    fejléc-infót kifejezetten csak a Split nézethez írta elő
+  - Split nézet: `styles.splitLayout` (CSS grid, 1fr 1fr, 1200px alatt 1 oszlopra esik vissza) — bal
+    panelben `MessageThread detailed`, jobb panelben `ReplyComposer`, a sorrendet a
+    `ticketDetailSplitReversed` preferencia dönti el ("⇄ Csere" gomb). Húzható elválasztó (resizable)
+    NEM készült el — a terv ezt explicit opcionálisnak jelölte ("ha komplex: fix 50/50 arány is
+    elfogadható"), fix 1fr/1fr grid arányt implementáltam
+  - Nézet váltó + Csere gomb a ticket cím sorában jobb oldalt (`styles.titleRow`/`viewToggleRow`) — mindkettő
+    közvetlenül a `PUT /me/preferences`-t hívja (teljes preferencia objektum, a nem érintett mezők a
+    lekérdezett aktuális értékről), a query cache-t `setQueryData`-val frissítve — nincs külön "Mentés"
+    gomb, minden kattintás azonnal perzisztál (ez eltér a `ticketPropertiesAutosave` draft mintától, de
+    a terv itt nem írt elő draft/mentés flow-t a nézetváltáshoz, egy kétállapotú toggle-nél nem is
+    indokolt)
+  - NSwag újragenerálva (a backend dev szerver újraindítva, hogy a `dotnet build` utáni NSwag lépés friss
+    swagger.json-t lásson — a `GenerateApiClient` MSBuild target `http://localhost:5000`-ről húzza a
+    sémát, HA a szerver fut; ha nem, csak figyelmeztet és kihagyja, nem töri el a buildet)
+  - Tesztelve curl-lel élő adaton: `GET`/`PUT /me/preferences` (`ticketDetailView`/
+    `ticketDetailSplitReversed` mezők), `POST /tickets/1/messages` HTML body + CC + BCC-vel (siker,
+    201, majd törölve) + érvénytelen CC-vel (400), a kimenő email Mailpit HTTP API-n keresztül
+    ellenőrizve hogy a CC/BCC ténylegesen bekerült a MIME fejlécekbe. Teszt adatok (üzenet #19,
+    preferencia módosítások) utólag visszaállítva/törölve
+  - `tsc -b`, `npm run build` (production) és `oxlint` tiszta — 0 új warning (a 2 meglévő
+    `react(set-state-in-effect)` figyelmeztetés a Settings oldalakon változatlan, nem ehhez a lépéshez
+    tartozik)
+  - BÖNGÉSZŐS vizuális/interakciós tesztelés NEM történt ehhez a lépéshez sem (nincs
+    böngésző-automatizálási eszköz ebben a környezetben) — a `vite dev` szerver élő fájljait curl-lel
+    ellenőriztem (mind a négy új fájl hiba nélkül transform-ál), de a tényleges editor-interakció
+    (formázás, link beszúrás, canned response betöltés, split nézet swap, resize) manuális kipróbálást
+    igényel
 
 ## Seed adatok
 - Admin user: admin@supportportal.dev / Admin1234!
@@ -325,6 +408,16 @@ cd frontend && npm run dev               # port 5173
 - [ ] Teszt adatok: ticket #12, #13 és CSM "Kovács Anna Módosítva" (id=1) a 13a. lépés teszteléséből
       bent maradtak a dev DB-ben (nem törölhetők FK constraint miatt Notifications tábla felől) —
       ártalmatlanok, de ha tiszta demo state kell, kézzel törlendők vagy DB reseteld
+- [ ] 15. lépés UI vizuális/interakciós ellenőrzése böngészőben MÉG NEM TÖRTÉNT MEG (Classic/Split
+      váltás, panel csere, TipTap toolbar formázás gombok, link beszúrás, canned response modal
+      betöltés, belső jegyzet sárga háttér, CC/BCC összecsukható panel) — nincs böngésző-automatizálási
+      eszköz ebben a környezetben
+- [ ] 15. lépés: a terv "Címzett... felülírható" pontja szándékosan NEM lett szerkeszthető (read-only
+      marad) — a backend `POST /messages` nem támogat cél-cím felülírást, csak `cc`/`bcc`-t; ha ez
+      valódi igény, backend-bővítés szükséges hozzá (lásd 15. lépés összefoglaló)
+- [ ] Régi (15. lépés előtti) TicketMessages sorok body-ja plain text, nem HTML — megjelenítéskor a
+      `.bubble` `white-space: pre-wrap`-je miatt vizuálisan még rendben jelennek meg, de nem lettek
+      migrálva HTML-re; ez nem hiba, csak érdemes tudni demózáskor
 
-## Következő feladat (15. lépés)
-Még nincs meghatározva.
+## Következő feladat (16. lépés)
+(Még nincs kitűzve.)

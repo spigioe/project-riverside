@@ -16,13 +16,15 @@ import {
   CsmAssignRequest,
   CustomFieldType,
   CustomFieldValueDto,
-  MessageDirection,
   TicketDetailDto,
+  TicketDetailView,
+  TicketListView,
   TicketSource,
   TicketStatus,
   UpdateCustomFieldValueItem,
   UpdateTicketRequest,
   UpdateTicketStatusRequest,
+  UpdateUserPreferenceRequest,
 } from '../api'
 import { Modal } from '../components/Modal/Modal'
 import { StatusBadge } from '../components/Badge/StatusBadge'
@@ -31,6 +33,9 @@ import badgeStyles from '../components/Badge/Badge.module.css'
 import shared from '../components/Settings/SettingsShared.module.css'
 import { getErrorMessage } from '../lib/errors'
 import { formatDateTime, formatTicketId } from '../lib/format'
+import { plainTextToHtml } from '../lib/htmlText'
+import { ReplyComposer } from './TicketDetail/ReplyComposer'
+import { MessageThread } from './TicketDetail/MessageThread'
 import styles from './TicketDetailPage.module.css'
 
 function extractClickUpTaskId(url: string): string {
@@ -64,12 +69,6 @@ const STATUS_OPTIONS: { value: TicketStatus; label: string }[] = [
   { value: TicketStatus.Closed, label: 'Lezárva' },
 ]
 
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  const initials = parts.length > 1 ? [parts[0], parts[parts.length - 1]] : [parts[0]]
-  return initials.map((p) => p[0]?.toUpperCase() ?? '').join('')
-}
-
 export function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
   const ticketId = Number(id)
@@ -77,6 +76,8 @@ export function TicketDetailPage() {
   const queryClient = useQueryClient()
 
   const [replyBody, setReplyBody] = useState('')
+  const [cc, setCc] = useState('')
+  const [bcc, setBcc] = useState('')
   const [isInternalNote, setIsInternalNote] = useState(false)
 
   const ticketQuery = useQuery({
@@ -98,9 +99,16 @@ export function TicketDetailPage() {
 
   const sendMessageMutation = useMutation({
     mutationFn: () =>
-      ticketClient.addMessage(ticketId, new CreateTicketMessageRequest({ body: replyBody, isInternalNote })),
+      ticketClient.addMessage(ticketId, new CreateTicketMessageRequest({
+        body: replyBody,
+        isInternalNote,
+        cc: cc.trim() || undefined,
+        bcc: bcc.trim() || undefined,
+      })),
     onSuccess: () => {
       setReplyBody('')
+      setCc('')
+      setBcc('')
       queryClient.invalidateQueries({ queryKey: ['ticket-messages', ticketId] })
     },
   })
@@ -151,6 +159,21 @@ export function TicketDetailPage() {
     queryFn: () => meClient.getPreferences(),
   })
   const autosave = preferencesQuery.data?.ticketPropertiesAutosave ?? true
+  const detailView = preferencesQuery.data?.ticketDetailView ?? TicketDetailView.Classic
+  const splitReversed = preferencesQuery.data?.ticketDetailSplitReversed ?? false
+
+  // Nézet váltó / csere gomb: a teljes preferencia objektumot küldi vissza (a PUT replace-all), a nem
+  // érintett mezőket a jelenlegi (lekérdezett) értékről veszi.
+  const detailViewMutation = useMutation({
+    mutationFn: (next: { ticketDetailView?: TicketDetailView; ticketDetailSplitReversed?: boolean }) =>
+      meClient.updatePreferences(new UpdateUserPreferenceRequest({
+        ticketPropertiesAutosave: preferencesQuery.data?.ticketPropertiesAutosave ?? true,
+        ticketListView: preferencesQuery.data?.ticketListView ?? TicketListView.Table,
+        ticketDetailView: next.ticketDetailView ?? detailView,
+        ticketDetailSplitReversed: next.ticketDetailSplitReversed ?? splitReversed,
+      })),
+    onSuccess: (result) => queryClient.setQueryData(['user-preferences'], result),
+  })
 
   const [draftAssignedToId, setDraftAssignedToId] = useState<number | undefined>(undefined)
   const [draftStatus, setDraftStatus] = useState<TicketStatus | undefined>(undefined)
@@ -241,9 +264,25 @@ export function TicketDetailPage() {
   const users = usersQuery.data ?? []
 
   function handleSend() {
-    if (!replyBody.trim() || sendMessageMutation.isPending) return
+    if (sendMessageMutation.isPending) return
     sendMessageMutation.mutate()
   }
+
+  const composer = (
+    <ReplyComposer
+      requesterEmail={ticket.requesterEmail!}
+      body={replyBody}
+      onBodyChange={setReplyBody}
+      cc={cc}
+      onCcChange={setCc}
+      bcc={bcc}
+      onBccChange={setBcc}
+      isInternalNote={isInternalNote}
+      onInternalNoteChange={setIsInternalNote}
+      onSend={handleSend}
+      sending={sendMessageMutation.isPending}
+    />
+  )
 
   return (
     <div className={styles.page}>
@@ -252,7 +291,35 @@ export function TicketDetailPage() {
           ← Vissza a jegyekhez
         </button>
 
-        <h1 className={styles.title}>{ticket.subject}</h1>
+        <div className={styles.titleRow}>
+          <h1 className={styles.title}>{ticket.subject}</h1>
+          <div className={styles.viewToggleRow}>
+            {detailView === TicketDetailView.Split && (
+              <button
+                type="button"
+                className={styles.swapButton}
+                onClick={() => detailViewMutation.mutate({ ticketDetailSplitReversed: !splitReversed })}
+                title="Panelek felcserélése"
+              >
+                ⇄ Csere
+              </button>
+            )}
+            <button
+              type="button"
+              className={`${styles.viewToggleButton} ${detailView === TicketDetailView.Classic ? styles.viewToggleButtonActive : ''}`}
+              onClick={() => detailViewMutation.mutate({ ticketDetailView: TicketDetailView.Classic })}
+            >
+              Classic
+            </button>
+            <button
+              type="button"
+              className={`${styles.viewToggleButton} ${detailView === TicketDetailView.Split ? styles.viewToggleButtonActive : ''}`}
+              onClick={() => detailViewMutation.mutate({ ticketDetailView: TicketDetailView.Split })}
+            >
+              Split
+            </button>
+          </div>
+        </div>
 
         <div className={styles.metaRow}>
           <StatusBadge status={ticket.status!} />
@@ -267,64 +334,26 @@ export function TicketDetailPage() {
           </span>
         </div>
 
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardHeaderTitle}>Beszélgetés</span>
-            <span className={styles.cardHeaderCount}>{messages.length} üzenet</span>
-          </div>
-          <div className={styles.thread}>
-            {messages.length === 0 && (
-              <div className={styles.emptyThread}>Még nincs üzenet ebben a jegyben.</div>
+        {detailView === TicketDetailView.Classic ? (
+          <>
+            {composer}
+            <MessageThread ticket={ticket} messages={messages} />
+          </>
+        ) : (
+          <div className={styles.splitLayout}>
+            {splitReversed ? (
+              <>
+                <div className={styles.splitPanel}>{composer}</div>
+                <div className={styles.splitPanel}><MessageThread ticket={ticket} messages={messages} detailed /></div>
+              </>
+            ) : (
+              <>
+                <div className={styles.splitPanel}><MessageThread ticket={ticket} messages={messages} detailed /></div>
+                <div className={styles.splitPanel}>{composer}</div>
+              </>
             )}
-            {messages.map((msg) => {
-              const isOutbound = msg.direction === MessageDirection.Outbound
-              const author = isOutbound ? (msg.senderUserName ?? 'Ügyintéző') : ticket.requesterName!
-              return (
-                <div key={msg.id} className={`${styles.messageRow} ${isOutbound ? styles.outbound : styles.inbound}`}>
-                  <div className={styles.messageMeta}>
-                    <div className={styles.avatarSm}>{getInitials(author)}</div>
-                    <span className={styles.authorName}>{author}</span>
-                    <span className={styles.timeMono}>{formatDateTime(msg.createdAt)}</span>
-                    {msg.isInternalNote && <span className={styles.internalTag}>Belső</span>}
-                  </div>
-                  <div className={styles.bubble}>{msg.body}</div>
-                </div>
-              )
-            })}
           </div>
-        </div>
-
-        <div className={styles.card}>
-          <div className={styles.composerTabs}>
-            <button
-              className={`${styles.tab} ${!isInternalNote ? styles.tabActive : ''}`}
-              onClick={() => setIsInternalNote(false)}
-            >
-              Válasz
-            </button>
-            <button
-              className={`${styles.tab} ${isInternalNote ? styles.tabActive : ''}`}
-              onClick={() => setIsInternalNote(true)}
-            >
-              Belső jegyzet
-            </button>
-          </div>
-          <textarea
-            className={styles.textarea}
-            placeholder={`Válasz írása ${ticket.requesterEmail} részére…`}
-            value={replyBody}
-            onChange={(e) => setReplyBody(e.target.value)}
-          />
-          <div className={styles.composerFooter}>
-            <button
-              className={styles.sendButton}
-              disabled={!replyBody.trim() || sendMessageMutation.isPending}
-              onClick={handleSend}
-            >
-              Küldés →
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       <div className={styles.right}>
@@ -413,10 +442,6 @@ export function TicketDetailPage() {
           </div>
         </div>
 
-        <AiSection ticket={ticket} onSuggestedReply={(body) => { setReplyBody(body); setIsInternalNote(false) }} />
-
-        <ClickUpSection ticketId={ticketId} />
-
         <div className={styles.card}>
           <div className={styles.panelHeader}>Egyéni mezők</div>
           <div className={styles.panelBody}>
@@ -446,6 +471,10 @@ export function TicketDetailPage() {
             )}
           </div>
         </div>
+
+        <AiSection ticket={ticket} onSuggestedReply={(body) => { setReplyBody(plainTextToHtml(body)); setIsInternalNote(false) }} />
+
+        <ClickUpSection ticketId={ticketId} />
       </div>
     </div>
   )

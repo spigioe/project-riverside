@@ -1,0 +1,99 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
+
+.wrapperInternal .editorArea {
+  background: var(--amber-bg);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.toolbarButton {
+  padding: 4px 9px;
+  background: var(--surface);
+  border: 1.5px solid var(--navy);
+  border-radius: var(--radius);
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.toolbarButton:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-pop-sm);
+}
+
+.toolbarButton:active:not(:disabled) {
+  transform: translate(0, 0);
+  box-shadow: none;
+}
+
+.toolbarButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.toolbarButtonActive {
+  background: var(--navy);
+  color: #fff;
+}
+
+.toolbarDivider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border-light);
+  margin: 0 2px;
+}
+
+.editorArea {
+  position: relative;
+}
+
+.placeholder {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  font-size: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.editorContent :global(.ProseMirror) {
+  min-height: 88px;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.55;
+  outline: none;
+}
+
+.editorContent :global(.ProseMirror p) {
+  margin: 0 0 8px;
+}
+
+.editorContent :global(.ProseMirror p:last-child) {
+  margin-bottom: 0;
+}
+
+.editorContent :global(.ProseMirror ul),
+.editorContent :global(.ProseMirror ol) {
+  padding-left: 22px;
+  margin: 0 0 8px;
+}
+
+.editorContent :global(.ProseMirror a) {
+  color: var(--primary);
+  text-decoration: underline;
+}

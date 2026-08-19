@@ -6351,6 +6351,8 @@ export interface ITestClickUpConnectionResponse {
 export class UserPreferenceDto implements IUserPreferenceDto {
     ticketPropertiesAutosave?: boolean;
     ticketListView?: TicketListView;
+    ticketDetailView?: TicketDetailView;
+    ticketDetailSplitReversed?: boolean;
 
     constructor(data?: IUserPreferenceDto) {
         if (data) {
@@ -6365,6 +6367,8 @@ export class UserPreferenceDto implements IUserPreferenceDto {
         if (_data) {
             this.ticketPropertiesAutosave = _data["ticketPropertiesAutosave"];
             this.ticketListView = _data["ticketListView"];
+            this.ticketDetailView = _data["ticketDetailView"];
+            this.ticketDetailSplitReversed = _data["ticketDetailSplitReversed"];
         }
     }
 
@@ -6379,6 +6383,8 @@ export class UserPreferenceDto implements IUserPreferenceDto {
         data = typeof data === 'object' ? data : {};
         data["ticketPropertiesAutosave"] = this.ticketPropertiesAutosave;
         data["ticketListView"] = this.ticketListView;
+        data["ticketDetailView"] = this.ticketDetailView;
+        data["ticketDetailSplitReversed"] = this.ticketDetailSplitReversed;
         return data;
     }
 }
@@ -6386,6 +6392,8 @@ export class UserPreferenceDto implements IUserPreferenceDto {
 export interface IUserPreferenceDto {
     ticketPropertiesAutosave?: boolean;
     ticketListView?: TicketListView;
+    ticketDetailView?: TicketDetailView;
+    ticketDetailSplitReversed?: boolean;
 }
 
 export enum TicketListView {
@@ -6393,9 +6401,16 @@ export enum TicketListView {
     Card = "Card",
 }
 
+export enum TicketDetailView {
+    Classic = "Classic",
+    Split = "Split",
+}
+
 export class UpdateUserPreferenceRequest implements IUpdateUserPreferenceRequest {
     ticketPropertiesAutosave?: boolean;
     ticketListView?: TicketListView;
+    ticketDetailView?: TicketDetailView;
+    ticketDetailSplitReversed?: boolean;
 
     constructor(data?: IUpdateUserPreferenceRequest) {
         if (data) {
@@ -6410,6 +6425,8 @@ export class UpdateUserPreferenceRequest implements IUpdateUserPreferenceRequest
         if (_data) {
             this.ticketPropertiesAutosave = _data["ticketPropertiesAutosave"];
             this.ticketListView = _data["ticketListView"];
+            this.ticketDetailView = _data["ticketDetailView"];
+            this.ticketDetailSplitReversed = _data["ticketDetailSplitReversed"];
         }
     }
 
@@ -6424,6 +6441,8 @@ export class UpdateUserPreferenceRequest implements IUpdateUserPreferenceRequest
         data = typeof data === 'object' ? data : {};
         data["ticketPropertiesAutosave"] = this.ticketPropertiesAutosave;
         data["ticketListView"] = this.ticketListView;
+        data["ticketDetailView"] = this.ticketDetailView;
+        data["ticketDetailSplitReversed"] = this.ticketDetailSplitReversed;
         return data;
     }
 }
@@ -6431,6 +6450,8 @@ export class UpdateUserPreferenceRequest implements IUpdateUserPreferenceRequest
 export interface IUpdateUserPreferenceRequest {
     ticketPropertiesAutosave?: boolean;
     ticketListView?: TicketListView;
+    ticketDetailView?: TicketDetailView;
+    ticketDetailSplitReversed?: boolean;
 }
 
 export class NotificationDto implements INotificationDto {
@@ -7709,6 +7730,8 @@ export class TicketMessageDto implements ITicketMessageDto {
     senderUserName?: string | undefined;
     senderEmail?: string | undefined;
     body?: string;
+    cc?: string | undefined;
+    bcc?: string | undefined;
     isInternalNote?: boolean;
     direction?: MessageDirection;
     createdAt?: Date;
@@ -7730,6 +7753,8 @@ export class TicketMessageDto implements ITicketMessageDto {
             this.senderUserName = _data["senderUserName"];
             this.senderEmail = _data["senderEmail"];
             this.body = _data["body"];
+            this.cc = _data["cc"];
+            this.bcc = _data["bcc"];
             this.isInternalNote = _data["isInternalNote"];
             this.direction = _data["direction"];
             this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
@@ -7751,6 +7776,8 @@ export class TicketMessageDto implements ITicketMessageDto {
         data["senderUserName"] = this.senderUserName;
         data["senderEmail"] = this.senderEmail;
         data["body"] = this.body;
+        data["cc"] = this.cc;
+        data["bcc"] = this.bcc;
         data["isInternalNote"] = this.isInternalNote;
         data["direction"] = this.direction;
         data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
@@ -7765,6 +7792,8 @@ export interface ITicketMessageDto {
     senderUserName?: string | undefined;
     senderEmail?: string | undefined;
     body?: string;
+    cc?: string | undefined;
+    bcc?: string | undefined;
     isInternalNote?: boolean;
     direction?: MessageDirection;
     createdAt?: Date;
@@ -7778,6 +7807,8 @@ export enum MessageDirection {
 export class CreateTicketMessageRequest implements ICreateTicketMessageRequest {
     body?: string;
     isInternalNote?: boolean;
+    cc?: string | undefined;
+    bcc?: string | undefined;
 
     constructor(data?: ICreateTicketMessageRequest) {
         if (data) {
@@ -7792,6 +7823,8 @@ export class CreateTicketMessageRequest implements ICreateTicketMessageRequest {
         if (_data) {
             this.body = _data["body"];
             this.isInternalNote = _data["isInternalNote"];
+            this.cc = _data["cc"];
+            this.bcc = _data["bcc"];
         }
     }
 
@@ -7806,6 +7839,8 @@ export class CreateTicketMessageRequest implements ICreateTicketMessageRequest {
         data = typeof data === 'object' ? data : {};
         data["body"] = this.body;
         data["isInternalNote"] = this.isInternalNote;
+        data["cc"] = this.cc;
+        data["bcc"] = this.bcc;
         return data;
     }
 }
@@ -7813,6 +7848,8 @@ export class CreateTicketMessageRequest implements ICreateTicketMessageRequest {
 export interface ICreateTicketMessageRequest {
     body?: string;
     isInternalNote?: boolean;
+    cc?: string | undefined;
+    bcc?: string | undefined;
 }
 
 export class ClickUpLinkDto implements IClickUpLinkDto {

@@ -22,13 +22,16 @@ public class EmailService(HttpClient httpClient, IOptions<MailSettings> mailOpti
     // mindkettő biztonságosan illeszkedik a lenti record property nevekre.
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    public async Task<string> SendAsync(string to, string subject, string body, string? inReplyTo, string? references)
+    public async Task<string> SendAsync(string to, string subject, string body, string? inReplyTo, string? references, string? cc = null, string? bcc = null)
     {
         var message = new MimeMessage();
         message.From.Add(MailboxAddress.Parse(_settings.FromAddress));
         message.To.Add(MailboxAddress.Parse(to));
+        AddAddresses(message.Cc, cc);
+        AddAddresses(message.Bcc, bcc);
         message.Subject = subject;
-        message.Body = new TextPart("plain") { Text = body };
+        // A reply composer (TipTap) HTML-t ad — a body itt már HTML, nem plain text.
+        message.Body = new TextPart("html") { Text = body };
 
         var messageId = MimeUtils.GenerateMessageId();
         message.MessageId = messageId;
@@ -91,6 +94,14 @@ public class EmailService(HttpClient httpClient, IOptions<MailSettings> mailOpti
         }
 
         return results;
+    }
+
+    private static void AddAddresses(InternetAddressList list, string? commaSeparated)
+    {
+        if (string.IsNullOrWhiteSpace(commaSeparated)) return;
+
+        foreach (var address in commaSeparated.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            list.Add(MailboxAddress.Parse(address.Trim()));
     }
 
     private static string? GetFirstNormalizedHeader(Dictionary<string, List<string>> headers, string name) =>

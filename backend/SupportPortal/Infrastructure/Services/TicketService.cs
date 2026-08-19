@@ -277,7 +277,7 @@ public class TicketService(
             .Select(m => new TicketMessageDto(
                 m.Id, m.TicketId,
                 m.SenderUserId, m.SenderUser != null ? m.SenderUser.FullName : null,
-                m.SenderEmail, m.Body, m.IsInternalNote, m.Direction, m.CreatedAt))
+                m.SenderEmail, m.Body, m.Cc, m.Bcc, m.IsInternalNote, m.Direction, m.CreatedAt))
             .ToListAsync();
     }
 
@@ -291,6 +291,8 @@ public class TicketService(
             TicketId = ticketId,
             SenderUserId = currentUserId,
             Body = request.Body,
+            Cc = request.Cc,
+            Bcc = request.Bcc,
             IsInternalNote = request.IsInternalNote,
             Direction = MessageDirection.Outbound,
         };
@@ -299,7 +301,7 @@ public class TicketService(
         await db.SaveChangesAsync();
 
         if (!request.IsInternalNote)
-            await SendReplyEmailAsync(ticket, request.Body);
+            await SendReplyEmailAsync(ticket, request.Body, request.Cc, request.Bcc);
 
         var recipientIds = new HashSet<int>();
         if (ticket.AssignedToId.HasValue) recipientIds.Add(ticket.AssignedToId.Value);
@@ -319,7 +321,7 @@ public class TicketService(
             .Select(m => new TicketMessageDto(
                 m.Id, m.TicketId,
                 m.SenderUserId, m.SenderUser != null ? m.SenderUser.FullName : null,
-                m.SenderEmail, m.Body, m.IsInternalNote, m.Direction, m.CreatedAt))
+                m.SenderEmail, m.Body, m.Cc, m.Bcc, m.IsInternalNote, m.Direction, m.CreatedAt))
             .FirstAsync();
     }
 
@@ -329,7 +331,7 @@ public class TicketService(
         return idx >= 0 && idx < email.Length - 1 ? email[(idx + 1)..] : email;
     }
 
-    private async Task SendReplyEmailAsync(Ticket ticket, string body)
+    private async Task SendReplyEmailAsync(Ticket ticket, string body, string? cc, string? bcc)
     {
         // Az eredeti (legkorábbi) bejövő email erre a jegyre — ennek Message-ID-jére válaszolunk,
         // hogy a levelezőkliens/Mailpit egy szálban tartsa a beszélgetést.
@@ -343,7 +345,7 @@ public class TicketService(
         try
         {
             var messageId = await emailService.SendAsync(
-                ticket.RequesterEmail, subject, body, original?.ExternalMessageId, original?.ExternalMessageId);
+                ticket.RequesterEmail, subject, body, original?.ExternalMessageId, original?.ExternalMessageId, cc, bcc);
 
             db.EmailQueues.Add(new EmailQueue
             {

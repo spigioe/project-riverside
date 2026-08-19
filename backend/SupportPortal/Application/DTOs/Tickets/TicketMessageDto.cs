@@ -9,6 +9,8 @@ public record TicketMessageDto(
     string? SenderUserName,
     string? SenderEmail,
     string Body,
+    string? Cc,
+    string? Bcc,
     bool IsInternalNote,
     MessageDirection Direction,
     DateTime CreatedAt

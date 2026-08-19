@@ -10,6 +10,8 @@ public class TicketMessage
     public User? SenderUser { get; set; }
     public string? SenderEmail { get; set; }
     public string Body { get; set; } = null!;
+    public string? Cc { get; set; }
+    public string? Bcc { get; set; }
     public bool IsInternalNote { get; set; } = false;
     public MessageDirection Direction { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
