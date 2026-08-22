@@ -749,6 +749,66 @@ cd frontend && npm run dev               # port 5173
     `TicketDetailPage.module.css`, `MergeModal.tsx` (ÚJ), `RelatedTicketsSection.tsx` (ÚJ)) tiszta
     lefutása, valamint a `vite dev` élő fájljainak hiba nélküli transform-álása (curl-lel ellenőrizve)
     igazolja, hogy a kód szintaktikailag/típusilag helyes
+- 20. lépés KÉSZ: Freshdesk-stílusú merge — üzenet-migráció, audit mindkét ticketre, értesítés,
+  "Összevonva" lista-badge
+  - `TicketService.MergeAsync` kiegészítve (a 19. lépésben bevezetett flag-only viselkedés helyett):
+    a forrás ticket ÖSSZES `TicketMessage`-e bulk `TicketId` frissítéssel átkerül a target ticketre
+    (`db.TicketMessages.Where(m => m.TicketId == id).ToListAsync()`, majd soronként
+    `message.TicketId = targetTicketId`, egy `SaveChangesAsync()`-ben). A `FileStorage` táblát
+    SZÁNDÉKOSAN NEM kellett külön migrálni — a `FileStorage.MessageId` FK-n keresztül kapcsolódik a
+    `TicketMessage`-hez, nem a Ticket-hez (lásd 17. lépés), így a csatolmányok a message-ekkel együtt
+    automatikusan "átkerülnek", anélkül hogy egyetlen `FileStorage` sort módosítani kellett volna. A
+    `CreatedAt` időbélyeg nem változik a migrált üzeneteken, ezért a target szálában
+    (`GetMessagesAsync` `OrderBy(CreatedAt)`) automatikusan időrendben, a target saját üzenetei közé
+    interleave-elve jelennek meg — élőben tesztelve két friss teszt ticket között (egy-egy üzenet
+    mindkettőn, eltérő időbélyeggel), a merge után a target `/messages` végpontja pontosan a várt
+    időrendi sorrendben adta vissza mindkettőt
+  - Audit log: MINDKÉT ticketre (forrás ÉS target) kerül egy `"merged"` action bejegyzés, azonos
+    `newValue`-val: `"Összevonva #{sourceId} → #{targetId}"` (a 19. lépésben csak a forrásra került
+    audit sor, más — rövidebb — `newValue` alakkal). A frontend `lib/activityFormat.ts`-ben ÚJ
+    `case 'merged': return newValue ?? 'Jegy összevonva'` ág — ezelőtt a `'merged'` action a formázó
+    `default` ágába esett és csak a nyers `"merged"` szót jelenítette meg a tevékenységnaplóban
+    (a `newValue`-t figyelmen kívül hagyva), ez a 19. lépés egy észrevétlen hiánya volt, most javítva
+  - Notification: ha a target ticketnek van `AssignedToId`-ja ÉS az nem a merge-t végző user, egy
+    `NotificationTrigger.NewMessage` triggerű értesítés megy neki `TicketId=targetId`-vel, szöveg:
+    `"Ticket #{sourceId} összevonásra került ebbe a jegybe"` — ugyanaz az önmagunknak-ne-küldjünk-
+    értesítést minta, mint `AssignAsync`/`UpdateStatusAsync`-nál. Élőben tesztelve: két friss teszt
+    ticket, target hozzárendelve egy MÁSIK userhez (nem az admin, aki a merge-t végezte) — a
+    `Notifications` táblában megjelent a `NewMessage` trigger, a pontos szöveggel, `TicketId=target`
+  - NSwag újragenerálás NEM volt szükséges — a `MergeAsync` szignatúrája (`id, targetTicketId,
+    currentUserId`) és a `POST /tickets/{id}/merge` request/response alakja (`MergeTicketRequest` →
+    204 No Content) változatlan maradt, nincs új/módosult DTO
+  - Frontend, "Összevonva" lista-badge: `StatusBadge` (`components/Badge/StatusBadge.tsx`) kapott egy
+    opcionális `isMerged?: boolean` propot — ha igaz, a `status` mezőtől függetlenül egy szürke
+    (`styles.gray`) "Összevonva" badge-et renderel a valós (`Closed`) státusz helyett. Ez KIZÁRÓLAG a
+    `TicketsPage.tsx` két badge-hívásán (táblázat sor + kártya fejléc) lett bekötve — a
+    `TicketDetailPage.tsx` fejlécének `StatusBadge`-e (a 19. lépésben már ott lévő, külön "ÖSSZEVONVA →
+    #Y" kattintható badge MELLETT) SZÁNDÉKOSAN VÁLTOZATLAN maradt, mert a feladat leírása kifejezetten
+    "a ticket listában" kérte ezt a viselkedést, a detail fejlécen már megvan a bővebb infót adó
+    (cél ticketre mutató) dedikált badge, egy második "Összevonva" felirat mellette redundáns lenne. A
+    `RelatedTicketsSection`/`MergeModal` keresési találatait NEM kellett módosítani, mert azok a
+    backend oldalon MÁR ki vannak szűrve `!IsMerged`-re (19. lépés), összevont ticket sosem jelenik
+    meg bennük
+  - "nem szűrhető ki alapból" (a terv pontja): ELLENŐRIZVE, hogy ez MÁR eleve teljesült — a
+    `TicketService.GetTicketsAsync` és a `TicketListQuery` sosem tartalmazott `IsMerged` szűrést, a
+    `TicketsPage.tsx` állapot-szűrő legördülője pedig alapból "Minden státusz" (`undefined`), tehát
+    összevont ticketek MINDIG szerepelnek a listában, hacsak a user kifejezetten nem szűr rájuk —
+    nem kellett hozzá kód-változtatás, csak megerősítés
+  - Validáció (self-merge, már-merged forrás/cél) ÚJRA-ellenőrizve élőben, változatlanul helyesen
+    működik (`TicketMergeResult.SelfMerge`/`SourceAlreadyMerged`/`TargetAlreadyMerged`, mindegyik 409) —
+    ezek a 19. lépés előttről megvoltak, a terv "már megvan, ellenőrizd" kérésének megfelelően csak
+    verifikáltam, nem módosítottam
+  - MEGJEGYZÉS a teszteléshez: menet közben kiderült, hogy a ticket #15 → #14 merge (`IsMerged=true`,
+    `MergedIntoTicketId=14`, audit sor `2026-08-22 22:41:27`) a FELHASZNÁLÓ saját, valós tesztelése
+    volt a 19. lépésben épített funkción (nem az én teszt-adatom) — ezt a state-et NEM állítottam
+    vissza/nem nyúltam hozzá, a saját tesztjeimhez helyette két vadonatúj, kizárólag erre a célra
+    létrehozott ticketet használtam (#17 forrás, #18 target), amiket a teszt végén teljesen töröltem
+    (üzenetek, `FileStorage`, `EmailQueue`, `AuditLog`, `Notification` sorok, majd maguk a ticketek)
+  - `tsc -b`, `npm run build` (production) és `oxlint` (`StatusBadge.tsx`, `TicketsPage.tsx`,
+    `activityFormat.ts`) tiszta — 0 warning. `dotnet build` tiszta, 0 warning/error
+  - BÖNGÉSZŐS vizuális ellenőrzés ehhez a lépéshez NEM történt (ugyanaz a Playwright/`libnspr4.so`
+    korlát, lásd 19. lépés összefoglaló és a TODO lista) — csak backend curl-teszt + `vite dev` élő
+    fájl transform-ellenőrzés
 
 ## Seed adatok
 - Admin user: admin@supportportal.dev / Admin1234!
@@ -835,6 +895,13 @@ cd frontend && npm run dev               # port 5173
       jövőbeli környezetben ezek a rendszer-csomagok telepítve vannak (vagy sudo elérhető), a
       Playwright-alapú tesztelés innentől megismételhető (a driver script ötlete: `chromium.launch()`,
       login `#email`/`#password`+`button[type=submit]`, navigálás `/tickets/{id}`-re)
+      — UTÓLAGOS MEGJEGYZÉS (20. lépés közben észlelve): a ticket #15 → #14 merge (audit sor
+      `2026-08-22 22:41:27`) alapján ÚGY TŰNIK a felhasználó időközben saját maga kipróbálta az
+      Összevonás gombot/modalt élesben — ez közvetett bizonyíték arra, hogy a UI működik, de nem
+      helyettesíti a fenti tételes ellenőrzést (pl. badge pozíció, üres állapot szövege)
+- [ ] 20. lépés UI vizuális ellenőrzése böngészőben NEM TÖRTÉNT MEG (ugyanaz a Playwright/`libnspr4.so`
+      korlát) — konkrétan az "Összevonva" szürke badge a ticket listában (táblázat ÉS kártya nézet is)
+      nincs manuálisan visszaigazolva, csak `tsc`/build/oxlint szinten
 - [ ] A `/settings/tickets` "MinIO orphan blob" takarítás NEM történt meg: a 19. lépés böngésző-cél
       nélküli, valódi Mailpit SMTP-n átküldött teszt csatolmányai (screenshot.png, dokumentum.pdf)
       MinIO-ban FIZIKAILAG bent maradtak (a DB-sorokat töröltem, de a MinIO objektumokat nem) — ez

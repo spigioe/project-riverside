@@ -62,6 +62,8 @@ export function formatActivityAction(entry: TicketActivityDto): string {
       return `ClickUp link hozzáadva: ${newValue}`
     case 'clickup_link_removed':
       return `ClickUp link törölve: ${oldValue}`
+    case 'merged':
+      return newValue ?? 'Jegy összevonva'
     default:
       return action ?? 'Ismeretlen esemény'
   }

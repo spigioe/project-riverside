@@ -315,14 +315,33 @@ public class TicketService(
 
         if (target.IsMerged) return TicketMergeResult.TargetAlreadyMerged;
 
+        // Freshdesk-stílusú merge: a forrás összes üzenete átkerül a target ticket_id-jára — a
+        // FileStorage sorok a MessageId-n keresztül kapcsolódnak, nem a TicketId-n, tehát a
+        // csatolmányok automatikusan "átkerülnek" a message-ekkel együtt, külön migrálás nélkül.
+        // A CreatedAt nem változik, ezért a target szálában időrendben, a többi üzenet közé
+        // interleave-elve jelennek meg.
+        var messagesToMove = await db.TicketMessages.Where(m => m.TicketId == id).ToListAsync();
+        foreach (var message in messagesToMove)
+            message.TicketId = targetTicketId;
+
         ticket.IsMerged = true;
         ticket.MergedIntoTicketId = targetTicketId;
         ticket.Status = TicketStatus.Closed;
         ticket.UpdatedAt = DateTime.UtcNow;
+        target.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
 
-        await auditLogService.LogAsync(currentUserId, "ticket", id, "merged", null, $"#{targetTicketId}");
+        var mergeDescription = $"Összevonva #{id} → #{targetTicketId}";
+        await auditLogService.LogAsync(currentUserId, "ticket", id, "merged", null, mergeDescription);
+        await auditLogService.LogAsync(currentUserId, "ticket", targetTicketId, "merged", null, mergeDescription);
+
+        if (target.AssignedToId.HasValue && target.AssignedToId.Value != currentUserId)
+        {
+            await notificationService.SendAsync(
+                target.AssignedToId.Value, NotificationTrigger.NewMessage, targetTicketId,
+                $"Ticket #{id} összevonásra került ebbe a jegybe");
+        }
 
         return TicketMergeResult.Success;
     }

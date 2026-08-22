@@ -10,6 +10,7 @@ const VARIANTS: Record<TicketStatus, string> = {
   [TicketStatus.Closed]: styles.dark,
 }
 
-export function StatusBadge({ status }: { status: TicketStatus }) {
+export function StatusBadge({ status, isMerged }: { status: TicketStatus; isMerged?: boolean }) {
+  if (isMerged) return <span className={`${styles.badge} ${styles.gray}`}>Összevonva</span>
   return <span className={`${styles.badge} ${VARIANTS[status]}`}>{STATUS_LABELS[status]}</span>
 }

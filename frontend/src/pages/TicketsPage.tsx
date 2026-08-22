@@ -191,7 +191,7 @@ export function TicketsPage() {
                       <Link to={`/tickets/${ticket.id}`} className={styles.subjectLink}>{ticket.subject}</Link>
                     </td>
                     <td className={styles.muted}>{ticket.requesterEmail}</td>
-                    <td><StatusBadge status={ticket.status!} /></td>
+                    <td><StatusBadge status={ticket.status!} isMerged={ticket.isMerged} /></td>
                     <td><PriorityBadge priority={ticket.priority!} /></td>
                     <td>{ticket.assignedToName ?? '—'}</td>
                     <td className={styles.muted}>{ticket.categoryName ?? '—'}</td>
@@ -212,7 +212,7 @@ export function TicketsPage() {
               <Link key={ticket.id} to={`/tickets/${ticket.id}`} className={styles.ticketCard}>
                 <div className={styles.ticketCardHeader}>
                   <span className={styles.mono}>{formatTicketId(ticket.id!)}</span>
-                  <StatusBadge status={ticket.status!} />
+                  <StatusBadge status={ticket.status!} isMerged={ticket.isMerged} />
                 </div>
                 <div className={styles.ticketCardSubject}>{ticket.subject}</div>
                 <div className={styles.ticketCardMeta}>
