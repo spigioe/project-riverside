@@ -808,6 +808,28 @@
   margin-top: 8px;
 }
 
+.searchResultItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--bg-alt);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.searchResultItem:hover {
+  border-color: var(--navy);
+}
+
+.mergedBadge {
+  text-decoration: none;
+  cursor: pointer;
+}
+
 /* ── Csatolmányok ──────────────────────────────────────── */
 
 .attachmentChips {

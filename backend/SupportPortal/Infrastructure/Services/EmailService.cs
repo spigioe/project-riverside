@@ -73,6 +73,13 @@ public class EmailService(HttpClient httpClient, IOptions<MailSettings> mailOpti
                     ?? [];
                 var headers = new Dictionary<string, List<string>>(rawHeaders, StringComparer.OrdinalIgnoreCase);
 
+                var attachments = new List<InboundEmailAttachment>();
+                foreach (var part in detail.Attachments ?? [])
+                {
+                    var bytes = await httpClient.GetByteArrayAsync($"/api/v1/message/{id}/part/{part.PartID}");
+                    attachments.Add(new InboundEmailAttachment(part.FileName, part.ContentType, bytes));
+                }
+
                 results.Add(new InboundEmail(
                     MessageId: detail.MessageID,
                     From: detail.From is not null ? $"{detail.From.Name} <{detail.From.Address}>" : string.Empty,
@@ -81,7 +88,8 @@ public class EmailService(HttpClient httpClient, IOptions<MailSettings> mailOpti
                     Body: !string.IsNullOrWhiteSpace(detail.Text) ? detail.Text : detail.HTML ?? string.Empty,
                     InReplyTo: GetFirstNormalizedHeader(headers, "In-Reply-To"),
                     References: GetAllNormalizedHeaderValues(headers, "References"),
-                    ReceivedAt: detail.Date.ToUniversalTime()
+                    ReceivedAt: detail.Date.ToUniversalTime(),
+                    Attachments: attachments
                 ));
 
                 // "Seen" jelölés a Mailpit HTTP API-val — az IMAP SetFlags(Seen) megfelelője ezen a transporton.
@@ -125,5 +133,8 @@ public class EmailService(HttpClient httpClient, IOptions<MailSettings> mailOpti
     private record MailpitListResponse(int Unread, List<MailpitMessageSummary> Messages);
     private record MailpitMessageSummary(string ID, bool Read);
     private record MailpitAddress(string Name, string Address);
-    private record MailpitMessageDetail(string MessageID, MailpitAddress? From, List<MailpitAddress> To, string? Subject, string? Text, string? HTML, DateTime Date);
+    private record MailpitAttachment(string PartID, string FileName, string ContentType);
+    private record MailpitMessageDetail(
+        string MessageID, MailpitAddress? From, List<MailpitAddress> To, string? Subject, string? Text, string? HTML,
+        DateTime Date, List<MailpitAttachment>? Attachments);
 }

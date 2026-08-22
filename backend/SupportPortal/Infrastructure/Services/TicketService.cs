@@ -301,7 +301,7 @@ public class TicketService(
         return TicketCsmAssignResult.Success;
     }
 
-    public async Task<TicketMergeResult> MergeAsync(int id, int targetTicketId)
+    public async Task<TicketMergeResult> MergeAsync(int id, int targetTicketId, int currentUserId)
     {
         if (id == targetTicketId) return TicketMergeResult.SelfMerge;
 
@@ -321,7 +321,44 @@ public class TicketService(
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
+
+        await auditLogService.LogAsync(currentUserId, "ticket", id, "merged", null, $"#{targetTicketId}");
+
         return TicketMergeResult.Success;
+    }
+
+    public async Task<IReadOnlyList<TicketSearchResultDto>> SearchAsync(string? q, int limit)
+    {
+        if (string.IsNullOrWhiteSpace(q)) return [];
+
+        var effectiveLimit = limit is < 1 or > 50 ? 10 : limit;
+        var search = q.Trim();
+
+        var query = db.Tickets.AsNoTracking().Where(t => !t.IsMerged);
+
+        query = int.TryParse(search, out var ticketId)
+            ? query.Where(t => t.Id == ticketId || t.Subject.Contains(search) || t.RequesterEmail.Contains(search))
+            : query.Where(t => t.Subject.Contains(search) || t.RequesterEmail.Contains(search));
+
+        return await query
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(effectiveLimit)
+            .Select(t => new TicketSearchResultDto(t.Id, t.Subject, t.Status, t.RequesterEmail))
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<TicketRelatedDto>?> GetRelatedAsync(int id)
+    {
+        var ticket = await db.Tickets.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
+        if (ticket is null) return null;
+
+        return await db.Tickets
+            .AsNoTracking()
+            .Where(t => t.RequesterEmail == ticket.RequesterEmail && t.Id != id && !t.IsMerged)
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(5)
+            .Select(t => new TicketRelatedDto(t.Id, t.Subject, t.Status, t.Priority, t.CreatedAt))
+            .ToListAsync();
     }
 
     public async Task<IReadOnlyList<TicketMessageDto>?> GetMessagesAsync(int ticketId)

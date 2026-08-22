@@ -25,6 +25,14 @@ public class TicketController(
         return Ok(result);
     }
 
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(IReadOnlyList<TicketSearchResultDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> SearchTickets([FromQuery] string? q, [FromQuery] int limit = 10)
+    {
+        var results = await ticketService.SearchAsync(q, limit);
+        return Ok(results);
+    }
+
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(TicketDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -127,7 +135,7 @@ public class TicketController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> MergeTicket(int id, [FromBody] MergeTicketRequest request)
     {
-        var result = await ticketService.MergeAsync(id, request.TargetTicketId);
+        var result = await ticketService.MergeAsync(id, request.TargetTicketId, User.GetUserId());
         return result switch
         {
             TicketMergeResult.Success => NoContent(),
@@ -189,6 +197,18 @@ public class TicketController(
             return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
 
         return Ok(activity);
+    }
+
+    [HttpGet("{id:int}/related")]
+    [ProducesResponseType(typeof(IReadOnlyList<TicketRelatedDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetRelated(int id)
+    {
+        var related = await ticketService.GetRelatedAsync(id);
+        if (related is null)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
+
+        return Ok(related);
     }
 
     [HttpGet("{id:int}/clickup")]

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   csmClient,
@@ -39,6 +39,8 @@ import { ReplyComposer } from './TicketDetail/ReplyComposer'
 import { MessageThread } from './TicketDetail/MessageThread'
 import { TicketInfoPanel } from './TicketDetail/TicketInfoPanel'
 import { TicketActivityLog } from './TicketDetail/TicketActivityLog'
+import { MergeModal } from './TicketDetail/MergeModal'
+import { RelatedTicketsSection } from './TicketDetail/RelatedTicketsSection'
 import styles from './TicketDetailPage.module.css'
 
 function extractClickUpTaskId(url: string): string {
@@ -83,6 +85,7 @@ export function TicketDetailPage() {
   const [bcc, setBcc] = useState('')
   const [isInternalNote, setIsInternalNote] = useState(false)
   const [attachments, setAttachments] = useState<File[]>([])
+  const [mergeModalOpen, setMergeModalOpen] = useState(false)
 
   const ticketQuery = useQuery({
     queryKey: ['ticket', ticketId],
@@ -348,6 +351,15 @@ export function TicketDetailPage() {
         <div className={styles.titleRow}>
           <h1 className={styles.title}>{ticket.subject}</h1>
           <div className={styles.viewToggleRow}>
+            {!ticket.isMerged && (
+              <button
+                type="button"
+                className={shared.secondaryButton}
+                onClick={() => setMergeModalOpen(true)}
+              >
+                Összevonás
+              </button>
+            )}
             {ticket.status !== TicketStatus.Closed && ticket.status !== TicketStatus.Resolved && (
               <button
                 type="button"
@@ -388,6 +400,14 @@ export function TicketDetailPage() {
         </div>
 
         <div className={styles.metaRow}>
+          {ticket.isMerged && ticket.mergedIntoTicketId && (
+            <Link
+              to={`/tickets/${ticket.mergedIntoTicketId}`}
+              className={`${badgeStyles.badge} ${badgeStyles.dark} ${styles.mergedBadge}`}
+            >
+              ÖSSZEVONVA → #{ticket.mergedIntoTicketId}
+            </Link>
+          )}
           <StatusBadge status={ticket.status!} />
           <PriorityBadge priority={ticket.priority!} />
           {ticket.isCsmFlagged && (
@@ -556,7 +576,11 @@ export function TicketDetailPage() {
         <AiSection ticket={ticket} onSuggestedReply={(body) => { setReplyBody(plainTextToHtml(body)); setIsInternalNote(false) }} />
 
         <ClickUpSection ticketId={ticketId} />
+
+        <RelatedTicketsSection ticketId={ticketId} />
       </div>
+
+      {mergeModalOpen && <MergeModal ticketId={ticketId} onClose={() => setMergeModalOpen(false)} />}
     </div>
   )
 }

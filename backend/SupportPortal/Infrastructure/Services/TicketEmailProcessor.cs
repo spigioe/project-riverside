@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MimeKit;
 using SupportPortal.Application.DTOs;
 using SupportPortal.Application.Interfaces;
@@ -10,7 +11,12 @@ using SupportPortal.Domain.Enums;
 
 namespace SupportPortal.Infrastructure.Services;
 
-public partial class TicketEmailProcessor(AppDbContext db, ICsmService csmService, ILogger<TicketEmailProcessor> logger) : ITicketEmailProcessor
+public partial class TicketEmailProcessor(
+    AppDbContext db,
+    ICsmService csmService,
+    IFileStorageService fileStorageService,
+    IOptions<MinioSettings> minioOptions,
+    ILogger<TicketEmailProcessor> logger) : ITicketEmailProcessor
 {
     [GeneratedRegex(@"\[#(\d+)\]")]
     private static partial Regex SubjectTicketIdRegex();
@@ -58,24 +64,40 @@ public partial class TicketEmailProcessor(AppDbContext db, ICsmService csmServic
             };
             db.Tickets.Add(ticket);
             await db.SaveChangesAsync();
+
+            // Az induló email tartalma a ticket.Body-ban van, nem egy TicketMessage sorban (meglévő
+            // minta) — de a csatolmányoknak kell egy TicketMessage.Id, amihez a FileStorage sorok
+            // kapcsolódnak, ezért csak akkor hozunk létre egy kezdő bejövő üzenetet, ha ténylegesen
+            // van csatolmány.
+            if (email.Attachments.Count > 0)
+            {
+                var initialMessage = new TicketMessage
+                {
+                    TicketId = ticket.Id,
+                    SenderEmail = fromAddress.Address,
+                    Body = email.Body,
+                    Direction = MessageDirection.Inbound,
+                };
+                db.TicketMessages.Add(initialMessage);
+                await db.SaveChangesAsync();
+
+                await UploadAttachmentsAsync(ticket.Id, initialMessage.Id, email.Attachments);
+            }
         }
         else
         {
-            // TODO (17. lépés): a bejövő email csatolmányai jelenleg NEM kerülnek feldolgozásra.
-            // A Mailpit HTTP API a message detail válaszban ("Attachments" tömb, PartID-kkel) adja
-            // vissza őket, tartalmukat pedig egy külön GET /api/v1/message/{id}/part/{PartID} hívással
-            // kellene lekérni — ez az EmailService.FetchNewAsync/InboundEmail réteget új mezővel
-            // (attachment lista + tartalom stream) bővítené, majd itt (miután a TicketMessage.Id ismert)
-            // IFileStorageService.UploadAsync + FileStorage sor létrehozása kellene, ugyanúgy mint a
-            // kimenő csatolmányoknál (TicketService.AddMessageAsync). A kimenő (portál → email)
-            // csatolmányok viszont teljesen működnek, ez a TODO csak a bejövő irányra vonatkozik.
-            db.TicketMessages.Add(new TicketMessage
+            var message = new TicketMessage
             {
                 TicketId = ticket.Id,
                 SenderEmail = fromAddress.Address,
                 Body = email.Body,
                 Direction = MessageDirection.Inbound,
-            });
+            };
+            db.TicketMessages.Add(message);
+            await db.SaveChangesAsync();
+
+            if (email.Attachments.Count > 0)
+                await UploadAttachmentsAsync(ticket.Id, message.Id, email.Attachments);
         }
 
         db.EmailQueues.Add(new EmailQueue
@@ -135,4 +157,31 @@ public partial class TicketEmailProcessor(AppDbContext db, ICsmService csmServic
 
     private static string StripTicketIdTag(string subject) =>
         SubjectTicketIdRegex().Replace(subject ?? string.Empty, string.Empty).Trim();
+
+    // Ugyanaz a MinIO feltöltési minta, mint a kimenő csatolmányoknál (TicketService.AddMessageAsync),
+    // csak IFormFile helyett a Mailpit-ről már letöltött byte[] tartalommal.
+    private async Task UploadAttachmentsAsync(int ticketId, int messageId, IReadOnlyList<InboundEmailAttachment> attachments)
+    {
+        foreach (var attachment in attachments)
+        {
+            var fileName = Path.GetFileName(attachment.Filename);
+            var objectKey = $"tickets/{ticketId}/{messageId}/{Guid.NewGuid()}-{fileName}";
+
+            using (var stream = new MemoryStream(attachment.Data))
+                await fileStorageService.UploadAsync(objectKey, stream, attachment.Data.Length, attachment.ContentType);
+
+            db.FileStorages.Add(new FileStorage
+            {
+                MessageId = messageId,
+                StorageBackend = StorageBackend.Minio,
+                BucketOrPath = minioOptions.Value.Bucket,
+                ObjectKey = objectKey,
+                OriginalFilename = fileName,
+                MimeType = string.IsNullOrWhiteSpace(attachment.ContentType) ? "application/octet-stream" : attachment.ContentType,
+                FileSize = attachment.Data.Length,
+            });
+        }
+
+        await db.SaveChangesAsync();
+    }
 }

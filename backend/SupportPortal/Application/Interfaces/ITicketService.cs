@@ -21,8 +21,10 @@ public interface ITicketService
     Task<TicketAssignResult> AssignAsync(int id, int? assignedToId, int currentUserId);
     Task<bool?> ToggleCsmAsync(int id, int currentUserId);
     Task<TicketCsmAssignResult> AssignCsmAsync(int id, int? csmId, int currentUserId);
-    Task<TicketMergeResult> MergeAsync(int id, int targetTicketId);
+    Task<TicketMergeResult> MergeAsync(int id, int targetTicketId, int currentUserId);
     Task<IReadOnlyList<TicketMessageDto>?> GetMessagesAsync(int ticketId);
     Task<TicketMessageDto?> AddMessageAsync(int ticketId, CreateTicketMessageRequest request, int currentUserId, IReadOnlyList<IFormFile>? attachments = null);
     Task<IReadOnlyList<TicketActivityDto>?> GetActivityAsync(int ticketId);
+    Task<IReadOnlyList<TicketSearchResultDto>> SearchAsync(string? q, int limit);
+    Task<IReadOnlyList<TicketRelatedDto>?> GetRelatedAsync(int id);
 }

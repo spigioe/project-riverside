@@ -3527,6 +3527,67 @@ export class TicketClient {
         return Promise.resolve<TicketDetailDto>(null as any);
     }
 
+    searchTickets(q?: string | null | undefined, limit?: number | undefined, cancelToken?: CancelToken): Promise<TicketSearchResultDto[]> {
+        let url_ = this.baseUrl + "/api/portal/tickets/search?";
+        if (q !== undefined && q !== null)
+            url_ += "q=" + encodeURIComponent("" + q) + "&";
+        if (limit === null)
+            throw new globalThis.Error("The parameter 'limit' cannot be null.");
+        else if (limit !== undefined)
+            url_ += "limit=" + encodeURIComponent("" + limit) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSearchTickets(_response);
+        });
+    }
+
+    protected processSearchTickets(response: AxiosResponse): Promise<TicketSearchResultDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(TicketSearchResultDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<TicketSearchResultDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<TicketSearchResultDto[]>(null as any);
+    }
+
     getTicket(id: number, cancelToken?: CancelToken): Promise<TicketDetailDto> {
         let url_ = this.baseUrl + "/api/portal/tickets/{id}";
         if (id === undefined || id === null)
@@ -4164,6 +4225,71 @@ export class TicketClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<TicketActivityDto[]>(null as any);
+    }
+
+    getRelated(id: number, cancelToken?: CancelToken): Promise<TicketRelatedDto[]> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/related";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetRelated(_response);
+        });
+    }
+
+    protected processGetRelated(response: AxiosResponse): Promise<TicketRelatedDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(TicketRelatedDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<TicketRelatedDto[]>(result200);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<TicketRelatedDto[]>(null as any);
     }
 
     getClickUpLinks(id: number, cancelToken?: CancelToken): Promise<ClickUpLinkDto[]> {
@@ -7591,6 +7717,54 @@ export enum TicketStatus {
     Closed = "Closed",
 }
 
+export class TicketSearchResultDto implements ITicketSearchResultDto {
+    id?: number;
+    subject?: string;
+    status?: TicketStatus;
+    requesterEmail?: string;
+
+    constructor(data?: ITicketSearchResultDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.subject = _data["subject"];
+            this.status = _data["status"];
+            this.requesterEmail = _data["requesterEmail"];
+        }
+    }
+
+    static fromJS(data: any): TicketSearchResultDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new TicketSearchResultDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["subject"] = this.subject;
+        data["status"] = this.status;
+        data["requesterEmail"] = this.requesterEmail;
+        return data;
+    }
+}
+
+export interface ITicketSearchResultDto {
+    id?: number;
+    subject?: string;
+    status?: TicketStatus;
+    requesterEmail?: string;
+}
+
 export class TicketDetailDto implements ITicketDetailDto {
     id?: number;
     subject?: string;
@@ -8156,6 +8330,58 @@ export interface ITicketActivityDto {
     action?: string;
     oldValue?: string | undefined;
     newValue?: string | undefined;
+    createdAt?: Date;
+}
+
+export class TicketRelatedDto implements ITicketRelatedDto {
+    id?: number;
+    subject?: string;
+    status?: TicketStatus;
+    priority?: TicketPriority;
+    createdAt?: Date;
+
+    constructor(data?: ITicketRelatedDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.subject = _data["subject"];
+            this.status = _data["status"];
+            this.priority = _data["priority"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): TicketRelatedDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new TicketRelatedDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["subject"] = this.subject;
+        data["status"] = this.status;
+        data["priority"] = this.priority;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface ITicketRelatedDto {
+    id?: number;
+    subject?: string;
+    status?: TicketStatus;
+    priority?: TicketPriority;
     createdAt?: Date;
 }
 

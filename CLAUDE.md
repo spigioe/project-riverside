@@ -643,6 +643,112 @@ cd frontend && npm run dev               # port 5173
     két érintett CSS modult is) curl-lel ellenőriztem, hiba nélkül transform-álnak, de a tényleges
     viselkedés (aláírás vizuális elkülönülése/kurzorpozíció, idézet gomb, checkbox, Előnézet modal
     elrendezése) manuális kipróbálást igényel
+- 19. lépés KÉSZ: Bejövő email csatolmányok, merge gomb, kapcsolódó ticketek
+  - Bejövő email csatolmányok, backend: `InboundEmail` (`Application/DTOs/InboundEmail.cs`) kiegészítve
+    `IReadOnlyList<InboundEmailAttachment> Attachments`-szel, új `InboundEmailAttachment(Filename,
+    ContentType, Data)` record ugyanabban a fájlban. `EmailService.FetchNewAsync`: a `MailpitMessageDetail`
+    record kapott egy `List<MailpitAttachment>? Attachments` mezőt (`PartID`, `FileName`, `ContentType`) —
+    a Mailpit tényleges JSON válaszát élőben (Mailpit HTTP API-n keresztül, teszt SMTP emaillel)
+    ellenőriztem, a mező mindig jelen van (`[]` ha nincs csatolmány), `PartID` string ("2", "3", ...).
+    Minden `Attachments` elemre `GetByteArrayAsync($"/api/v1/message/{id}/part/{PartID}")` tölti le a
+    nyers bájtokat (ez a végpont NEM JSON-t ad vissza, ezért nem a meglévő `JsonOptions`-os
+    `GetFromJsonAsync`-et használja)
+  - `TicketEmailProcessor` konstruktora kiegészült `IFileStorageService`-szel és
+    `IOptions<MinioSettings>`-szel (ugyanaz a kettő, amit a `TicketService` is kap) — mindkettő már
+    regisztrálva volt DI-ban a 17. lépésből, nem kellett új `Program.cs` bejegyzés. Új privát
+    `UploadAttachmentsAsync(ticketId, messageId, attachments)` helper, ami sorról sorra megismétli a
+    kimenő csatolmányoknál (`TicketService.AddMessageAsync`) már meglévő MinIO-feltöltési mintát
+    (`tickets/{ticketId}/{messageId}/{guid}-{filename}` object key, `FileStorage` sor), csak
+    `IFormFile.OpenReadStream()` helyett egy `MemoryStream(attachment.Data)`-val
+  - TALÁLT ÉS MEGOLDOTT STRUKTURÁLIS HIÁNYOSSÁG: a meglévő ticket-létrehozó ág (`ProcessOneAsync`,
+    ha nincs egyező meglévő ticket) SOHA nem hozott létre `TicketMessage` sort az induló emailhez — a
+    tartalom kizárólag a `ticket.Body` mezőben landolt, aminek viszont nincs `Id`-ja, amihez egy
+    `FileStorage.MessageId` FK-t kapcsolni lehetne. Mivel ez a mező a frontenden SEHOL nincs
+    megjelenítve (átvizsgáltam a `TicketInfoPanel`-t és a `MessageThread`-et is — egyik sem rendereli
+    a `ticket.Body`-t), a MINIMÁLIS beavatkozást választottam: csak akkor hozok létre egy kezdő bejövő
+    `TicketMessage`-t az új ticket ágban, ha az emailnek TÉNYLEGESEN van csatolmánya (attachment
+    nélküli új ticketeknél a viselkedés változatlan, semmi nem változik a meglévő ticketeknél sem).
+    Élőben tesztelve mindkét ág: (1) válasz egy meglévő ticketre csatolmánnyal — a csatolmány a már
+    létező bejövő `TicketMessage`-hez kapcsolódott, (2) vadonatúj ticket csatolmánnyal — a kezdő
+    `TicketMessage` létrejött és a csatolmány ahhoz kapcsolódott, mindkettő `GET
+    /tickets/{id}/attachments`-szel és tényleges letöltéssel (byte-tartalom egyezés) ellenőrizve
+  - Merge gomb, backend: a terv "Backend — már megvan" állítása RÉSZBEN volt pontos — a `MergeAsync`
+    ténylegesen működött, de (a 17. lépésben minden más ticket-mutációra bevezetett audit logolással
+    ellentétben) NEM logolt semmit az `AuditLogs` táblába. Ugyanazt a mintát követve, mint az
+    `AssignCsmAsync`/`UpdateTicketAsync`-nál (17. lépés), a `MergeAsync` szignatúrája kapott egy
+    `currentUserId` paramétert (`ITicketService`, `TicketService`, az egyetlen hívó
+    `TicketController.MergeTicket` már rendelkezésre álló `User.GetUserId()`-vel hívja), és sikeres
+    merge után `auditLogService.LogAsync(currentUserId, "ticket", id, "merged", null, $"#{targetTicketId}")`
+    ír egy bejegyzést — csak a forrás ticketre (a cél ticket állapota nem változik a merge-nél, nincs
+    mit logolni rajta). Élőben tesztelve (majd visszaállítva): self-merge → 409, sikeres merge → 204 +
+    `IsMerged`/`MergedIntoTicketId`/`Status=Closed` helyesen beállítva + `merged` audit bejegyzés
+    `newValue="#{targetId}"` alakban a tevékenységnaplóban
+  - `GET /api/portal/tickets/search?q=&limit=10` — ÚJ `TicketSearchResultDto(Id, Subject, Status,
+    RequesterEmail)`, `TicketService.SearchAsync`: ha `q` numerikus, `Id`-ra IS illeszt (nem csak
+    `Subject`/`RequesterEmail Contains`-ra) — a terv "ticket ID vagy tárgy alapján keresés" pontja
+    miatt. `!IsMerged` szűrés a találatokon SAJÁT DÖNTÉS (a terv nem írta elő explicit módon) — enélkül
+    egy már összevont ticketet lehetne kiválasztani cél gyanánt a merge modalban, ami úgyis azonnal
+    409 `TargetAlreadyMerged`-et adna a `MergeAsync`-től, feleslegesen rossz UX. `limit` 1–50 közé
+    clamp-elve (alapérték 10, ugyanaz a minta mint a `TicketListQuery.PageSize`-nál)
+  - A terv "FluentValidation: merge-nél targetTicketId nem lehet ugyanaz mint az aktuális ticket ID"
+    pontját SZÁNDÉKOSAN NEM egy validátor-szabályként implementáltam — a `MergeTicketRequestValidator`
+    csak a request body-t látja (`TargetTicketId`), az útvonal `{id}` paramétere nem érhető el belőle.
+    Ez már ELŐZŐLEG is meg volt oldva service-szinten (`TicketMergeResult.SelfMerge`, a 17. lépés előtti
+    kódban), ugyanazt a mintát követve, mint a DB-lookupot igénylő egyéb service-szintű enumok
+    (`TicketCsmAssignResult.CsmNotFound` stb.) — nem hoztam létre duplikált ellenőrzést
+  - `GET /api/portal/tickets/{id}/related` — ÚJ `TicketRelatedDto(Id, Subject, Status, Priority,
+    CreatedAt)`, `TicketService.GetRelatedAsync`: `RequesterEmail` egyezés, kizárja az aktuális és a
+    `IsMerged` ticketeket, `Take(5)`, `OrderByDescending(CreatedAt)`, pontosan a terv szerint. Mindkét
+    új végpont a `TicketController`-ben, a `GetTickets`/`GetActivity` mellett (route ütközés nincs, a
+    `{id:int}` constraint miatt a `search` szegmens nem illeszkedik az `{id:int}` mintára)
+  - NSwag újragenerálva (a `dotnet run` háttérfolyamat újraindítva, hogy a friss swagger.json-t lássa,
+    majd `dotnet build` a `nswag run` MSBuild target kiváltásához) — `generated-client.ts` tartalmazza
+    `ticketClient.searchTickets`/`getRelated`-et és a két új DTO-t
+  - Frontend: `pages/TicketDetail/MergeModal.tsx` (ÚJ) — kétlépcsős modal (keresés → megerősítés),
+    300ms debounce ugyanazzal a `setTimeout`/`clearTimeout` mintával, mint a `TicketsPage` keresőmezője
+    (nincs külön debounce-könyvtár a projektben). Keresési találatok `<button>` elemekként (nem
+    `<div>`), mert kattinthatónak kell lenniük — ehhez ÚJ `.searchResultItem` CSS osztály (button-reset:
+    `font: inherit`, `color: inherit`, a `.clickUpItem` border/padding/background mintáját követve).
+    Megerősítéskor `ticketClient.mergeTicket` hívás, sikeres válasz után: `['ticket', targetId]` és
+    `['tickets']` (lista) invalidálás, toast (`useToastStore.addToast` — ez volt az ELSŐ hely a
+    kódbázisban, ahol egy mutation `onSuccess`-e közvetlenül hív toast-ot, eddig kizárólag az SSE
+    notification hook hívta), majd `navigate(`/tickets/${targetId}`)`
+  - `pages/TicketDetail/RelatedTicketsSection.tsx` (ÚJ) — a `ClickUpSection` ALATT a jobb panelben.
+    `react-router-dom` `Link`-kel (nem `<a href>`-fel) navigál a kapcsolódó ticketre, a meglévő
+    `.clickUpList`/`.clickUpItem`/`.clickUpItemHeader`/`.clickUpMeta` CSS osztályokat újrahasznosítva
+    (nem kellett hozzá új CSS blokk, a `Link` `display:block` inline style-lal kapja meg a szükséges
+    block-szintű megjelenítést, mert alapból inline elem)
+  - "Összevonás" gomb a `titleRow`/`viewToggleRow`-ban, a Lezárás gomb ELŐTT — `!ticket.isMerged`
+    esetén látszik (a terv szerint), a meglévő `shared.secondaryButton` stílussal. "ÖSSZEVONVA → #Y"
+    badge a `metaRow`-ban, a `StatusBadge` ELŐTT — `badgeStyles.badge`+`badgeStyles.dark` (ugyanaz a
+    variáns, mint a `Closed` státuszé) + ÚJ `.mergedBadge` CSS osztály (`text-decoration: none;
+    cursor: pointer`), `react-router-dom` `Link`-ként renderelve a cél ticketre
+  - Tesztelve élőben, valódi Mailpit SMTP + polling ciklussal (60 másodperces `PollIntervalSeconds`,
+    NEM csökkentve a teszthez, kivárva a tényleges ciklust): (1) csatolmányos válasz egy meglévő
+    ticketre (`Re: [#15] ...` subject-tag egyezés) — a csatolmány (PNG) megjelent a
+    `/tickets/{id}/attachments` végponton, letöltve és a byte-tartalom BÁJTRA PONTOSAN egyezett a
+    elküldött fájléval; (2) csatolmányos email vadonatúj ticket-témával — új ticket jött létre, kezdő
+    `TicketMessage` + csatolmány (PDF) helyesen kapcsolódva, letöltve és tartalma egyezett;
+    (3) `GET /tickets/search?q=...` numerikus és szöveges kereséssel; (4) `GET /tickets/{id}/related`
+    egyező és nem egyező requester email-lel, 404 nemlétező ticketre; (5) merge: self-merge → 409,
+    sikeres merge → audit log bejegyzés, majd manuálisan VISSZAÁLLÍTVA (`IsMerged`/
+    `MergedIntoTicketId` visszaállítva, a teszt audit sor törölve). Minden teszt közben létrejött
+    plusz adat (teszt `TicketMessage`/`FileStorage`/`EmailQueue` sorok, a vadonatúj teszt ticket) a
+    tesztelés után SQL-lel törölve — a dev DB végállapota megegyezik a lépés eleji állapottal (ticket
+    #14/#15 pontosan az eredeti állapotukban)
+  - BÖNGÉSZŐS vizuális/interakciós tesztelés: MEGKÍSÉRELVE, de VÉGÜL NEM SIKERÜLT — ellentétben a
+    korábbi lépésekkel (ahol egyáltalán nem állt rendelkezésre böngésző-automatizálási eszköz), itt
+    telepítettem Playwright-ot (`npx playwright install chromium`, sikeresen letöltötte a binárisokat),
+    DE a headless Chromium indítása lib hiány miatt elhasal (`libnspr4.so: cannot open shared object
+    file`) — a hiányzó rendszer-csomagok telepítéséhez (`playwright install --with-deps`) root jogosultság
+    kellene, a környezetben NINCS jelszó nélküli `sudo` (`sudo -n true` → "interactive authentication
+    is required"). Emiatt a merge modal/badge/kapcsolódó jegyek szekció tényleges vizuális
+    megjelenése és kattintás-viselkedése (a keresési találatok gomb-stílusa, a badge pozicionálása a
+    metaRow-ban, a modal két állapota közti váltás) NEM lett manuálisan ellenőrizve — csak a `tsc -b`,
+    `npm run build` (production) és `oxlint` (érintett fájlok: `TicketDetailPage.tsx`,
+    `TicketDetailPage.module.css`, `MergeModal.tsx` (ÚJ), `RelatedTicketsSection.tsx` (ÚJ)) tiszta
+    lefutása, valamint a `vite dev` élő fájljainak hiba nélküli transform-álása (curl-lel ellenőrizve)
+    igazolja, hogy a kód szintaktikailag/típusilag helyes
 
 ## Seed adatok
 - Admin user: admin@supportportal.dev / Admin1234!
@@ -698,9 +804,7 @@ cd frontend && npm run dev               # port 5173
       response beszúrás kurzor pozícióra nem üres editornál, link popover pozicionálás/Escape/külső
       kattintás bezárás, üres kijelöléssel beszúrt link szövege) — nincs böngésző-automatizálási eszköz
       ebben a környezetben
-- [ ] Bejövő email csatolmányok NINCSENEK feldolgozva (17. lépés TODO-ja, lásd `TicketEmailProcessor.cs`
-      komment) — a Mailpit HTTP API attachment-tartalmát külön hívással kellene lekérni és
-      MinIO-ba tölteni; a kimenő (portál→email) csatolmányok teljesen működnek
+- [x] ~~Bejövő email csatolmányok NINCSENEK feldolgozva~~ — MEGOLDVA a 19. lépésben (lásd ott)
 - [ ] 17. lépés UI vizuális/interakciós ellenőrzése böngészőben MÉG NEM TÖRTÉNT MEG (fájl csatolás/
       eltávolítás gomb és lista a composerben, kép thumbnail betöltés a buborékokban, Lezárás gomb
       confirm dialog, tevékenységnapló accordion nyitás/zárás mindkét nézetben) — nincs
@@ -721,6 +825,21 @@ cd frontend && npm run dev               # port 5173
       utólag kapcsolja ki/be, a már beszúrt idézet nem tűnik el/jelenik meg automatikusan (szándékos
       egyszerűsítés, lásd 18. lépés összefoglaló); ha ez valódi igény, egy élő szinkronizálást kellene
       építeni rá
+- [ ] 19. lépés UI vizuális/interakciós ellenőrzése böngészőben MÉG NEM TÖRTÉNT MEG (Összevonás gomb,
+      merge modal keresés/kiválasztás/megerősítés két állapota, ÖSSZEVONVA badge pozíció és kattintás,
+      Kapcsolódó jegyek szekció lista/üres állapot) — lásd a 19. lépés összefoglalójában: EBBEN a
+      lépésben megpróbáltam Playwright-tal böngésző-automatizálást beüzemelni (korábbi lépésekben ez
+      elvi lehetőségként sem merült fel), de a headless Chromium hiányzó rendszer-shared library-k
+      (`libnspr4.so` stb.) miatt nem indul el, a telepítéshez (`playwright install --with-deps`) pedig
+      root/sudo kellene, ami nem elérhető ebben a környezetben (`sudo -n true` elutasítva) — ha egy
+      jövőbeli környezetben ezek a rendszer-csomagok telepítve vannak (vagy sudo elérhető), a
+      Playwright-alapú tesztelés innentől megismételhető (a driver script ötlete: `chromium.launch()`,
+      login `#email`/`#password`+`button[type=submit]`, navigálás `/tickets/{id}`-re)
+- [ ] A `/settings/tickets` "MinIO orphan blob" takarítás NEM történt meg: a 19. lépés böngésző-cél
+      nélküli, valódi Mailpit SMTP-n átküldött teszt csatolmányai (screenshot.png, dokumentum.pdf)
+      MinIO-ban FIZIKAILAG bent maradtak (a DB-sorokat töröltem, de a MinIO objektumokat nem) — ez
+      ugyanaz a minta, amit a korábbi lépések is követtek (a DB takarítás dokumentálva volt, a MinIO
+      blob-ok törlése nem), ártalmatlan, csak dev-bucket helyfoglalás
 
 ## Rich text editor — később implementálandó (18. lépés terv 4. pontja, dokumentálva, NEM implementálva)
 - Képbeszúrás inline — a StarterKit nem tartalmaz Image extension-t (`@tiptap/extension-image` külön

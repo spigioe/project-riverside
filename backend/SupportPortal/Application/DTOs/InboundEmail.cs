@@ -8,5 +8,8 @@ public record InboundEmail(
     string Body,
     string? InReplyTo,
     string? References,
-    DateTime ReceivedAt
+    DateTime ReceivedAt,
+    IReadOnlyList<InboundEmailAttachment> Attachments
 );
+
+public record InboundEmailAttachment(string Filename, string ContentType, byte[] Data);
