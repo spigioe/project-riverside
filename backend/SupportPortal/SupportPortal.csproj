@@ -38,6 +38,14 @@
     </Exec>
     <Message Importance="high" Condition="'$(NSwagBackendCheckExitCode)' != '0'" Text="NSwag: a backend nem érhető el a http://localhost:5000 címen — a TypeScript API kliens generálása kimarad." />
     <Exec Command="$(NSwagExe_Net90) run nswag.json /variables:Configuration=$(Configuration)" WorkingDirectory="$(MSBuildProjectDirectory)" Condition="'$(NSwagBackendCheckExitCode)' == '0'" ContinueOnError="WarnAndContinue" />
+    <!--
+      Az NSwag Axios sablonja fájlletöltő végpontoknál `new Blob([...], { type: response.headers["content-type"] })`-öt
+      generál. Az axios headers-indexelés típusa (AxiosHeaderValue) tartalmaz null/AxiosHeaders/szám/logikai
+      értéket is, a natív BlobPropertyBag.type viszont csak string-et fogad — ez a sor ezért mindig típushibás
+      lenne tsc alatt. Mivel a generated-client.ts minden build során felülíródik, kézzel nem javítható;
+      egy `as string | undefined` cast-ot fűzünk hozzá utólag, sed-del, közvetlenül a generálás után.
+    -->
+    <Exec Command="sed -i 's/type: response.headers\[&quot;content-type&quot;\] })/type: response.headers[&quot;content-type&quot;] as string | undefined })/g' ../../frontend/src/api/generated-client.ts" Condition="'$(NSwagBackendCheckExitCode)' == '0'" ContinueOnError="WarnAndContinue" />
   </Target>
 
 </Project>

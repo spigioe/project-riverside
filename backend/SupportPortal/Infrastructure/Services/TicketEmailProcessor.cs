@@ -61,6 +61,14 @@ public partial class TicketEmailProcessor(AppDbContext db, ICsmService csmServic
         }
         else
         {
+            // TODO (17. lépés): a bejövő email csatolmányai jelenleg NEM kerülnek feldolgozásra.
+            // A Mailpit HTTP API a message detail válaszban ("Attachments" tömb, PartID-kkel) adja
+            // vissza őket, tartalmukat pedig egy külön GET /api/v1/message/{id}/part/{PartID} hívással
+            // kellene lekérni — ez az EmailService.FetchNewAsync/InboundEmail réteget új mezővel
+            // (attachment lista + tartalom stream) bővítené, majd itt (miután a TicketMessage.Id ismert)
+            // IFileStorageService.UploadAsync + FileStorage sor létrehozása kellene, ugyanúgy mint a
+            // kimenő csatolmányoknál (TicketService.AddMessageAsync). A kimenő (portál → email)
+            // csatolmányok viszont teljesen működnek, ez a TODO csak a bejövő irányra vonatkozik.
             db.TicketMessages.Add(new TicketMessage
             {
                 TicketId = ticket.Id,

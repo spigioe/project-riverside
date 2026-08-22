@@ -15,6 +15,7 @@ public class ClickUpLinkService(
     AppDbContext db,
     HttpClient httpClient,
     IIntegrationService integrationService,
+    IAuditLogService auditLogService,
     ILogger<ClickUpLinkService> logger) : IClickUpLinkService
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
@@ -56,6 +57,9 @@ public class ClickUpLinkService(
         db.ClickUpLinks.Add(link);
         await db.SaveChangesAsync();
 
+        await auditLogService.LogAsync(
+            currentUserId, "ticket", ticketId, "clickup_link_added", null, link.ClickUpTaskTitle ?? link.ClickUpTaskId);
+
         return await db.ClickUpLinks
             .AsNoTracking()
             .Where(l => l.Id == link.Id)
@@ -66,13 +70,17 @@ public class ClickUpLinkService(
             .FirstAsync();
     }
 
-    public async Task<bool> DeleteLinkAsync(int ticketId, int linkId)
+    public async Task<bool> DeleteLinkAsync(int ticketId, int linkId, int currentUserId)
     {
         var link = await db.ClickUpLinks.FirstOrDefaultAsync(l => l.Id == linkId && l.TicketId == ticketId);
         if (link is null) return false;
 
         db.ClickUpLinks.Remove(link);
         await db.SaveChangesAsync();
+
+        await auditLogService.LogAsync(
+            currentUserId, "ticket", ticketId, "clickup_link_removed", link.ClickUpTaskTitle ?? link.ClickUpTaskId, null);
+
         return true;
     }
 

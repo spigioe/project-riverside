@@ -3252,6 +3252,148 @@ export class TicketAiClient {
     }
 }
 
+export class TicketAttachmentsClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getAttachments(ticketId: number, cancelToken?: CancelToken): Promise<AttachmentDto[]> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{ticketId}/attachments";
+        if (ticketId === undefined || ticketId === null)
+            throw new globalThis.Error("The parameter 'ticketId' must be defined.");
+        url_ = url_.replace("{ticketId}", encodeURIComponent("" + ticketId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetAttachments(_response);
+        });
+    }
+
+    protected processGetAttachments(response: AxiosResponse): Promise<AttachmentDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(AttachmentDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<AttachmentDto[]>(result200);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AttachmentDto[]>(null as any);
+    }
+
+    download(id: number, cancelToken?: CancelToken): Promise<FileResponse> {
+        let url_ = this.baseUrl + "/api/portal/attachments/{id}/download";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            responseType: "blob",
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/octet-stream"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDownload(_response);
+        });
+    }
+
+    protected processDownload(response: AxiosResponse): Promise<FileResponse> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200 || status === 206) {
+            const contentDisposition = response.headers ? response.headers["content-disposition"] : undefined;
+            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
+            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
+            if (fileName) {
+                fileName = decodeURIComponent(fileName);
+            } else {
+                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
+                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
+            }
+            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] as string | undefined }), headers: _headers });
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<FileResponse>(null as any);
+    }
+}
+
 export class TicketClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -3877,21 +4019,34 @@ export class TicketClient {
         return Promise.resolve<TicketMessageDto[]>(null as any);
     }
 
-    addMessage(id: number, request: CreateTicketMessageRequest, cancelToken?: CancelToken): Promise<TicketMessageDto> {
+    addMessage(id: number, body?: string | undefined, isInternalNote?: boolean | undefined, cc?: string | null | undefined, bcc?: string | null | undefined, attachments?: FileParameter[] | null | undefined, cancelToken?: CancelToken): Promise<TicketMessageDto> {
         let url_ = this.baseUrl + "/api/portal/tickets/{id}/messages";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
         url_ = url_.replace("{id}", encodeURIComponent("" + id));
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(request);
+        const content_ = new FormData();
+        if (body === null || body === undefined)
+            throw new globalThis.Error("The parameter 'body' cannot be null.");
+        else
+            content_.append("Body", body.toString());
+        if (isInternalNote === null || isInternalNote === undefined)
+            throw new globalThis.Error("The parameter 'isInternalNote' cannot be null.");
+        else
+            content_.append("IsInternalNote", isInternalNote.toString());
+        if (cc !== null && cc !== undefined)
+            content_.append("Cc", cc.toString());
+        if (bcc !== null && bcc !== undefined)
+            content_.append("Bcc", bcc.toString());
+        if (attachments !== null && attachments !== undefined)
+            attachments.forEach(item_ => content_.append("Attachments", item_.data, item_.fileName ? item_.fileName : "Attachments") );
 
         let options_: AxiosRequestConfig = {
             data: content_,
             method: "POST",
             url: url_,
             headers: {
-                "Content-Type": "application/json",
                 "Accept": "application/json"
             },
             cancelToken
@@ -3925,6 +4080,13 @@ export class TicketClient {
             result201 = TicketMessageDto.fromJS(resultData201);
             return Promise.resolve<TicketMessageDto>(result201);
 
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
         } else if (status === 404) {
             const _responseText = response.data;
             let result404: any = null;
@@ -3937,6 +4099,71 @@ export class TicketClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<TicketMessageDto>(null as any);
+    }
+
+    getActivity(id: number, cancelToken?: CancelToken): Promise<TicketActivityDto[]> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/activity";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetActivity(_response);
+        });
+    }
+
+    protected processGetActivity(response: AxiosResponse): Promise<TicketActivityDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(TicketActivityDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<TicketActivityDto[]>(result200);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<TicketActivityDto[]>(null as any);
     }
 
     getClickUpLinks(id: number, cancelToken?: CancelToken): Promise<ClickUpLinkDto[]> {
@@ -7120,6 +7347,66 @@ export interface IAiClassifyResponse {
     suggestedPriority?: TicketPriority;
 }
 
+export class AttachmentDto implements IAttachmentDto {
+    id?: number;
+    messageId?: number;
+    originalFilename?: string;
+    mimeType?: string;
+    fileSize?: number;
+    uploadedAt?: Date;
+    downloadUrl?: string;
+
+    constructor(data?: IAttachmentDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.messageId = _data["messageId"];
+            this.originalFilename = _data["originalFilename"];
+            this.mimeType = _data["mimeType"];
+            this.fileSize = _data["fileSize"];
+            this.uploadedAt = _data["uploadedAt"] ? new Date(_data["uploadedAt"].toString()) : undefined as any;
+            this.downloadUrl = _data["downloadUrl"];
+        }
+    }
+
+    static fromJS(data: any): AttachmentDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new AttachmentDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["messageId"] = this.messageId;
+        data["originalFilename"] = this.originalFilename;
+        data["mimeType"] = this.mimeType;
+        data["fileSize"] = this.fileSize;
+        data["uploadedAt"] = this.uploadedAt ? this.uploadedAt.toISOString() : undefined as any;
+        data["downloadUrl"] = this.downloadUrl;
+        return data;
+    }
+}
+
+export interface IAttachmentDto {
+    id?: number;
+    messageId?: number;
+    originalFilename?: string;
+    mimeType?: string;
+    fileSize?: number;
+    uploadedAt?: Date;
+    downloadUrl?: string;
+}
+
 export class PagedResultOfTicketListItemDto implements IPagedResultOfTicketListItemDto {
     items?: TicketListItemDto[];
     page?: number;
@@ -7804,13 +8091,16 @@ export enum MessageDirection {
     Outbound = "Outbound",
 }
 
-export class CreateTicketMessageRequest implements ICreateTicketMessageRequest {
-    body?: string;
-    isInternalNote?: boolean;
-    cc?: string | undefined;
-    bcc?: string | undefined;
+export class TicketActivityDto implements ITicketActivityDto {
+    id?: number;
+    userId?: number | undefined;
+    userName?: string | undefined;
+    action?: string;
+    oldValue?: string | undefined;
+    newValue?: string | undefined;
+    createdAt?: Date;
 
-    constructor(data?: ICreateTicketMessageRequest) {
+    constructor(data?: ITicketActivityDto) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -7821,35 +8111,44 @@ export class CreateTicketMessageRequest implements ICreateTicketMessageRequest {
 
     init(_data?: any) {
         if (_data) {
-            this.body = _data["body"];
-            this.isInternalNote = _data["isInternalNote"];
-            this.cc = _data["cc"];
-            this.bcc = _data["bcc"];
+            this.id = _data["id"];
+            this.userId = _data["userId"];
+            this.userName = _data["userName"];
+            this.action = _data["action"];
+            this.oldValue = _data["oldValue"];
+            this.newValue = _data["newValue"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
         }
     }
 
-    static fromJS(data: any): CreateTicketMessageRequest {
+    static fromJS(data: any): TicketActivityDto {
         data = typeof data === 'object' ? data : {};
-        let result = new CreateTicketMessageRequest();
+        let result = new TicketActivityDto();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["body"] = this.body;
-        data["isInternalNote"] = this.isInternalNote;
-        data["cc"] = this.cc;
-        data["bcc"] = this.bcc;
+        data["id"] = this.id;
+        data["userId"] = this.userId;
+        data["userName"] = this.userName;
+        data["action"] = this.action;
+        data["oldValue"] = this.oldValue;
+        data["newValue"] = this.newValue;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
         return data;
     }
 }
 
-export interface ICreateTicketMessageRequest {
-    body?: string;
-    isInternalNote?: boolean;
-    cc?: string | undefined;
-    bcc?: string | undefined;
+export interface ITicketActivityDto {
+    id?: number;
+    userId?: number | undefined;
+    userName?: string | undefined;
+    action?: string;
+    oldValue?: string | undefined;
+    newValue?: string | undefined;
+    createdAt?: Date;
 }
 
 export class ClickUpLinkDto implements IClickUpLinkDto {
@@ -8590,6 +8889,66 @@ export interface ICustomFieldSummaryDto {
     name?: string;
     fieldType?: CustomFieldType;
     value?: string | undefined;
+}
+
+export class CreateTicketMessageRequest implements ICreateTicketMessageRequest {
+    body?: string;
+    isInternalNote?: boolean;
+    cc?: string | undefined;
+    bcc?: string | undefined;
+
+    constructor(data?: ICreateTicketMessageRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.body = _data["body"];
+            this.isInternalNote = _data["isInternalNote"];
+            this.cc = _data["cc"];
+            this.bcc = _data["bcc"];
+        }
+    }
+
+    static fromJS(data: any): CreateTicketMessageRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateTicketMessageRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["body"] = this.body;
+        data["isInternalNote"] = this.isInternalNote;
+        data["cc"] = this.cc;
+        data["bcc"] = this.bcc;
+        return data;
+    }
+}
+
+export interface ICreateTicketMessageRequest {
+    body?: string;
+    isInternalNote?: boolean;
+    cc?: string | undefined;
+    bcc?: string | undefined;
+}
+
+export interface FileParameter {
+    data: any;
+    fileName: string;
+}
+
+export interface FileResponse {
+    data: Blob;
+    status: number;
+    fileName?: string;
+    headers?: { [name: string]: any };
 }
 
 export class SwaggerException extends Error {

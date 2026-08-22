@@ -16,5 +16,5 @@ public interface ICustomFieldService
     Task<bool> DeactivateDefinitionAsync(int id);
 
     Task<IReadOnlyList<CustomFieldValueDto>?> GetValuesAsync(int ticketId);
-    Task<CustomFieldValuesUpdateResult> UpdateValuesAsync(int ticketId, IReadOnlyList<UpdateCustomFieldValueItem> values);
+    Task<CustomFieldValuesUpdateResult> UpdateValuesAsync(int ticketId, IReadOnlyList<UpdateCustomFieldValueItem> values, int currentUserId);
 }

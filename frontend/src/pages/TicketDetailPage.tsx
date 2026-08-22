@@ -5,6 +5,7 @@ import {
   csmClient,
   meClient,
   ticketAiClient,
+  ticketAttachmentsClient,
   ticketClient,
   ticketCustomFieldsClient,
   usersClient,
@@ -12,7 +13,6 @@ import {
   AssignTicketRequest,
   ClickUpLinkDto,
   CreateClickUpLinkRequest,
-  CreateTicketMessageRequest,
   CsmAssignRequest,
   CustomFieldType,
   CustomFieldValueDto,
@@ -36,6 +36,8 @@ import { formatDateTime, formatTicketId } from '../lib/format'
 import { plainTextToHtml } from '../lib/htmlText'
 import { ReplyComposer } from './TicketDetail/ReplyComposer'
 import { MessageThread } from './TicketDetail/MessageThread'
+import { TicketInfoPanel } from './TicketDetail/TicketInfoPanel'
+import { TicketActivityLog } from './TicketDetail/TicketActivityLog'
 import styles from './TicketDetailPage.module.css'
 
 function extractClickUpTaskId(url: string): string {
@@ -79,6 +81,7 @@ export function TicketDetailPage() {
   const [cc, setCc] = useState('')
   const [bcc, setBcc] = useState('')
   const [isInternalNote, setIsInternalNote] = useState(false)
+  const [attachments, setAttachments] = useState<File[]>([])
 
   const ticketQuery = useQuery({
     queryKey: ['ticket', ticketId],
@@ -92,6 +95,12 @@ export function TicketDetailPage() {
     enabled: Number.isFinite(ticketId),
   })
 
+  const attachmentsQuery = useQuery({
+    queryKey: ['ticket-attachments', ticketId],
+    queryFn: () => ticketAttachmentsClient.getAttachments(ticketId),
+    enabled: Number.isFinite(ticketId),
+  })
+
   const usersQuery = useQuery({
     queryKey: ['users'],
     queryFn: () => usersClient.getUsers(),
@@ -99,35 +108,49 @@ export function TicketDetailPage() {
 
   const sendMessageMutation = useMutation({
     mutationFn: () =>
-      ticketClient.addMessage(ticketId, new CreateTicketMessageRequest({
-        body: replyBody,
+      ticketClient.addMessage(
+        ticketId,
+        replyBody,
         isInternalNote,
-        cc: cc.trim() || undefined,
-        bcc: bcc.trim() || undefined,
-      })),
+        cc.trim() || undefined,
+        bcc.trim() || undefined,
+        attachments.length > 0 ? attachments.map((f) => ({ data: f, fileName: f.name })) : undefined,
+      ),
     onSuccess: () => {
       setReplyBody('')
       setCc('')
       setBcc('')
+      setAttachments([])
       queryClient.invalidateQueries({ queryKey: ['ticket-messages', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-attachments', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
     },
   })
 
   const statusMutation = useMutation({
     mutationFn: (status: TicketStatus) =>
       ticketClient.updateStatus(ticketId, new UpdateTicketStatusRequest({ status })),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
+    },
   })
 
   const assignMutation = useMutation({
     mutationFn: (assignedToId: number | undefined) =>
       ticketClient.assignTicket(ticketId, new AssignTicketRequest({ assignedToId })),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
+    },
   })
 
   const csmMutation = useMutation({
     mutationFn: () => ticketClient.toggleCsm(ticketId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
+    },
   })
 
   const csmListQuery = useQuery({
@@ -137,7 +160,10 @@ export function TicketDetailPage() {
 
   const csmAssignMutation = useMutation({
     mutationFn: (csmId: number | undefined) => ticketClient.assignCsm(ticketId, new CsmAssignRequest({ csmId })),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
+    },
   })
 
   const customFieldsQuery = useQuery({
@@ -148,7 +174,10 @@ export function TicketDetailPage() {
 
   const customFieldMutation = useMutation({
     mutationFn: (item: UpdateCustomFieldValueItem) => ticketCustomFieldsClient.updateValues(ticketId, [item]),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket-custom-fields', ticketId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket-custom-fields', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
+    },
   })
 
   // "Ticket tulajdonságok automatikus mentése" preferencia: ha ki van kapcsolva, a Felelős/Státusz
@@ -241,6 +270,7 @@ export function TicketDetailPage() {
       setPropertiesDirty(false)
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['ticket-custom-fields', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
     },
   })
 
@@ -268,6 +298,8 @@ export function TicketDetailPage() {
     sendMessageMutation.mutate()
   }
 
+  const customFields = customFieldsQuery.data ?? []
+
   const composer = (
     <ReplyComposer
       requesterEmail={ticket.requesterEmail!}
@@ -279,8 +311,20 @@ export function TicketDetailPage() {
       onBccChange={setBcc}
       isInternalNote={isInternalNote}
       onInternalNoteChange={setIsInternalNote}
+      attachments={attachments}
+      onAttachmentsChange={setAttachments}
       onSend={handleSend}
       sending={sendMessageMutation.isPending}
+      editorMinHeight={detailView === TicketDetailView.Split ? 300 : undefined}
+    />
+  )
+
+  const infoPanel = (collapsible: boolean) => (
+    <TicketInfoPanel
+      ticket={ticket}
+      customFields={customFields}
+      sourceLabel={SOURCE_LABELS[ticket.source!]}
+      collapsible={collapsible}
     />
   )
 
@@ -294,6 +338,18 @@ export function TicketDetailPage() {
         <div className={styles.titleRow}>
           <h1 className={styles.title}>{ticket.subject}</h1>
           <div className={styles.viewToggleRow}>
+            {ticket.status !== TicketStatus.Closed && ticket.status !== TicketStatus.Resolved && (
+              <button
+                type="button"
+                className={shared.secondaryButton}
+                disabled={statusMutation.isPending}
+                onClick={() => {
+                  if (confirm('Biztosan le szeretnéd zárni ezt a ticketet?')) statusMutation.mutate(TicketStatus.Closed)
+                }}
+              >
+                Lezárás
+              </button>
+            )}
             {detailView === TicketDetailView.Split && (
               <button
                 type="button"
@@ -337,19 +393,32 @@ export function TicketDetailPage() {
         {detailView === TicketDetailView.Classic ? (
           <>
             {composer}
-            <MessageThread ticket={ticket} messages={messages} />
+            <MessageThread ticket={ticket} messages={messages} attachments={attachmentsQuery.data ?? []} />
+            <TicketActivityLog ticketId={ticketId} />
           </>
         ) : (
           <div className={styles.splitLayout}>
             {splitReversed ? (
               <>
-                <div className={styles.splitPanel}>{composer}</div>
-                <div className={styles.splitPanel}><MessageThread ticket={ticket} messages={messages} detailed /></div>
+                <div className={styles.splitPanel}>
+                  {composer}
+                  <div className={styles.splitInfoPanel}>{infoPanel(false)}</div>
+                </div>
+                <div className={styles.splitPanel}>
+                  <MessageThread ticket={ticket} messages={messages} attachments={attachmentsQuery.data ?? []} detailed />
+                  <TicketActivityLog ticketId={ticketId} />
+                </div>
               </>
             ) : (
               <>
-                <div className={styles.splitPanel}><MessageThread ticket={ticket} messages={messages} detailed /></div>
-                <div className={styles.splitPanel}>{composer}</div>
+                <div className={styles.splitPanel}>
+                  <MessageThread ticket={ticket} messages={messages} attachments={attachmentsQuery.data ?? []} detailed />
+                  <TicketActivityLog ticketId={ticketId} />
+                </div>
+                <div className={styles.splitPanel}>
+                  {composer}
+                  <div className={styles.splitInfoPanel}>{infoPanel(false)}</div>
+                </div>
               </>
             )}
           </div>
@@ -357,6 +426,8 @@ export function TicketDetailPage() {
       </div>
 
       <div className={styles.right}>
+        {detailView === TicketDetailView.Classic && infoPanel(true)}
+
         <div className={styles.card}>
           <div className={styles.panelHeader}>Tulajdonságok</div>
           <div className={styles.panelBody}>

@@ -14,6 +14,7 @@ import {
   SettingsClient,
   SlaClient,
   TicketAiClient,
+  TicketAttachmentsClient,
   TicketClient,
   TicketCustomFieldsClient,
   UsersClient,
@@ -41,3 +42,4 @@ export const dashboardClient = new DashboardClient(baseURL, httpClient)
 export const meClient = new MeClient(baseURL, httpClient)
 export const customFieldDefinitionsClient = new CustomFieldDefinitionsClient(baseURL, httpClient)
 export const ticketCustomFieldsClient = new TicketCustomFieldsClient(baseURL, httpClient)
+export const ticketAttachmentsClient = new TicketAttachmentsClient(baseURL, httpClient)

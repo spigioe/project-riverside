@@ -1,13 +1,6 @@
 import { TicketStatus } from '../../api'
+import { STATUS_LABELS } from '../../lib/ticketLabels'
 import styles from './Badge.module.css'
-
-const LABELS: Record<TicketStatus, string> = {
-  [TicketStatus.New]: 'Új',
-  [TicketStatus.Open]: 'Nyitott',
-  [TicketStatus.Pending]: 'Függőben',
-  [TicketStatus.Resolved]: 'Megoldva',
-  [TicketStatus.Closed]: 'Lezárva',
-}
 
 const VARIANTS: Record<TicketStatus, string> = {
   [TicketStatus.New]: styles.gray,
@@ -18,5 +11,5 @@ const VARIANTS: Record<TicketStatus, string> = {
 }
 
 export function StatusBadge({ status }: { status: TicketStatus }) {
-  return <span className={`${styles.badge} ${VARIANTS[status]}`}>{LABELS[status]}</span>
+  return <span className={`${styles.badge} ${VARIANTS[status]}`}>{STATUS_LABELS[status]}</span>
 }

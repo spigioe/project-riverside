@@ -54,7 +54,7 @@ public class TicketController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateTicket(int id, [FromBody] UpdateTicketRequest request)
     {
-        var success = await ticketService.UpdateTicketAsync(id, request);
+        var success = await ticketService.UpdateTicketAsync(id, request, User.GetUserId());
         if (!success)
             return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
 
@@ -109,7 +109,7 @@ public class TicketController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> AssignCsm(int id, [FromBody] CsmAssignRequest request)
     {
-        var result = await ticketService.AssignCsmAsync(id, request.CsmId);
+        var result = await ticketService.AssignCsmAsync(id, request.CsmId, User.GetUserId());
         return result switch
         {
             TicketCsmAssignResult.Success => NoContent(),
@@ -157,16 +157,38 @@ public class TicketController(
         return Ok(messages);
     }
 
+    // multipart/form-data (nem JSON) — a csatolmányok (IFormFile lista) miatt. Lásd
+    // CreateTicketMessageFormRequest a Portal API-specifikus alakért; a Developer API (V1) POST
+    // /api/v1/tickets/{id}/messages változatlanul JSON-t fogad (CreateTicketMessageRequest), ott
+    // nincs fájlfeltöltés-igény.
     [HttpPost("{id:int}/messages")]
+    [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(TicketMessageDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AddMessage(int id, [FromBody] CreateTicketMessageRequest request)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AddMessage(int id, [FromForm] CreateTicketMessageFormRequest request)
     {
-        var message = await ticketService.AddMessageAsync(id, request, User.GetUserId());
+        var message = await ticketService.AddMessageAsync(
+            id,
+            new CreateTicketMessageRequest(request.Body, request.IsInternalNote, request.Cc, request.Bcc),
+            User.GetUserId(),
+            request.Attachments);
         if (message is null)
             return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
 
         return CreatedAtAction(nameof(GetMessages), new { id }, message);
+    }
+
+    [HttpGet("{id:int}/activity")]
+    [ProducesResponseType(typeof(IReadOnlyList<TicketActivityDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetActivity(int id)
+    {
+        var activity = await ticketService.GetActivityAsync(id);
+        if (activity is null)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
+
+        return Ok(activity);
     }
 
     [HttpGet("{id:int}/clickup")]
@@ -198,7 +220,7 @@ public class TicketController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteClickUpLink(int id, int linkId)
     {
-        var success = await clickUpLinkService.DeleteLinkAsync(id, linkId);
+        var success = await clickUpLinkService.DeleteLinkAsync(id, linkId, User.GetUserId());
         if (!success)
             return Problem(statusCode: StatusCodes.Status404NotFound, title: "A ClickUp link nem található.");
 

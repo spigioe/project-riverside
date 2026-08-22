@@ -1,12 +1,6 @@
 import { TicketPriority } from '../../api'
+import { PRIORITY_LABELS } from '../../lib/ticketLabels'
 import styles from './Badge.module.css'
-
-const LABELS: Record<TicketPriority, string> = {
-  [TicketPriority.Low]: 'Alacsony',
-  [TicketPriority.Medium]: 'Közepes',
-  [TicketPriority.High]: 'Magas',
-  [TicketPriority.Urgent]: 'Sürgős',
-}
 
 const VARIANTS: Record<TicketPriority, string> = {
   [TicketPriority.Low]: styles.green,
@@ -16,5 +10,5 @@ const VARIANTS: Record<TicketPriority, string> = {
 }
 
 export function PriorityBadge({ priority }: { priority: TicketPriority }) {
-  return <span className={`${styles.badge} ${VARIANTS[priority]}`}>{LABELS[priority]}</span>
+  return <span className={`${styles.badge} ${VARIANTS[priority]}`}>{PRIORITY_LABELS[priority]}</span>
 }

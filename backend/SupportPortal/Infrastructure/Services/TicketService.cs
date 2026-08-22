@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,8 +16,11 @@ public class TicketService(
     AppDbContext db,
     IEmailService emailService,
     IOptions<MailSettings> mailOptions,
+    IOptions<MinioSettings> minioOptions,
     INotificationService notificationService,
     ICsmService csmService,
+    IFileStorageService fileStorageService,
+    IAuditLogService auditLogService,
     ILogger<TicketService> logger) : ITicketService
 {
     public async Task<PagedResult<TicketListItemDto>> GetTicketsAsync(TicketListQuery query)
@@ -125,6 +129,8 @@ public class TicketService(
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
 
+        await auditLogService.LogAsync(currentUserId, "ticket", ticket.Id, "created", null, null);
+
         var activeUserIds = await db.Users
             .Where(u => u.IsActive && u.Id != currentUserId)
             .Select(u => u.Id)
@@ -136,10 +142,13 @@ public class TicketService(
         return (await GetTicketByIdAsync(ticket.Id))!;
     }
 
-    public async Task<bool> UpdateTicketAsync(int id, UpdateTicketRequest request)
+    public async Task<bool> UpdateTicketAsync(int id, UpdateTicketRequest request, int currentUserId)
     {
         var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
         if (ticket is null) return false;
+
+        var oldPriority = ticket.Priority;
+        var oldCategoryId = ticket.CategoryId;
 
         ticket.Subject = request.Subject;
         ticket.Body = request.Body;
@@ -150,6 +159,24 @@ public class TicketService(
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
+
+        if (oldPriority != request.Priority)
+        {
+            await auditLogService.LogAsync(
+                currentUserId, "ticket", id, "priority_changed", oldPriority.ToString(), request.Priority.ToString());
+        }
+
+        if (oldCategoryId != request.CategoryId)
+        {
+            var oldCategoryName = oldCategoryId.HasValue
+                ? await db.TicketCategories.Where(c => c.Id == oldCategoryId).Select(c => c.Name).FirstOrDefaultAsync()
+                : null;
+            var newCategoryName = request.CategoryId.HasValue
+                ? await db.TicketCategories.Where(c => c.Id == request.CategoryId).Select(c => c.Name).FirstOrDefaultAsync()
+                : null;
+            await auditLogService.LogAsync(currentUserId, "ticket", id, "category_changed", oldCategoryName, newCategoryName);
+        }
+
         return true;
     }
 
@@ -158,10 +185,14 @@ public class TicketService(
         var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
         if (ticket is null) return false;
 
+        var oldStatus = ticket.Status;
         ticket.Status = status;
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
+
+        if (oldStatus != status)
+            await auditLogService.LogAsync(currentUserId, "ticket", id, "status_changed", oldStatus.ToString(), status.ToString());
 
         if (ticket.AssignedToId.HasValue && ticket.AssignedToId.Value != currentUserId)
         {
@@ -184,10 +215,22 @@ public class TicketService(
             if (!userExists) return TicketAssignResult.UserNotFound;
         }
 
+        var oldAssignedToId = ticket.AssignedToId;
         ticket.AssignedToId = assignedToId;
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
+
+        if (oldAssignedToId != assignedToId)
+        {
+            var oldName = oldAssignedToId.HasValue
+                ? await db.Users.Where(u => u.Id == oldAssignedToId).Select(u => u.FullName).FirstOrDefaultAsync()
+                : null;
+            var newName = assignedToId.HasValue
+                ? await db.Users.Where(u => u.Id == assignedToId).Select(u => u.FullName).FirstOrDefaultAsync()
+                : null;
+            await auditLogService.LogAsync(currentUserId, "ticket", id, "assigned", oldName, newName);
+        }
 
         if (assignedToId.HasValue && assignedToId.Value != currentUserId)
         {
@@ -204,10 +247,14 @@ public class TicketService(
         var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
         if (ticket is null) return null;
 
+        var oldFlagged = ticket.IsCsmFlagged;
         ticket.IsCsmFlagged = !ticket.IsCsmFlagged;
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
+
+        await auditLogService.LogAsync(
+            currentUserId, "ticket", id, "csm_flagged", oldFlagged.ToString(), ticket.IsCsmFlagged.ToString());
 
         if (ticket.IsCsmFlagged)
         {
@@ -224,7 +271,7 @@ public class TicketService(
         return ticket.IsCsmFlagged;
     }
 
-    public async Task<TicketCsmAssignResult> AssignCsmAsync(int id, int? csmId)
+    public async Task<TicketCsmAssignResult> AssignCsmAsync(int id, int? csmId, int currentUserId)
     {
         var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
         if (ticket is null) return TicketCsmAssignResult.TicketNotFound;
@@ -235,9 +282,21 @@ public class TicketService(
             if (!csmExists) return TicketCsmAssignResult.CsmNotFound;
         }
 
+        var oldCsmId = ticket.CsmId;
         ticket.CsmId = csmId;
         ticket.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
+
+        if (oldCsmId != csmId)
+        {
+            var oldName = oldCsmId.HasValue
+                ? await db.CsmManagers.Where(c => c.Id == oldCsmId).Select(c => c.Name).FirstOrDefaultAsync()
+                : null;
+            var newName = csmId.HasValue
+                ? await db.CsmManagers.Where(c => c.Id == csmId).Select(c => c.Name).FirstOrDefaultAsync()
+                : null;
+            await auditLogService.LogAsync(currentUserId, "ticket", id, "csm_assigned", oldName, newName);
+        }
 
         return TicketCsmAssignResult.Success;
     }
@@ -281,7 +340,8 @@ public class TicketService(
             .ToListAsync();
     }
 
-    public async Task<TicketMessageDto?> AddMessageAsync(int ticketId, CreateTicketMessageRequest request, int currentUserId)
+    public async Task<TicketMessageDto?> AddMessageAsync(
+        int ticketId, CreateTicketMessageRequest request, int currentUserId, IReadOnlyList<IFormFile>? attachments = null)
     {
         var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
         if (ticket is null) return null;
@@ -299,6 +359,33 @@ public class TicketService(
 
         db.TicketMessages.Add(message);
         await db.SaveChangesAsync();
+
+        if (attachments is { Count: > 0 })
+        {
+            foreach (var file in attachments)
+            {
+                var objectKey = $"tickets/{ticketId}/{message.Id}/{Guid.NewGuid()}-{Path.GetFileName(file.FileName)}";
+
+                await using (var stream = file.OpenReadStream())
+                    await fileStorageService.UploadAsync(objectKey, stream, file.Length, file.ContentType);
+
+                db.FileStorages.Add(new FileStorage
+                {
+                    MessageId = message.Id,
+                    StorageBackend = StorageBackend.Minio,
+                    BucketOrPath = minioOptions.Value.Bucket,
+                    ObjectKey = objectKey,
+                    OriginalFilename = file.FileName,
+                    MimeType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                    FileSize = file.Length,
+                });
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        await auditLogService.LogAsync(
+            currentUserId, "ticket", ticketId, "message_sent", null, request.IsInternalNote ? "internal_note" : "outbound");
 
         if (!request.IsInternalNote)
             await SendReplyEmailAsync(ticket, request.Body, request.Cc, request.Bcc);
@@ -323,6 +410,21 @@ public class TicketService(
                 m.SenderUserId, m.SenderUser != null ? m.SenderUser.FullName : null,
                 m.SenderEmail, m.Body, m.Cc, m.Bcc, m.IsInternalNote, m.Direction, m.CreatedAt))
             .FirstAsync();
+    }
+
+    public async Task<IReadOnlyList<TicketActivityDto>?> GetActivityAsync(int ticketId)
+    {
+        var ticketExists = await db.Tickets.AnyAsync(t => t.Id == ticketId);
+        if (!ticketExists) return null;
+
+        return await db.AuditLogs
+            .AsNoTracking()
+            .Where(a => a.EntityType == "ticket" && a.EntityId == ticketId)
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(50)
+            .Select(a => new TicketActivityDto(
+                a.Id, a.UserId, a.User != null ? a.User.FullName : null, a.Action, a.OldValue, a.NewValue, a.CreatedAt))
+            .ToListAsync();
     }
 
     private static string ExtractCompanyFromEmail(string email)

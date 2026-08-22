@@ -3,11 +3,26 @@ using SupportPortal.Application.DTOs.AuditLog;
 using SupportPortal.Application.DTOs.Common;
 using SupportPortal.Application.Interfaces;
 using SupportPortal.Data;
+using SupportPortal.Domain.Entities;
 
 namespace SupportPortal.Infrastructure.Services;
 
 public class AuditLogService(AppDbContext db) : IAuditLogService
 {
+    public async Task LogAsync(int? userId, string entityType, int entityId, string action, string? oldValue, string? newValue)
+    {
+        db.AuditLogs.Add(new AuditLog
+        {
+            UserId = userId,
+            EntityType = entityType,
+            EntityId = entityId,
+            Action = action,
+            OldValue = oldValue,
+            NewValue = newValue,
+        });
+        await db.SaveChangesAsync();
+    }
+
     public async Task<PagedResult<AuditLogDto>> GetAsync(AuditLogQuery query)
     {
         var page = query.Page < 1 ? 1 : query.Page;

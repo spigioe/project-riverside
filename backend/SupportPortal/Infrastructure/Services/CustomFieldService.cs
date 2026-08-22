@@ -17,7 +17,7 @@ namespace SupportPortal.Infrastructure.Services;
 // takar — azt szándékosan nem használjuk/nem állítjuk, mert az EntityType/EntityId már megvan erre
 // tervezve, és egy második, párhuzamos FK bevezetése/kitöltése külön migrációt és kockázatot jelentene
 // olyasmiért, amit a jelenlegi séma már megold.
-public class CustomFieldService(AppDbContext db) : ICustomFieldService
+public class CustomFieldService(AppDbContext db, IAuditLogService auditLogService) : ICustomFieldService
 {
     private const string EntityType = "ticket";
 
@@ -116,7 +116,8 @@ public class CustomFieldService(AppDbContext db) : ICustomFieldService
             .ToList();
     }
 
-    public async Task<CustomFieldValuesUpdateResult> UpdateValuesAsync(int ticketId, IReadOnlyList<UpdateCustomFieldValueItem> items)
+    public async Task<CustomFieldValuesUpdateResult> UpdateValuesAsync(
+        int ticketId, IReadOnlyList<UpdateCustomFieldValueItem> items, int currentUserId)
     {
         var ticketExists = await db.Tickets.AnyAsync(t => t.Id == ticketId);
         if (!ticketExists) return CustomFieldValuesUpdateResult.TicketNotFound;
@@ -144,8 +145,15 @@ public class CustomFieldService(AppDbContext db) : ICustomFieldService
             .ToListAsync();
         var existingByDefinitionId = existing.ToDictionary(v => v.FieldDefinitionId);
 
+        var changes = new List<(string FieldName, string? OldValue, string? NewValue)>();
+
         foreach (var item in items)
         {
+            var oldValue = existingByDefinitionId.TryGetValue(item.DefinitionId, out var existingValue) ? existingValue.Value : null;
+            if (oldValue == item.Value) continue;
+
+            changes.Add((definitions[item.DefinitionId].Name, oldValue, item.Value));
+
             if (string.IsNullOrEmpty(item.Value))
             {
                 if (existingByDefinitionId.TryGetValue(item.DefinitionId, out var toRemove))
@@ -170,6 +178,15 @@ public class CustomFieldService(AppDbContext db) : ICustomFieldService
         }
 
         await db.SaveChangesAsync();
+
+        foreach (var change in changes)
+        {
+            await auditLogService.LogAsync(
+                currentUserId, "ticket", ticketId, "custom_field_changed",
+                JsonSerializer.Serialize(new { fieldName = change.FieldName, value = change.OldValue }),
+                JsonSerializer.Serialize(new { fieldName = change.FieldName, value = change.NewValue }));
+        }
+
         return CustomFieldValuesUpdateResult.Success;
     }
 

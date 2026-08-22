@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -11,12 +11,19 @@ interface RichTextEditorProps {
   placeholder?: string
   highlighted?: boolean
   editable?: boolean
+  minHeight?: number
   onCannedResponseClick?: () => void
+  onAttachClick?: () => void
 }
 
-export function RichTextEditor({
-  content, onChange, placeholder, highlighted = false, editable = true, onCannedResponseClick,
-}: RichTextEditorProps) {
+export interface RichTextEditorHandle {
+  insertContent: (html: string) => void
+}
+
+export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(function RichTextEditor(
+  { content, onChange, placeholder, highlighted = false, editable = true, minHeight, onCannedResponseClick, onAttachClick },
+  ref,
+) {
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -28,8 +35,9 @@ export function RichTextEditor({
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   })
 
-  // Külső content-frissítés (canned response kiválasztás, AI válasz javaslat betöltése, Törlés gomb)
-  // szinkronizálása az editorba — a beírt szöveget viszont nem írjuk felül (lásd a lenti feltételt).
+  // Külső content-frissítés (AI válasz javaslat betöltése, Törlés gomb) szinkronizálása az editorba —
+  // a beírt szöveget viszont nem írjuk felül (lásd a lenti feltételt). A canned response beszúrás
+  // insertContent-tel megy (lásd insertContent handle), nem ezen az útvonalon.
   useEffect(() => {
     if (!editor) return
     if (content !== editor.getHTML()) {
@@ -42,22 +50,38 @@ export function RichTextEditor({
     editor?.setEditable(editable)
   }, [editable, editor])
 
+  useImperativeHandle(ref, () => ({
+    insertContent: (html: string) => {
+      editor?.chain().focus().insertContent(html).run()
+    },
+  }), [editor])
+
   const isEmpty = editor?.isEmpty ?? true
 
-  function addLink() {
+  const [linkPopoverOpen, setLinkPopoverOpen] = useState(false)
+
+  function applyLink(url: string) {
     if (!editor) return
-    const previousUrl = editor.getAttributes('link').href as string | undefined
-    const url = window.prompt('Link URL:', previousUrl ?? 'https://')
-    if (url === null) return
-    if (url.trim() === '') {
+    const trimmed = url.trim()
+    if (trimmed === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run()
+      setLinkPopoverOpen(false)
       return
     }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run()
+    if (editor.state.selection.empty) {
+      const escaped = trimmed.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      editor.chain().focus().insertContent(`<a href="${trimmed}">${escaped}</a>`).run()
+    } else {
+      editor.chain().focus().extendMarkRange('link').setLink({ href: trimmed }).run()
+    }
+    setLinkPopoverOpen(false)
   }
 
   return (
-    <div className={`${styles.wrapper} ${highlighted ? styles.wrapperInternal : ''}`}>
+    <div
+      className={`${styles.wrapper} ${highlighted ? styles.wrapperInternal : ''}`}
+      style={minHeight ? ({ '--editor-min-height': `${minHeight}px` } as React.CSSProperties) : undefined}
+    >
       <div className={styles.toolbar}>
         <button
           type="button"
@@ -99,18 +123,32 @@ export function RichTextEditor({
         >
           1. Lista
         </button>
-        <button
-          type="button"
-          className={`${styles.toolbarButton} ${editor?.isActive('link') ? styles.toolbarButtonActive : ''}`}
-          onClick={addLink}
-          aria-label="Link"
-        >
-          Link
-        </button>
+        <span className={styles.linkButtonWrapper}>
+          <button
+            type="button"
+            className={`${styles.toolbarButton} ${editor?.isActive('link') ? styles.toolbarButtonActive : ''}`}
+            onClick={() => setLinkPopoverOpen((o) => !o)}
+            aria-label="Link"
+          >
+            Link
+          </button>
+          {linkPopoverOpen && editor && (
+            <LinkPopover
+              initialUrl={(editor.getAttributes('link').href as string | undefined) ?? ''}
+              onApply={applyLink}
+              onClose={() => setLinkPopoverOpen(false)}
+            />
+          )}
+        </span>
         <span className={styles.toolbarDivider} />
         {onCannedResponseClick && (
           <button type="button" className={styles.toolbarButton} onClick={onCannedResponseClick}>
             Sablon
+          </button>
+        )}
+        {onAttachClick && (
+          <button type="button" className={styles.toolbarButton} onClick={onAttachClick} aria-label="Fájl csatolása">
+            📎
           </button>
         )}
         <button
@@ -125,6 +163,56 @@ export function RichTextEditor({
       <div className={styles.editorArea}>
         {isEmpty && placeholder && <div className={styles.placeholder}>{placeholder}</div>}
         <EditorContent editor={editor} className={styles.editorContent} />
+      </div>
+    </div>
+  )
+})
+
+function LinkPopover({
+  initialUrl, onApply, onClose,
+}: { initialUrl: string; onApply: (url: string) => void; onClose: () => void }) {
+  const [url, setUrl] = useState(initialUrl)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) onClose()
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onClose])
+
+  return (
+    <div className={styles.linkPopover} ref={containerRef}>
+      <input
+        type="text"
+        className={styles.linkPopoverInput}
+        value={url}
+        placeholder="https://"
+        autoFocus
+        onChange={(e) => setUrl(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { e.preventDefault(); onApply(url) }
+        }}
+      />
+      <div className={styles.linkPopoverActions}>
+        <button type="button" className={styles.linkPopoverButton} onClick={onClose}>
+          Mégse
+        </button>
+        <button
+          type="button"
+          className={`${styles.linkPopoverButton} ${styles.linkPopoverButtonPrimary}`}
+          onClick={() => onApply(url)}
+        >
+          Alkalmaz
+        </button>
       </div>
     </div>
   )

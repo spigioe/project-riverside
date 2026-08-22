@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Minio;
 using NSwag;
 using NSwag.Generation.Processors.Security;
 using SupportPortal.Application.DTOs;
@@ -41,6 +42,17 @@ var mailSettings = builder.Configuration.GetSection("Mail").Get<MailSettings>()
     ?? throw new InvalidOperationException("Mail settings not found.");
 
 builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("Mail"));
+
+// ── MinIO (csatolmány tárolás) ─────────────────────────────────────────────────
+var minioSettings = builder.Configuration.GetSection("Minio").Get<MinioSettings>()
+    ?? throw new InvalidOperationException("MinIO settings not found.");
+
+builder.Services.Configure<MinioSettings>(builder.Configuration.GetSection("Minio"));
+builder.Services.AddMinio(configureClient => configureClient
+    .WithEndpoint(minioSettings.Endpoint)
+    .WithCredentials(minioSettings.AccessKey, minioSettings.SecretKey)
+    .WithSSL(minioSettings.UseSSL)
+    .Build());
 
 // ── Titkosítás (ClickUp API kulcs stb.) ───────────────────────────────────────
 builder.Services.Configure<EncryptionSettings>(builder.Configuration.GetSection("Encryption"));
@@ -113,6 +125,8 @@ builder.Services.AddScoped<ICsmService, CsmService>();
 builder.Services.AddScoped<ICustomFieldService, CustomFieldService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
+builder.Services.AddScoped<IFileStorageService, MinioFileStorageService>();
+builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddHttpClient<IIntegrationService, IntegrationService>(client =>
     client.BaseAddress = new Uri("https://api.clickup.com/api/v2/"));
 builder.Services.AddHttpClient<IClickUpLinkService, ClickUpLinkService>(client =>
@@ -199,6 +213,9 @@ if (app.Environment.IsDevelopment())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
     await DbSeeder.SeedAsync(db);
+
+    var fileStorageService = scope.ServiceProvider.GetRequiredService<IFileStorageService>();
+    await fileStorageService.EnsureBucketExistsAsync();
 }
 
 app.UseCors("DevCors");

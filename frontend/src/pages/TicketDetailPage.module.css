@@ -441,6 +441,92 @@
   overflow-y: auto;
 }
 
+.splitInfoPanel {
+  flex-shrink: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  margin-top: 14px;
+}
+
+.splitInfoPanel .infoPanel {
+  margin-bottom: 0;
+}
+
+/* ── Ticket info blokk ─────────────────────────────────── */
+
+.infoPanel {
+  background: var(--bg-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.infoPanelHeader {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.infoPanelHeaderClickable {
+  cursor: pointer;
+}
+
+.infoPanelToggle {
+  font-size: 11px;
+}
+
+.infoPanelBody {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.infoPanelBadges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+
+.infoRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.infoRowLabel {
+  font-family: var(--font-heading);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  min-width: 84px;
+  flex-shrink: 0;
+}
+
+.infoRowValue {
+  color: var(--text);
+  word-break: break-word;
+}
+
+.infoRowValueMono {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
 .textarea {
   width: 100%;
   min-height: 88px;
@@ -720,4 +806,159 @@
   display: flex;
   gap: 6px;
   margin-top: 8px;
+}
+
+/* ── Csatolmányok ──────────────────────────────────────── */
+
+.attachmentChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 10px;
+}
+
+.attachmentChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  font-size: 12px;
+}
+
+.attachmentChipName {
+  color: var(--text);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachmentChipSize {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.attachmentChipRemove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.attachmentChipRemove:hover {
+  color: var(--red-text);
+}
+
+.attachmentError {
+  padding: 0 14px 10px;
+  font-size: 12px;
+  color: var(--red-text);
+}
+
+.attachmentList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.attachmentItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  font-size: 12px;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+.attachmentItem:hover {
+  border-color: var(--navy);
+}
+
+.attachmentItemIcon {
+  font-size: 14px;
+}
+
+.attachmentThumbnail {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+.attachmentItemName {
+  color: var(--text);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachmentItemSize {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* ── Tevékenységnapló ──────────────────────────────────── */
+
+.activityHeader {
+  width: 100%;
+  padding: 11px 18px;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.activityBody {
+  padding: 4px 18px 14px;
+  background: var(--bg-alt);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.activityRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.activityRow:last-child {
+  border-bottom: none;
+}
+
+.activityTime {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.activityUser {
+  font-weight: 600;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.activityAction {
+  color: var(--text);
 }

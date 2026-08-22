@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SupportPortal.Api.Extensions;
 using SupportPortal.Application.DTOs.CustomFields;
 using SupportPortal.Application.Interfaces;
 
@@ -28,7 +29,7 @@ public class TicketCustomFieldsController(ICustomFieldService customFieldService
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateValues(int id, [FromBody] List<UpdateCustomFieldValueItem> values)
     {
-        var result = await customFieldService.UpdateValuesAsync(id, values);
+        var result = await customFieldService.UpdateValuesAsync(id, values, User.GetUserId());
         switch (result)
         {
             case CustomFieldValuesUpdateResult.TicketNotFound:

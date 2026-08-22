@@ -368,6 +368,181 @@ cd frontend && npm run dev               # port 5173
     ellenőriztem (mind a négy új fájl hiba nélkül transform-ál), de a tényleges editor-interakció
     (formázás, link beszúrás, canned response betöltés, split nézet swap, resize) manuális kipróbálást
     igényel
+- 16. lépés KÉSZ: Rich text editor és ticket detail layout finomítás (kizárólag frontend, NSwag
+  változatlan)
+  - `pages/TicketDetail/TicketInfoPanel.tsx` (ÚJ): kompakt, label:érték-páros ticket info blokk
+    (`--bg-alt` háttér, `--border-light` keret) — badge sor (Státusz/Prioritás/Kategória), majd
+    Azonosító/Tárgy/Forrás/Létrehozva/Kérelmező/Email/Cég/CSM felelős sorok, végül a kitöltött custom
+    field-ek. `collapsible` prop (opcionális, alapból nyitva) — Classic nézetben `true`, Split nézetben
+    `false` (ott a panel eleve csak akkor látszik, ha a felhasználó lefelé görget, nincs értelme
+    összecsukni). A "cég" mezőt NEM a backendből kapja (a `TicketDetailDto`-n nincs `requesterCompany`,
+    az csak a lista DTO-n van a 13a. lépésből) — a frontend maga vágja le a domain-t
+    `requesterEmail`-ből (`lib/format.ts` `getRequesterCompany`), ugyanazt az egyszerű string-műveletet
+    ismételve, amit a backend a lista végponton csinál; NEM indokolt emiatt backend-mezőt bővíteni egy
+    tisztán frontend lépésben
+  - Split nézet: a jobb (composer) panel most `composer` + `TicketInfoPanel` egymás alatt
+    (`styles.splitInfoPanel`: `max-height: 260px; overflow-y: auto`). A composer TipTap editorja
+    magasabb lett Split nézetben — `RichTextEditor` új `minHeight` prop-ja egy `--editor-min-height`
+    CSS custom property-t állít be inline style-lal (Split: 300px, Classic: a meglévő 88px marad,
+    nincs prop átadva)
+  - Classic nézet: `TicketInfoPanel` (`collapsible=true`) a jobb oldalsáv TETEJÉN, a "Tulajdonságok"
+    kártya FELETT, alapból nyitva (helyi `useState`, nincs perzisztálva — a terv nem írta elő, hogy a
+    nyitott/zárt állapot megmaradjon nézetváltás/újratöltés között)
+  - Canned response beszúrás: `RichTextEditor` `forwardRef`-fel `RichTextEditorHandle`-t exponál
+    (`insertContent(html)`, ami `editor.chain().focus().insertContent(html).run()`-t hív). A
+    `ReplyComposer` a canned response kiválasztásakor ezt hívja `onBodyChange(plainTextToHtml(...))`
+    helyett — kurzor pozícióra szúr be, nem ír felül. Az "üres editornál a teljes tartalom betöltődik"
+    elvárás KÜLÖN ESETKEZELÉS NÉLKÜL teljesül: TipTap-ban `insertContent` egy üres editorban a (0.
+    pozíciójú) kurzorhoz szúr be, ami gyakorlatilag megegyezik a teljes tartalom betöltésével — nem
+    kellett `editor.isEmpty` alapján elágazni
+  - Link popover: a `Link` gomb már nem `window.prompt()`-ot hív, hanem egy saját `LinkPopover`
+    komponenst nyit meg (`RichTextEditor.tsx`-en belül, nem külön fájlban — elég kicsi ahhoz, hogy ne
+    érje meg szétszedni), a gomb alatt abszolút pozicionálva (`styles.linkButtonWrapper` position:relative
+    wrapper). URL input + Alkalmaz/Mégse gomb, `--navy` keret + `--shadow-pop-sm` (a tervben szereplő
+    "--border" token NEM létezik a CSS token rendszerben, `--border-light`/`--navy` van — a toolbar
+    gombok mintáját követve `--navy`-t használtam, konzisztensen a többi toolbar elemmel). Escape és
+    külső kattintás zár (`document` szintű `mousedown`/`keydown` listener, csak amíg a popover nyitva
+    van). Kijelölt szöveg esetén a meglévő `setLink` logika fut (a kijelölt szöveg marad a link szövege);
+    üres kijelölésnél ÚJ ág: `insertContent`-tel egy `<a href="...">URL</a>` HTML-t szúr be, mert a
+    TipTap `setLink` collapsed selection esetén nem hoz létre látható szöveget, csak egy "stored mark"-ot
+    a következő gépeléshez — ez a tervben elvárt "az URL maga lesz a megjelenített szöveg" viselkedést
+    közvetlenül nem adta volna. Üres URL-lel "Alkalmaz" = unlink (a korábbi `window.prompt`-os
+    változat is így kezelte az üres inputot, megtartva ezt a viselkedést)
+  - `tsc -b`, `npm run build` (production) és `oxlint` (`TicketDetailPage.tsx`, `ReplyComposer.tsx`,
+    `TicketInfoPanel.tsx`, `MessageThread.tsx`, `RichTextEditor.tsx`, `lib/format.ts`) tiszta — 0
+    warning
+  - BÖNGÉSZŐS vizuális/interakciós tesztelés NEM történt ehhez a lépéshez sem (nincs
+    böngésző-automatizálási eszköz ebben a környezetben) — a `vite dev` élő fájljait curl-lel
+    ellenőriztem (mind a négy érintett/új fájl hiba nélkül transform-ál), de a tényleges viselkedés
+    (info panel elrendezés Split/Classic nézetben, összecsukás, canned response tényleges kurzor-pozíció
+    beszúrás, link popover pozicionálása/Escape/külső kattintás) manuális kipróbálást igényel
+- 17. lépés KÉSZ: Csatolmányok, Lezárás gomb, tevékenységnapló
+  - Csatolmányok, backend: A terv "FileStorage + TicketAttachment entitások már megvannak" állítása
+    RÉSZBEN téves volt — a `FileStorage` entitás MÁR TARTALMAZ egy `MessageId` FK-t
+    `TicketMessage`-re (`TicketMessage.Attachments` nav property is megvolt rá), tehát ez MAGA az
+    attachment-tábla, külön `TicketAttachment` entitás nem létezett és nem is kellett (a
+    `file_storage`/`ticket_attachments` a tervben csak fogalmi leírás volt, nem szó szerinti
+    táblanév — a tényleges táblanevek PascalCase-ek, `FileStorages`). `IFileStorageService`
+    ("az absztrakció már megvan" — ez SEM volt igaz, nem létezett) + `MinioFileStorageService` ÚJ:
+    `EnsureBucketExistsAsync`/`UploadAsync`/`DownloadAsync`, `Minio` NuGet (7.0.0, már a csproj-ban
+    volt, csak nem volt bekötve) `IMinioClient`-tel (`AddMinio` DI extension). A pontos SDK API-t
+    (`PutObjectArgs`/`GetObjectArgs` fluent builder alak) egy ideiglenes próba-konzolprojekttel
+    ellenőriztem élő MinIO ellen (reflection + tényleges upload/download roundtrip), mert a
+    csomag verziója (7.0.0) újabb, mint amit dokumentációból biztosan ismertem
+  - `MinioSettings` (`Application/DTOs/MinioSettings.cs`) + `appsettings.Development.json` "Minio"
+    szekció (Endpoint=localhost:9000, a `.env` MINIO_ROOT_USER/PASSWORD/BUCKET értékeivel) — a
+    docker-compose a `backend` konténernek env var-ként adja át ugyanezt, de a backend lokálisan fut
+    (`dotnet run`), így az appsettings-nek is tartalmaznia kellett. Bucket létrehozás
+    (`EnsureBucketExistsAsync`) a Development induláskor (a migráció+seed blokk mellett)
+  - `POST /tickets/{id}/messages` mostantól KIZÁRÓLAG multipart/form-data-t fogad (nem JSON) —
+    `CreateTicketMessageFormRequest` (`[FromForm]`, `List<IFormFile>? Attachments`). SZÁNDÉKOS
+    ELTÉRÉS a terv "a meglévő JSON body mellé fájl feltöltés" megfogalmazásától: ASP.NET Core-ban
+    egy action nem tud egyszerre `[FromBody]` JSON-t ÉS `[FromForm]` fájlokat fogadni ugyanabból a
+    body-ból, a form mezők (Body/Cc/Bcc/IsInternalNote) simán megfelelnek a JSON mezőknek — a
+    Developer API-s `POST /api/v1/tickets/{id}/messages` VÁLTOZATLANUL JSON-t fogad
+    (`CreateTicketMessageRequest`), ott nincs fájlfeltöltés-igény, a két endpoint mostantól két
+    külön DTO-t használ ugyanarra a service-metódusra (`ITicketService.AddMessageAsync` kapott egy
+    opcionális `IReadOnlyList<IFormFile>? attachments = null` paramétert, defaulttal, hogy a V1
+    controller hívása ne törjön)
+  - Validáció (`CreateTicketMessageFormRequestValidator`): max 5 fájl, max 10MB/fájl, engedélyezett
+    kiterjesztések (pdf/doc/docx/xls/xlsx/png/jpg/jpeg/gif/txt/zip) — `RuleForEach` + `ChildRules`
+  - `GET /tickets/{id}/attachments` + `GET /attachments/{id}/download` — ÚJ `TicketAttachmentsController`
+    (`api/portal` route, mert a download endpoint NEM ticket-scoped). `IAttachmentService`/
+    `AttachmentService`: a letöltés a backendEN KERESZTÜL streamel (nem presigned MinIO URL) —
+    így a JWT auth természetesen érvényesül rajta, nincs extra CORS/publikus MinIO endpoint
+    kockázat. NSwag ezt automatikusan `Promise<FileResponse>`-ra generálta (`{ data: Blob, fileName,
+    status }`), ehhez nem kellett kézzel semmit írni
+  - NSwag/Axios ismert inkompatibilitás: a generált `download()` kód `new Blob([...], { type:
+    response.headers["content-type"] })`-öt ír, de az axios `AxiosHeaderValue` típusa (null-t is
+    tartalmazó unió) nem fér bele a natív `BlobPropertyBag.type: string`-be — ez MINDIG típushibás
+    lenne `tsc` alatt, FÜGGETLENÜL attól, hogy mit csinálunk, mert a `generated-client.ts` minden
+    backend build-nél újragenerálódik (kézzel nem javítható tartósan). Megpróbáltam egy globális
+    `BlobPropertyBag` deklaráció-merge-dzsel bővíteni a típust — ez NEM MŰKÖDÖTT (TS
+    "Subsequent property declarations must have the same type" hibát ad, a merge nem enged
+    típus-bővítést egy már létező property-n, még `any`-vel sem). VÉGSŐ MEGOLDÁS: egy `sed`
+    utófeldolgozó lépés a `SupportPortal.csproj` `GenerateApiClient` MSBuild targetjében, közvetlenül
+    az `nswag run` után — `as string | undefined` cast-ot fűz a sorhoz minden regenerálás után.
+    Tesztelve: `dotnet build` → a sor ténylegesen patch-elve → `tsc -b` tiszta
+  - Csatolmányok, frontend: `RichTextEditor` toolbar ÚJ opcionális `onAttachClick` prop (📎 gomb, a
+    "Sablon" gomb mellett — a terv "a toolbar-ban" kérte, nem a composer láblécében).
+    `ReplyComposer`: rejtett `<input type="file" multiple>` + kiválasztott fájlok chip-lista
+    (fájlnév+méret+X törlés gomb) + kliens oldali validáció (max 5 fájl, max 10MB/fájl, hibaüzenet
+    inline). Az `attachments: File[]` állapot a `TicketDetailPage`-ben él (ugyanaz a lifting minta,
+    mint `replyBody`/`cc`/`bcc`), küldéskor `ticketClient.addMessage(id, body, isInternalNote, cc,
+    bcc, attachments.map(f => ({ data: f, fileName: f.name })))` — az NSwag-generált szignatúra
+    pozicionális paraméterekre vált (nem egy request-objektumra), mert a backend action mostantól
+    `[FromForm]`
+  - `MessageThread`/`MessageBubble`: ÚJ `attachments: AttachmentDto[]` prop (a `TicketDetailPage`
+    egyetlen `GET /tickets/{id}/attachments` hívással tölti be MIND az összeset, a `MessageBubble`
+    `messageId` szerint szűri) — típus szerinti ikon (🖼️/📄/📦/📝/📊/📃/📎), fájlnév, méret, kattintásra
+    letöltés (`ticketAttachmentsClient.download` → Blob → ideiglenes `<a download>` link, mert a
+    böngésző natív letöltés-linkje nem tudna JWT Authorization headert küldeni). Kép típusoknál
+    (`image/*`) inline thumbnail: a kép TARTALMÁT is a hitelesített `download()` hívással tölti be
+    (`useEffect` + object URL + cleanup-kori `revokeObjectURL`), NEM sima `<img src={downloadUrl}>`-jal
+    — utóbbi nem küldene Authorization headert, 401-et kapna
+  - Lezárás gomb: a `titleRow`-ban, a Classic/Split váltó ELŐTT — csak akkor látszik, ha a
+    `ticket.status` nem Closed és nem Resolved. A MEGLÉVŐ `statusMutation`-t hívja (nincs külön
+    mutation), `confirm()` dialógus (a projekt már meglévő mintája, pl. ClickUp link törlésnél) —
+    `shared.secondaryButton` stílus (a terv "secondary gomb, --border keret" kérése szerint; a
+    `--border` token NEM létezik, `--border-light` van, a `.secondaryButton` már ezt használja)
+  - Tevékenységnapló, backend: `IAuditLogService` KIEGÉSZÍTVE egy `LogAsync` write metódussal — ez
+    ELŐTTE NEM LÉTEZETT (a service KIZÁRÓLAG a `/settings/system` audit log OLVASÁSÁT szolgálta ki,
+    semmi nem írt bele — a terv "valószínűleg nincs bekötve" gyanúja helytálló volt, ténylegesen
+    SEMMI nem volt bekötve). Bekötve: `TicketService` (created, status_changed, assigned,
+    csm_flagged, csm_assigned, priority_changed, category_changed, message_sent — ez utóbbihoz
+    `AddMessageAsync` mostantól minden híváskor logol), `CustomFieldService.UpdateValuesAsync`
+    (custom_field_changed, mezőnként, CSAK a ténylegesen változott mezőkre), `ClickUpLinkService`
+    (clickup_link_added/clickup_link_removed). Ehhez több service-metódus szignatúrája bővült egy
+    `currentUserId int` paraméterrel (`AssignCsmAsync`, `UpdateTicketAsync`,
+    `CustomFieldService.UpdateValuesAsync`, `ClickUpLinkService.DeleteLinkAsync`) — a hívó
+    controllerekben ez már elérhető volt `User.GetUserId()`-vel, csak eddig nem lett átadva
+  - "Ticket lezárva (closed)" a tervben KÜLÖN felsorolt pont — ÖSSZEVONVA a `status_changed`
+    action-nel (nem külön "closed" action), mert a Lezárás gomb ÚGYIS a meglévő
+    `PATCH .../status`-t hívja `Closed`-dal, a `status_changed` bejegyzés ("Státusz módosítva: X →
+    Lezárva") már pontosan ezt az eseményt írja le — egy külön, redundáns "closed" action-nek nem
+    lett volna hozzáadott információtartalma
+  - Old/new value formátum action-önként ELTÉR (dokumentálva `lib/activityFormat.ts` tetején): a
+    legtöbb action egyszerű string old/new (pl. `status_changed`: `"New"`→`"Open"`, a nyers enum
+    string), DE a `custom_field_changed`-nél egy JSON objektum (`{"fieldName":...,"value":...}`),
+    mert a mező NEVÉT is át kellett adni, és az `AuditLog` táblának nincs külön oszlopa erre — ezt
+    egyedül ennél az action-nél kellett, a többinél a plain string elég volt
+  - `GET /tickets/{id}/activity` — `TicketController`-ben (nem külön controller, mert szorosan a
+    ticket-hez tartozik, mint a `/messages`), `Take(50)`, `OrderByDescending(CreatedAt)`
+  - Tevékenységnapló, frontend: `TicketActivityLog` (ÚJ, `pages/TicketDetail/`) — accordion,
+    alapból ZÁRVA, a fejléc ("Tevékenységnapló · N esemény") a `useQuery`-t FÜGGETLENÜL az
+    összecsukott állapottól betölti (nem `enabled: open`-nel), hogy a fejléc számlálója nyitás
+    előtt is helyes legyen. A thread ALATT jelenik meg MINDKÉT nézetben (Classic: közvetlenül a
+    `MessageThread` után; Split: a thread-panelen belül, a `MessageThread` után — mindkét
+    `splitReversed` ágban külön beszúrva, mert a JSX két külön blokkban van). `formatActivityAction`
+    (`lib/activityFormat.ts`) fordítja magyarra az action+old/new párokat — a `STATUS_LABELS`/
+    `PRIORITY_LABELS` konstansokat KIEMELTEM a `StatusBadge`/`PriorityBadge` komponensekből egy
+    közös `lib/ticketLabels.ts`-be (korábban a komponens-fájlból exportálva lettek volna, ami
+    `react(only-export-components)` oxlint warningot adott — a Fast Refresh csak akkor működik
+    jól, ha egy fájl KIZÁRÓLAG komponenst exportál)
+  - Bejövő email csatolmányok: NEM implementálva, TODO-ként jelölve `TicketEmailProcessor.cs`-ben
+    (kommentben) ÉS itt lent a TODO listában — a Mailpit HTTP API `Attachments`/`PartID` mezőit és
+    egy külön `GET .../part/{PartID}` hívást igényelne, ami az `EmailService`/`InboundEmail`
+    réteget is bővítené; a KIMENŐ (portál→email) csatolmányok viszont teljesen működnek, ahogy a
+    terv előírta minimumként
+  - Tesztelve élő adaton (ticket #1-en, curl-lel): fájlfeltöltés csatolmánnyal (201, MinIO-ba
+    ténylegesen feltöltve), `GET .../attachments` (helyes `downloadUrl`), letöltés (200, helyes
+    tartalom/fájlnév/Content-Type), érvénytelen kiterjesztés (400), 6 fájl egyszerre (400, "max 5"),
+    404 nemlétező ticket/attachment-re, `status_changed`/`priority_changed`/`category_changed`/
+    `csm_assigned`/`message_sent`/`clickup_link_added`/`clickup_link_removed` audit bejegyzések
+    mindegyike (helyes old/new érték). Minden teszt adat (üzenetek, csatolmány DB-sor, audit log
+    sorok, ClickUp link) utólag törölve/visszaállítva — ticket #1 végállapota megegyezik a lépés
+    eleji állapottal
+  - `tsc -b`, `npm run build` (production) és `oxlint` (`TicketDetailPage.tsx`, `ReplyComposer.tsx`,
+    `MessageThread.tsx`, `TicketActivityLog.tsx` (ÚJ), `RichTextEditor.tsx`, `StatusBadge.tsx`,
+    `PriorityBadge.tsx`, `lib/format.ts`, `lib/activityFormat.ts` (ÚJ), `lib/ticketLabels.ts` (ÚJ),
+    `api/index.ts`) tiszta — 0 új warning (a `TicketInfoPanel.tsx` 3 meglévő
+    `no-unused-vars`/pre-existing warningja a 16. lépésből maradt ott, nem ehhez a lépéshez
+    tartozik, nem nyúltam hozzá)
+  - BÖNGÉSZŐS vizuális/interakciós tesztelés NEM történt ehhez a lépéshez sem (nincs
+    böngésző-automatizálási eszköz ebben a környezetben) — a `vite dev` élő fájljait curl-lel
+    ellenőriztem (mind a nyolc érintett/új fájl hiba nélkül transform-ál), de a tényleges viselkedés
+    (fájl csatolás/eltávolítás UI, kép thumbnail betöltés, Lezárás confirm dialog, tevékenységnapló
+    accordion nyitás/zárás) manuális kipróbálást igényel
 
 ## Seed adatok
 - Admin user: admin@supportportal.dev / Admin1234!
@@ -418,6 +593,24 @@ cd frontend && npm run dev               # port 5173
 - [ ] Régi (15. lépés előtti) TicketMessages sorok body-ja plain text, nem HTML — megjelenítéskor a
       `.bubble` `white-space: pre-wrap`-je miatt vizuálisan még rendben jelennek meg, de nem lettek
       migrálva HTML-re; ez nem hiba, csak érdemes tudni demózáskor
+- [ ] 16. lépés UI vizuális/interakciós ellenőrzése böngészőben MÉG NEM TÖRTÉNT MEG (ticket info blokk
+      elrendezés Split alsó panelben és Classic oldalsávban, összecsukás Classic nézetben, canned
+      response beszúrás kurzor pozícióra nem üres editornál, link popover pozicionálás/Escape/külső
+      kattintás bezárás, üres kijelöléssel beszúrt link szövege) — nincs böngésző-automatizálási eszköz
+      ebben a környezetben
+- [ ] Bejövő email csatolmányok NINCSENEK feldolgozva (17. lépés TODO-ja, lásd `TicketEmailProcessor.cs`
+      komment) — a Mailpit HTTP API attachment-tartalmát külön hívással kellene lekérni és
+      MinIO-ba tölteni; a kimenő (portál→email) csatolmányok teljesen működnek
+- [ ] 17. lépés UI vizuális/interakciós ellenőrzése böngészőben MÉG NEM TÖRTÉNT MEG (fájl csatolás/
+      eltávolítás gomb és lista a composerben, kép thumbnail betöltés a buborékokban, Lezárás gomb
+      confirm dialog, tevékenységnapló accordion nyitás/zárás mindkét nézetben) — nincs
+      böngésző-automatizálási eszköz ebben a környezetben
+- [ ] `SupportPortal.csproj` `GenerateApiClient` target kiegészítve egy `sed` utófeldolgozó lépéssel
+      (lásd 17. lépés összefoglaló) — ismert NSwag/Axios kvirk kerülő megoldása (fájlletöltő
+      végpontok `Blob`/`content-type` típusütközése); ha egy jövőbeli NSwag verzió javítja ezt
+      upstream, a sed lépés no-op-pá válik (nem talál illeszkedő sort), nem árt, de érdemes tudni
+      róla, ha valaki a generált kliens szerkezetét vizsgálja
 
-## Következő feladat (16. lépés)
+## Következő feladat (18. lépés)
 (Még nincs kitűzve.)
+

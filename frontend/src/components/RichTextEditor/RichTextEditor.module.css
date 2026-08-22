@@ -61,6 +61,66 @@
   position: relative;
 }
 
+.linkButtonWrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.linkPopover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 240px;
+  background: var(--surface);
+  border: 1.5px solid var(--navy);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-pop-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.linkPopoverInput {
+  width: 100%;
+  padding: 6px 9px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.linkPopoverActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.linkPopoverButton {
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--navy);
+  border-radius: var(--radius);
+  font-family: var(--font-heading);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.linkPopoverButton:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-pop-sm);
+}
+
+.linkPopoverButtonPrimary {
+  background: var(--navy);
+  color: #fff;
+}
+
 .placeholder {
   position: absolute;
   top: 12px;
@@ -71,7 +131,7 @@
 }
 
 .editorContent :global(.ProseMirror) {
-  min-height: 88px;
+  min-height: var(--editor-min-height, 88px);
   padding: 12px 14px;
   font-size: 14px;
   color: var(--text);
