@@ -6,10 +6,12 @@ public record UserPreferenceDto(
     bool TicketPropertiesAutosave,
     TicketListView TicketListView,
     TicketDetailView TicketDetailView,
-    bool TicketDetailSplitReversed);
+    bool TicketDetailSplitReversed,
+    string? EmailSignature);
 
 public record UpdateUserPreferenceRequest(
     bool TicketPropertiesAutosave,
     TicketListView TicketListView,
     TicketDetailView TicketDetailView,
-    bool TicketDetailSplitReversed);
+    bool TicketDetailSplitReversed,
+    string? EmailSignature);

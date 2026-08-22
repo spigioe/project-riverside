@@ -6580,6 +6580,7 @@ export class UserPreferenceDto implements IUserPreferenceDto {
     ticketListView?: TicketListView;
     ticketDetailView?: TicketDetailView;
     ticketDetailSplitReversed?: boolean;
+    emailSignature?: string | undefined;
 
     constructor(data?: IUserPreferenceDto) {
         if (data) {
@@ -6596,6 +6597,7 @@ export class UserPreferenceDto implements IUserPreferenceDto {
             this.ticketListView = _data["ticketListView"];
             this.ticketDetailView = _data["ticketDetailView"];
             this.ticketDetailSplitReversed = _data["ticketDetailSplitReversed"];
+            this.emailSignature = _data["emailSignature"];
         }
     }
 
@@ -6612,6 +6614,7 @@ export class UserPreferenceDto implements IUserPreferenceDto {
         data["ticketListView"] = this.ticketListView;
         data["ticketDetailView"] = this.ticketDetailView;
         data["ticketDetailSplitReversed"] = this.ticketDetailSplitReversed;
+        data["emailSignature"] = this.emailSignature;
         return data;
     }
 }
@@ -6621,6 +6624,7 @@ export interface IUserPreferenceDto {
     ticketListView?: TicketListView;
     ticketDetailView?: TicketDetailView;
     ticketDetailSplitReversed?: boolean;
+    emailSignature?: string | undefined;
 }
 
 export enum TicketListView {
@@ -6638,6 +6642,7 @@ export class UpdateUserPreferenceRequest implements IUpdateUserPreferenceRequest
     ticketListView?: TicketListView;
     ticketDetailView?: TicketDetailView;
     ticketDetailSplitReversed?: boolean;
+    emailSignature?: string | undefined;
 
     constructor(data?: IUpdateUserPreferenceRequest) {
         if (data) {
@@ -6654,6 +6659,7 @@ export class UpdateUserPreferenceRequest implements IUpdateUserPreferenceRequest
             this.ticketListView = _data["ticketListView"];
             this.ticketDetailView = _data["ticketDetailView"];
             this.ticketDetailSplitReversed = _data["ticketDetailSplitReversed"];
+            this.emailSignature = _data["emailSignature"];
         }
     }
 
@@ -6670,6 +6676,7 @@ export class UpdateUserPreferenceRequest implements IUpdateUserPreferenceRequest
         data["ticketListView"] = this.ticketListView;
         data["ticketDetailView"] = this.ticketDetailView;
         data["ticketDetailSplitReversed"] = this.ticketDetailSplitReversed;
+        data["emailSignature"] = this.emailSignature;
         return data;
     }
 }
@@ -6679,6 +6686,7 @@ export interface IUpdateUserPreferenceRequest {
     ticketListView?: TicketListView;
     ticketDetailView?: TicketDetailView;
     ticketDetailSplitReversed?: boolean;
+    emailSignature?: string | undefined;
 }
 
 export class NotificationDto implements INotificationDto {

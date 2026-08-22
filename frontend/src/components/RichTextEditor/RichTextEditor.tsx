@@ -1,9 +1,31 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
+import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
 import styles from './RichTextEditor.module.css'
+
+// A paragraph node alapból nem őriz meg tetszőleges class attribútumot parse/szerializálás közben —
+// ez kell ahhoz, hogy az aláírás sorai (lásd ReplyComposer signature-beszúrás) megtartsák a szürke
+// stílusukat, miután a setContent egyszer feldolgozta a HTML-t.
+const ParagraphAttributes = Extension.create({
+  name: 'paragraphAttributes',
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['paragraph'],
+        attributes: {
+          class: {
+            default: null,
+            parseHTML: (element) => element.getAttribute('class'),
+            renderHTML: (attributes) => (attributes.class ? { class: attributes.class as string } : {}),
+          },
+        },
+      },
+    ]
+  },
+})
 
 interface RichTextEditorProps {
   content: string
@@ -18,6 +40,9 @@ interface RichTextEditorProps {
 
 export interface RichTextEditorHandle {
   insertContent: (html: string) => void
+  // Kezdeti tartalom beállítása (aláírás/idézet auto-beszúrás mount-kor) + kurzor a dokumentum elejére —
+  // nem emitál onChange-et, a hívónak külön kell szinkronizálnia a szülő state-jét (lásd ReplyComposer).
+  setContentAndFocusStart: (html: string) => void
 }
 
 export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(function RichTextEditor(
@@ -29,6 +54,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       StarterKit,
       Underline,
       Link.configure({ openOnClick: false, autolink: true }),
+      ParagraphAttributes,
     ],
     content,
     editable,
@@ -53,6 +79,10 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
   useImperativeHandle(ref, () => ({
     insertContent: (html: string) => {
       editor?.chain().focus().insertContent(html).run()
+    },
+    setContentAndFocusStart: (html: string) => {
+      editor?.commands.setContent(html, { emitUpdate: false })
+      editor?.commands.focus('start')
     },
   }), [editor])
 
@@ -106,6 +136,14 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
           aria-label="Aláhúzott"
         >
           <u>U</u>
+        </button>
+        <button
+          type="button"
+          className={`${styles.toolbarButton} ${editor?.isActive('blockquote') ? styles.toolbarButtonActive : ''}`}
+          onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+          aria-label="Idézet"
+        >
+          "
         </button>
         <button
           type="button"

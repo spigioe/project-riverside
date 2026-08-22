@@ -1,16 +1,21 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { cannedResponsesClient, CannedResponseDto } from '../../api'
 import { Modal } from '../../components/Modal/Modal'
 import { RichTextEditor, type RichTextEditorHandle } from '../../components/RichTextEditor/RichTextEditor'
-import { plainTextToHtml, isHtmlEmpty } from '../../lib/htmlText'
+import rteStyles from '../../components/RichTextEditor/RichTextEditor.module.css'
+import { EmailPreviewModal } from './EmailPreviewModal'
+import { useAuthStore } from '../../store/useAuthStore'
+import { plainTextToHtml, isHtmlEmpty, buildSignatureHtml, buildQuoteHtml } from '../../lib/htmlText'
 import { formatFileSize } from '../../lib/format'
+import shared from '../../components/Settings/SettingsShared.module.css'
 import styles from '../TicketDetailPage.module.css'
 
 const MAX_ATTACHMENTS = 5
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024
 
 interface ReplyComposerProps {
+  ticketSubject: string
   requesterEmail: string
   body: string
   onBodyChange: (html: string) => void
@@ -25,17 +30,45 @@ interface ReplyComposerProps {
   onSend: () => void
   sending: boolean
   editorMinHeight?: number
+  // undefined = a preferenciák/üzenetek még töltődnek, még nem tudjuk eldönteni mit szúrjunk be
+  signature?: string
+  lastInboundBody?: string | null
 }
 
 export function ReplyComposer({
-  requesterEmail, body, onBodyChange, cc, onCcChange, bcc, onBccChange,
+  ticketSubject, requesterEmail, body, onBodyChange, cc, onCcChange, bcc, onBccChange,
   isInternalNote, onInternalNoteChange, attachments, onAttachmentsChange, onSend, sending, editorMinHeight,
+  signature, lastInboundBody,
 }: ReplyComposerProps) {
   const [ccBccOpen, setCcBccOpen] = useState(false)
   const [cannedOpen, setCannedOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const [attachmentError, setAttachmentError] = useState<string | null>(null)
+  const [autoQuoteEnabled, setAutoQuoteEnabled] = useState(true)
   const editorRef = useRef<RichTextEditorHandle>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const initializedRef = useRef(false)
+  const authUser = useAuthStore((s) => s.user)
+
+  // Mount-kori automatikus tartalom: idézet (ha be van kapcsolva és van bejövő üzenet) + aláírás,
+  // a kurzor a dokumentum elejére kerül. Csak EGYSZER fut le (ref guard), amint mindkét async adat
+  // (preferenciák, üzenetlista) betöltött — ha közben a user már írt valamit, nem nyúlunk hozzá.
+  useEffect(() => {
+    if (initializedRef.current) return
+    if (signature === undefined || lastInboundBody === undefined) return
+    initializedRef.current = true
+    if (!isHtmlEmpty(body)) return
+
+    const parts: string[] = []
+    if (autoQuoteEnabled && lastInboundBody) parts.push(buildQuoteHtml(lastInboundBody))
+    if (signature.trim()) parts.push(buildSignatureHtml(signature, rteStyles.emailSignatureLine))
+    if (parts.length === 0) return
+
+    const html = '<p></p>' + parts.join('')
+    editorRef.current?.setContentAndFocusStart(html)
+    onBodyChange(html)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature, lastInboundBody, autoQuoteEnabled])
 
   function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files ?? [])
@@ -110,6 +143,17 @@ export function ReplyComposer({
               </div>
             </>
           )}
+          {lastInboundBody && (
+            <label className={styles.previewCheckboxRow}>
+              <input
+                type="checkbox"
+                checked={autoQuoteEnabled}
+                onChange={(e) => setAutoQuoteEnabled(e.target.checked)}
+                style={{ width: 'auto' }}
+              />
+              Eredeti üzenet idézése a válaszban
+            </label>
+          )}
         </div>
       )}
 
@@ -153,6 +197,16 @@ export function ReplyComposer({
       {attachmentError && <div className={styles.attachmentError}>{attachmentError}</div>}
 
       <div className={styles.composerFooter}>
+        {!isInternalNote && (
+          <button
+            type="button"
+            className={shared.secondaryButton}
+            disabled={isHtmlEmpty(body)}
+            onClick={() => setPreviewOpen(true)}
+          >
+            Előnézet
+          </button>
+        )}
         <button
           type="button"
           className={styles.sendButton}
@@ -162,6 +216,21 @@ export function ReplyComposer({
           {isInternalNote ? (sending ? 'Mentés…' : 'Mentés →') : (sending ? 'Küldés…' : 'Küldés →')}
         </button>
       </div>
+
+      {previewOpen && (
+        <EmailPreviewModal
+          subject={ticketSubject}
+          fromName={authUser?.fullName ?? ''}
+          fromEmail={authUser?.email ?? ''}
+          toEmail={requesterEmail}
+          cc={cc}
+          bcc={bcc}
+          bodyHtml={body}
+          sending={sending}
+          onClose={() => setPreviewOpen(false)}
+          onSend={onSend}
+        />
+      )}
 
       {cannedOpen && (
         <CannedResponseModal

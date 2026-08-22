@@ -9,5 +9,6 @@ public class UpdateUserPreferenceRequestValidator : AbstractValidator<UpdateUser
     {
         RuleFor(x => x.TicketListView).IsInEnum().WithMessage("Érvénytelen nézet típus.");
         RuleFor(x => x.TicketDetailView).IsInEnum().WithMessage("Érvénytelen jegy nézet típus.");
+        RuleFor(x => x.EmailSignature).MaximumLength(2000).WithMessage("Az email aláírás legfeljebb 2000 karakter lehet.");
     }
 }

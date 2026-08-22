@@ -10,4 +10,5 @@ public class UserPreference
     public TicketListView TicketListView { get; set; } = TicketListView.Table;
     public TicketDetailView TicketDetailView { get; set; } = TicketDetailView.Classic;
     public bool TicketDetailSplitReversed { get; set; } = false;
+    public string? EmailSignature { get; set; }
 }

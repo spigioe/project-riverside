@@ -157,3 +157,23 @@
   color: var(--primary);
   text-decoration: underline;
 }
+
+.editorContent :global(.ProseMirror blockquote) {
+  margin: 0 0 8px;
+  padding: 6px 12px;
+  background: var(--bg-alt);
+  border-left: 3px solid var(--primary);
+  font-style: italic;
+  white-space: pre-wrap;
+}
+
+.editorContent :global(.ProseMirror blockquote p) {
+  margin: 0 0 4px;
+}
+
+/* Aláírás sorai (RichTextEditorHandle.setContentAndFocusStart-tal beszúrva, lásd ReplyComposer) —
+   a class-t a paragraphAttributes extension őrzi meg parse/szerializálás közben. */
+.emailSignatureLine {
+  color: var(--text-muted);
+  font-size: 13px;
+}

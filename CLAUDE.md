@@ -543,6 +543,106 @@ cd frontend && npm run dev               # port 5173
     ellenőriztem (mind a nyolc érintett/új fájl hiba nélkül transform-ál), de a tényleges viselkedés
     (fájl csatolás/eltávolítás UI, kép thumbnail betöltés, Lezárás confirm dialog, tevékenységnapló
     accordion nyitás/zárás) manuális kipróbálást igényel
+- 18. lépés KÉSZ: Rich text editor bővítések — agent aláírás, idézet gomb, email előnézet
+  - Migráció: `AddEmailSignature` — `UserPreferences.EmailSignature` (nullable `longtext`). Mivel
+    nullable (nincs non-nullable enum-konverziós csapda, mint a 15. lépés `TicketDetailView`-jánál),
+    a migráció egyszerű `AddColumn`, nem kellett benne backfill `UPDATE`. Alkalmazva és tesztelve élő
+    MySQL-en. `UpdateUserPreferenceRequestValidator` kiegészítve egy `MaximumLength(2000)` szabállyal
+    az `EmailSignature`-re — ez NEM szerepelt a tervben explicit módon, de a többi szöveges mezőhöz
+    (pl. custom field érték) hasonlóan indokolt korlát volt egy szabadon írható textarea-nál
+  - `GET`/`PUT /api/portal/me/preferences` kiegészítve `emailSignature`-rel (`UserPreferenceDto`/
+    `UpdateUserPreferenceRequest`), NSwag újragenerálva (a `dotnet run`-nal futó backend újraindítva,
+    hogy a friss modellt lássa a swagger.json, majd `dotnet build` a `nswag run` MSBuild target
+    kiváltásához — docker compose build NEM futott, a terv tiltása szerint)
+  - TALÁLT ÉS JAVÍTOTT MEGLÉVŐ HIBA (a feladat explicit hatókörén túl, de ugyanazt a payload-építő
+    kódot érintette): a `PreferencesPage.tsx` mentés mutation-je eddig a `UpdateUserPreferenceRequest`
+    4 mezője közül csak kettőt (`ticketPropertiesAutosave`, `ticketListView`) küldte el — a
+    `ticketDetailView`/`ticketDetailSplitReversed` mezők hiányoztak a payloadból, ami azt jelentette,
+    hogy a Preferenciák oldalról MINDEN mentés csendben visszaállította ezt a két mezőt az alapértékére
+    (Classic/false), felülírva a ticket detail nézetváltó gombjaival korábban beállított értéket. Mivel
+    ugyanide kellett az `emailSignature` mezőt is felvenni, itt javítottam: a mentés mostantól a
+    `preferencesQuery.data`-ból veszi át a `ticketDetailView`/`ticketDetailSplitReversed` aktuális
+    értékét (nem írja felül), curl-lel visszaellenőrizve (`ticketDetailView` a teszt előtti "Split"
+    értéken maradt egy PreferencesPage-stílusú mentés szimulációja után is)
+  - `/preferences` oldal: "Email aláírás" textarea (4 sor, `shared.field` minta, a meglévő
+    `SettingsShared.module.css` `.field textarea` stílusával — nem kellett új CSS), ugyanabba a
+    `draft`/`setDraft` state-be integrálva, mint az autosave/listView (nincs setState-in-effect)
+  - ReplyComposer aláírás + idézet automatikus beszúrás EGY KÖZÖS, mount-kori, ref-guardolt
+    `useEffect`-ben történik (nem két külön effect, mert mindkettő ugyanazt a kezdeti editor-tartalmat
+    építi fel egyszerre): megvárja, amíg MIND a `signature` (preferenciák), MIND a `lastInboundBody`
+    (üzenetlista) prop eldől (`undefined` = "még tölt", ne csináljon semmit) — így egy lassabb hálózati
+    válasz esetén sem marad ki az auto-kitöltés. Csak EGYSZER fut le (`initializedRef`), és csak ha a
+    body ekkor még üres — ha a user már gépelt valamit, mielőtt az adatok betöltöttek, nem nyúl hozzá.
+    ISMERT KORLÁT (nem javítva, mert a `replyBody`/`cc`/`bcc`/`attachments` state a `TicketDetailPage`-ben
+    is így viselkedik már a 15. lépés óta): kliensoldali navigáció ticket A-ról ticket B-re (route param
+    csere, nem teljes remount) NEM reseteli ezt az effektet — az aláírás/idézet csak az ELSŐ megnyitott
+    ticketnél kerül automatikusan beszúrásra ugyanabban a böngésző-munkamenetben
+  - Aláírás beszúrás (`lib/htmlText.ts` `buildSignatureHtml`): `--` elválasztó sor + soronkénti `<p>`,
+    mindegyik egy `lineClassName`-t kap (grey stílushoz). PROBLÉMA amit ez megold: a TipTap paragraph
+    node ALAPÉRTELMEZETTEN NEM őriz meg tetszőleges `class` attribútumot parse/szerializálás közben —
+    ezért egy kis saját `ParagraphAttributes` TipTap `Extension` (`RichTextEditor.tsx`,
+    `addGlobalAttributes`) kell hozzá, ami a `class`-t globális attribútumként regisztrálja a
+    `paragraph` node type-ra. Enélkül a `styles.emailSignatureLine` class egy `setContent` kör után
+    egyszerűen eltűnt volna a doksziból
+  - `RichTextEditorHandle` új metódussal bővült: `setContentAndFocusStart(html)` — ez KÜLÖNBÖZIK a
+    meglévő `insertContent`-től (ami a kurzorhoz szúr be, `emitUpdate` mellett): ez a teljes kezdeti
+    tartalmat állítja be `emitUpdate: false`-zal (nem hív onChange-et), majd a kurzort a dokumentum
+    ELEJÉRE fókuszálja (`focus('start')`) — mivel a beszúrt HTML `<p></p>`-vel kezdődik (üres bekezdés),
+    ez pontosan "a kurzor az idézet/aláírás ELÉ" viselkedést adja. A hívó (`ReplyComposer`) a
+    `setContentAndFocusStart` hívás UTÁN külön `onBodyChange(html)`-t is hív, hogy a szülő
+    (`TicketDetailPage`) `replyBody` state-je szinkronban maradjon — enélkül a `RichTextEditor` meglévő
+    "külső content-frissítés szinkronizálása" effektje (16. lépésből) visszaírta volna az editort az
+    (időközben már elavult) `content` propra
+  - Idézet gomb: `@tiptap/extension-blockquote` NEM lett telepítve — a `StarterKit` (már telepített
+    csomag) alapból tartalmazza (`starter-kit` v3.30.2 `blockquote: Partial<BlockquoteOptions> | false`),
+    csak a toolbar gombot (`"` ikon, `toggleBlockquote()`, a U után) és a CSS-t (`--bg-alt` háttér,
+    bal oldali 3px `--primary` border, `italic`) kellett hozzáadni
+  - Automatikus idézet: `TicketDetailPage` számolja ki `lastInboundBody`-t (`messages` lista utolsó
+    `MessageDirection.Inbound` üzenetének body-ja, `undefined` amíg `messagesQuery` tölt, `null` ha
+    nincs bejövő üzenet). A `ReplyComposer`-ben egy checkbox ("Eredeti üzenet idézése a válaszban",
+    alapból BEKAPCSOLVA, csak akkor látszik ha van mit idézni és nem belső jegyzet mód) vezérli — DE
+    csak a fenti EGYSZERI mount-kori beszúrás pillanatában számít: ha a user a beszúrás UTÁN kapcsolja
+    ki/be, az már NEM módosítja a már beszúrt tartalmat (nincs élő, Gmail-szerű "idézett szöveg
+    megjelenítése/elrejtése" szinkron) — ez SZÁNDÉKOS EGYSZERŰSÍTÉS, összhangban a terv saját
+    "(opcionálisan, toggle-lel kapcsolható ki)" megfogalmazásával, ami magát a funkciót is opcionálisnak
+    jelölte. A bejövő üzenet body-ja (ami tetszőleges külső HTML lehet emailből) a meglévő
+    `sanitizeHtml` (DOMPurify) függvényen megy át beszúrás előtt (`buildQuoteHtml`), ugyanazzal a
+    fenyegetettségi modellel, mint a `SafeHtml` komponens megjelenítésnél. A blockquote CSS-e
+    `white-space: pre-wrap`-et is kapott — ugyanaz a védőháló, mint a `.bubble` osztálynál (15. lépés
+    TODO-ja: régi üzenetek plain text body-ja), hogy a régi, HTML-t nem tartalmazó bejövő üzenetek
+    idézése is olvasható maradjon
+  - Email előnézet: ÚJ `pages/TicketDetail/EmailPreviewModal.tsx`, a meglévő `Modal` komponensre épül,
+    amit egy opcionális `maxWidth` prop-pal bővítettem (a terv "max-width 700px" kérése miatt — a
+    többi hívó helyen változatlan marad az alapértelmezett 480px). A fejléc sorokhoz (Tárgy/Tól/Nek/
+    CC/BCC) a `TicketInfoPanel`-ből már ismert `.infoRow`/`.infoRowLabel`/`.infoRowValue` osztályokat
+    használtam újra (`TicketDetailPage.module.css`-ben definiálva, nem hoztam létre külön CSS modult a
+    modalhoz, ahogy a többi `TicketDetail/*.tsx` fájl sem teszi). A törzs `SafeHtml`-lel renderelődik.
+    FONTOS ÉRTELMEZÉSI DÖNTÉS: mivel az aláírás és az idézet (a fenti két pont szerint) VALÓDI,
+    szerkeszthető editor-tartalomként kerül be a body-ba (nem csak küldéskor/előnézetkor hozzáfűzött
+    extra darab), a terv "Aláírás az alján" bullet pontja MAGÁTÓL teljesül azzal, hogy a modal az
+    editor HTML tartalmát (`body`) rendereli — nem lett külön "aláírás szekció" hozzáadva a modalhoz,
+    mert az duplikálná a már a body-ban szereplő aláírást. Az "Előnézet" gomb (`shared.secondaryButton`,
+    a composer lábléc "Küldés" gombja mellett) csak "Válasz" módban jelenik meg (belső jegyzetnél nincs
+    email küldés). A modal "Küldés" gombja a meglévő `onSend`-et hívja, majd bezárja a modalt
+  - `Tól`/`fromName`/`fromEmail` az `useAuthStore().user`-ből jön (a bejelentkezett ügyintéző neve/
+    email címe) — ez NEM szerepel a `TicketDetailDto`-ban, nem kellett hozzá backend-mező, mivel a
+    kliensoldalon már elérhető az auth store-ból
+  - Backend restart: a `dotnet run` folyamatot újraindítottam (nem docker compose-szal, azt a terv
+    tiltja), hogy a friss `UserPreference.EmailSignature` mezőt lássa a NSwag-generáláshoz szükséges
+    élő swagger.json — ez normál dev workflow lépés, nem docker-t érintő újraindítás
+  - Tesztelve curl-lel élő adaton: `GET`/`PUT /me/preferences` `emailSignature` mezővel (kerekítve
+    UTF-8 ékezetes szöveggel + `\n` sortöréssel), 2001 karakteres aláírás → 400 (MaximumLength), a
+    teszt előtti `ticketDetailView` ("Split") érték visszaállítva a curl-tesztek után. A tényleges
+    TipTap-interakciót (aláírás/idézet automatikus beszúrás kurzorpozícióval, blockquote toggle gomb,
+    Előnézet modal renderelése/Küldés gomb) NEM lehetett curl-lel tesztelni
+  - `tsc -b`, `npm run build` (production) és `oxlint` (minden érintett/új fájl: `PreferencesPage.tsx`,
+    `TicketDetailPage.tsx`, `ReplyComposer.tsx`, `EmailPreviewModal.tsx` (ÚJ), `RichTextEditor.tsx`,
+    `Modal.tsx`, `lib/htmlText.ts`) tiszta — 0 új warning
+  - BÖNGÉSZŐS vizuális/interakciós tesztelés NEM történt ehhez a lépéshez sem (nincs
+    böngésző-automatizálási eszköz ebben a környezetben) — a `vite dev` élő fájljait (beleértve a
+    két érintett CSS modult is) curl-lel ellenőriztem, hiba nélkül transform-álnak, de a tényleges
+    viselkedés (aláírás vizuális elkülönülése/kurzorpozíció, idézet gomb, checkbox, Előnézet modal
+    elrendezése) manuális kipróbálást igényel
 
 ## Seed adatok
 - Admin user: admin@supportportal.dev / Admin1234!
@@ -610,7 +710,29 @@ cd frontend && npm run dev               # port 5173
       végpontok `Blob`/`content-type` típusütközése); ha egy jövőbeli NSwag verzió javítja ezt
       upstream, a sed lépés no-op-pá válik (nem talál illeszkedő sort), nem árt, de érdemes tudni
       róla, ha valaki a generált kliens szerkezetét vizsgálja
+- [ ] 18. lépés UI vizuális/interakciós ellenőrzése böngészőben MÉG NEM TÖRTÉNT MEG (aláírás
+      automatikus beszúrása + vizuális elkülönülése + kurzorpozíció, idézet toolbar gomb, automatikus
+      idézet checkbox, Email előnézet modal elrendezése/Küldés gomb) — nincs böngésző-automatizálási
+      eszköz ebben a környezetben
+- [ ] A ticketDetailView/ticketDetailSplitReversed "elfelejtő mentés" hiba javítva a PreferencesPage-en
+      (lásd 18. lépés összefoglaló) — ÉRDEMES ellenőrizni böngészőben, hogy a nézetváltó gombokkal
+      beállított Split/Csere állapot tényleg túléli a Preferenciák oldalról való mentést
+- [ ] Az automatikus idézet checkbox csak a mount-kori egyszeri beszúrás pillanatában hat — ha a user
+      utólag kapcsolja ki/be, a már beszúrt idézet nem tűnik el/jelenik meg automatikusan (szándékos
+      egyszerűsítés, lásd 18. lépés összefoglaló); ha ez valódi igény, egy élő szinkronizálást kellene
+      építeni rá
 
-## Következő feladat (18. lépés)
-(Még nincs kitűzve.)
-
+## Rich text editor — később implementálandó (18. lépés terv 4. pontja, dokumentálva, NEM implementálva)
+- Képbeszúrás inline — a StarterKit nem tartalmaz Image extension-t (`@tiptap/extension-image` külön
+  telepítés), az inline kép tárolása valószínűleg a meglévő MinIO/`IFileStorageService` (17. lépés)
+  útvonalát követné, de ezt még nem terveztük meg
+- Vízszintes elválasztó — a StarterKit HorizontalRule extension-je már benne van a csomagban
+  (hasonlóan a blockquote-hoz), csak egy toolbar gomb kellene hozzá
+- Szöveg szín — `@tiptap/extension-color` + `@tiptap/extension-text-style` külön telepítést igényelne
+- Karakter/szószámláló — `@tiptap/extension-character-count` külön telepítést igényelne
+- Mentett piszkozat (localStorage) — a `replyBody`/`cc`/`bcc` state jelenleg nincs perzisztálva ticketek
+  vagy oldal-újratöltés között (lásd a 18. lépés összefoglalójában az "ismert korlát" bekezdést)
+- Fullscreen mód
+- Késleltetett küldés — a `TicketService`/email-küldés jelenlegi útvonala szinkron, ehhez valamilyen
+  ütemezett háttérfeladat (pl. a meglévő `PeriodicTimer`-alapú background service minta, lásd
+  `ClickUpSyncBackgroundService`) kellene

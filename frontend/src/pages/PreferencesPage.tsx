@@ -14,15 +14,21 @@ export function PreferencesPage() {
 
   // Nincs effect: amíg a user nem érint egy mezőt sem, a szerkesztett érték a lekérdezett adatból
   // származik render közben; onChange-kor a draft állapot veszi át — így nincs setState-in-effect.
-  const [draft, setDraft] = useState<{ autosave: boolean; listView: TicketListView } | null>(null)
+  const [draft, setDraft] = useState<{ autosave: boolean; listView: TicketListView; signature: string } | null>(null)
   const autosave = draft?.autosave ?? preferencesQuery.data?.ticketPropertiesAutosave ?? true
   const listView = draft?.listView ?? preferencesQuery.data?.ticketListView ?? TicketListView.Table
+  const signature = draft?.signature ?? preferencesQuery.data?.emailSignature ?? ''
 
   const saveMutation = useMutation({
     mutationFn: () =>
       meClient.updatePreferences(new UpdateUserPreferenceRequest({
         ticketPropertiesAutosave: autosave,
         ticketListView: listView,
+        // A ticketDetailView/ticketDetailSplitReversed mezőket a ticket detail nézetváltó gombjai
+        // írják, itt csak megőrizzük a jelenlegi értéküket, hogy a mentés ne írja őket felül.
+        ticketDetailView: preferencesQuery.data?.ticketDetailView,
+        ticketDetailSplitReversed: preferencesQuery.data?.ticketDetailSplitReversed,
+        emailSignature: signature.trim() === '' ? undefined : signature,
       })),
     onSuccess: (result) => {
       queryClient.setQueryData(['user-preferences'], result)
@@ -55,7 +61,7 @@ export function PreferencesPage() {
                     id="pref-autosave"
                     type="checkbox"
                     checked={autosave}
-                    onChange={(e) => setDraft({ autosave: e.target.checked, listView })}
+                    onChange={(e) => setDraft({ autosave: e.target.checked, listView, signature })}
                     style={{ width: 'auto' }}
                   />
                   Ticket tulajdonságok automatikus mentése
@@ -71,11 +77,26 @@ export function PreferencesPage() {
                 <select
                   id="pref-listview"
                   value={listView}
-                  onChange={(e) => setDraft({ autosave, listView: e.target.value as TicketListView })}
+                  onChange={(e) => setDraft({ autosave, listView: e.target.value as TicketListView, signature })}
                 >
                   <option value={TicketListView.Table}>Táblázat</option>
                   <option value={TicketListView.Card}>Kártyák</option>
                 </select>
+              </div>
+
+              <div className={shared.field}>
+                <label htmlFor="pref-signature">Email aláírás</label>
+                <textarea
+                  id="pref-signature"
+                  rows={4}
+                  value={signature}
+                  onChange={(e) => setDraft({ autosave, listView, signature: e.target.value })}
+                  placeholder="Pl.: Üdvözlettel,&#10;Kovács Anna&#10;Support Portál"
+                />
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Új válasz írásakor automatikusan bekerül a szerkesztő aljára, "--" elválasztóval.
+                  Ha törlöd az adott válaszból, az nem áll vissza automatikusan.
+                </div>
               </div>
 
               <div className={shared.formActions}>

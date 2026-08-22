@@ -16,6 +16,7 @@ import {
   CsmAssignRequest,
   CustomFieldType,
   CustomFieldValueDto,
+  MessageDirection,
   TicketDetailDto,
   TicketDetailView,
   TicketListView,
@@ -300,8 +301,15 @@ export function TicketDetailPage() {
 
   const customFields = customFieldsQuery.data ?? []
 
+  // undefined amíg az adott lekérdezés még tölt — a ReplyComposer csak akkor szúrja be az
+  // aláírást/idézetet mount-kor, ha mindkettő eldőlt (lásd ReplyComposer effect).
+  const signature = preferencesQuery.data ? (preferencesQuery.data.emailSignature ?? '') : undefined
+  const lastInboundMessage = [...messages].reverse().find((m) => m.direction === MessageDirection.Inbound)
+  const lastInboundBody = messagesQuery.isLoading ? undefined : (lastInboundMessage?.body ?? null)
+
   const composer = (
     <ReplyComposer
+      ticketSubject={ticket.subject ?? ''}
       requesterEmail={ticket.requesterEmail!}
       body={replyBody}
       onBodyChange={setReplyBody}
@@ -316,6 +324,8 @@ export function TicketDetailPage() {
       onSend={handleSend}
       sending={sendMessageMutation.isPending}
       editorMinHeight={detailView === TicketDetailView.Split ? 300 : undefined}
+      signature={signature}
+      lastInboundBody={lastInboundBody}
     />
   )
 
