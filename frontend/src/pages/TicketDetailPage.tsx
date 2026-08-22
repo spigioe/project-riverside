@@ -329,6 +329,7 @@ export function TicketDetailPage() {
       editorMinHeight={detailView === TicketDetailView.Split ? 300 : undefined}
       signature={signature}
       lastInboundBody={lastInboundBody}
+      disabled={ticket.isMerged}
     />
   )
 
@@ -398,6 +399,15 @@ export function TicketDetailPage() {
             </button>
           </div>
         </div>
+
+        {ticket.isMerged && ticket.mergedIntoTicketId && (
+          <div className={styles.mergedBanner}>
+            ⚠ Ez a jegy összevonásra került a(z) #{ticket.mergedIntoTicketId} jeggyel.
+            <Link to={`/tickets/${ticket.mergedIntoTicketId}`} className={styles.mergedBannerLink}>
+              → Megnyitás
+            </Link>
+          </div>
+        )}
 
         <div className={styles.metaRow}>
           {ticket.isMerged && ticket.mergedIntoTicketId && (

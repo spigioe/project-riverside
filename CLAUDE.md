@@ -809,6 +809,63 @@ cd frontend && npm run dev               # port 5173
   - BÖNGÉSZŐS vizuális ellenőrzés ehhez a lépéshez NEM történt (ugyanaz a Playwright/`libnspr4.so`
     korlát, lásd 19. lépés összefoglaló és a TODO lista) — csak backend curl-teszt + `vite dev` élő
     fájl transform-ellenőrzés
+- 21. lépés KÉSZ: Merge UX javítás — forrás-elválasztó az üzenetszálban, "Összevonva" banner + readonly
+  composer a merge-elt ticketen
+  - Migráció: `AddMessageSourceTicketId` — `TicketMessages.SourceTicketId` (nullable FK→`Tickets`,
+    `OnDelete(SetNull)`, ugyanaz a minta mint `Ticket.MergedIntoTicketId`-nál). ÚJ
+    `TicketMessageConfiguration` (`Data/Configurations/`) — eddig nem létezett külön konfiguráció a
+    `TicketMessage` entitáshoz (a `Cc`/`Bcc`/stb. mezők konvenció alapján fordultak le), csak emiatt az
+    egy FK miatt kellett létrehozni, a `TicketConfiguration`-ban már bevett `HasOne().WithMany().
+    HasForeignKey().OnDelete(SetNull)` mintát követve. Alkalmazva és tesztelve élő MySQL-en
+  - `TicketService.MergeAsync`: az átkerülő üzeneteken `message.SourceTicketId ??= id` (a `??=` SZÁNDÉKOS
+    — ha egy üzenet már korábban migrált egy előző merge során (pl. C→A, majd most A→B), az EREDETI
+    forrás (C) marad megjelölve, nem a köztes ticket (A); a target szálában így mindig a ténylegesen
+    létrehozó ticketre mutat az elválasztó, nem egy köztes állomásra)
+  - `TicketMessageDto` kiegészítve `SourceTicketId`-vel (mindkét service-beli konstruktor-hívás
+    frissítve: `GetMessagesAsync` és `AddMessageAsync` select-je). NSwag újragenerálva (a `dotnet run`
+    háttérfolyamat újraindítva — a korábbi PID-et `kill`/`kill -9`-cel kellett leállítani, mert a sima
+    SIGTERM nem szabadította fel azonnal az 5000-es portot —, majd `dotnet build` a friss swagger.json-nal)
+  - Frontend, forrás-elválasztó: `MessageThread.tsx` — az üzenetlistát (már eleve `CreatedAt` szerint
+    rendezett, interleave-elt sorrendben érkezik a backendtől) végigmegy, és minden üzenet ELÉ beszúr
+    egy `.mergeSeparator` sort ("Beolvasztva a(z) #X jegyből"), HA `msg.sourceTicketId != null` ÉS az
+    előző üzenet `sourceTicketId`-ja ELTÉR ettől (tehát csak a csoport ELSŐ üzenete elé, nem
+    minden migrált üzenet elé) — ez helyesen kezeli azt az esetet is, ha a migrált és a target saját
+    üzenetei időrendben keverednek (nem feltétlenül egy tömbben vannak a lista végén)
+  - Frontend, "Összevonva" banner: a `TicketDetailPage` fejlécében, a `titleRow` ALATT, a `metaRow`
+    FELETT (ha `ticket.isMerged && ticket.mergedIntoTicketId`) — `.mergedBanner` (amber, a meglévő
+    `--amber-bg/-text/-border` tokenekkel, ugyanaz mint a `.internalTag`-nál használt paletta) +
+    kattintható "→ Megnyitás" link a cél ticketre. EZ KÜLÖNBÖZIK a 19. lépésben már meglévő
+    "ÖSSZEVONVA → #Y" `metaRow`-badge-től (az a `StatusBadge` mellett egy kompakt pill, ez egy jól
+    látható, teljes szélességű figyelmeztető sáv) — mindkettő megmaradt, nem redundánsak: a badge a
+    kompakt állapotjelző, a banner a nem-eltéveszthető figyelmeztetés
+  - Frontend, readonly composer: `ReplyComposer` ÚJ `disabled?: boolean` prop (`TicketDetailPage.tsx`
+    `ticket.isMerged`-del hívja). A tab/mező/toolbar/gomb-blokk (a fájlfeltöltés input kivételével nem
+    kellett külön szétszedni) egy `.composerDisabled` (`opacity: 0.55; pointer-events: none`) wrapper
+    div-be került, PLUSZ explicit `editable={!disabled}` a `RichTextEditor`-nak (a komponens ezt a
+    propot MÁR támogatta a 15. lépés óta, csak eddig sosem lett átadva) és `disabled={...|| disabled}`
+    az Előnézet/Küldés gombokon — SZÁNDÉKOSAN KETTŐS védelem (CSS pointer-events ÉS natív disabled
+    attribútum), mert a pointer-events:none önmagában nem tiltja a billentyűzetes fókuszt/Tab-bal
+    elérést, a natív `disabled`/`editable=false` viszont igen. A composer tetején egy külön, NEM
+    elhalványított figyelmeztető sor jelenik meg ("⚠ Ez a jegy összevonásra került, nem lehet rá
+    válaszolni.") — a meglévő `.mergedBanner` osztályt újrahasznosítva, hogy ne kelljen külön CSS-t
+    írni ugyanahhoz a vizuális stílushoz
+  - Tesztelve curl-lel élő adaton (két friss teszt ticket, #23 forrás → #24 cél): üzenet létrehozás
+    mindkettőn (`sourceTicketId: null` alapból), merge után a target `/messages` válaszában a migrált
+    üzenet `sourceTicketId: 23`, a target saját üzenete `sourceTicketId: null` marad — pontosan a várt
+    csoportosítási kulcs a frontend elválasztóhoz. `GET /tickets/23` a merge után `isMerged: true,
+    mergedIntoTicketId: 24` — ez a banner/readonly composer feltétele. FONTOS CURL-CSAPDA (dokumentálva,
+    ha valaki később hasonlót próbál): `curl -F "Body=<p>...</p>"` A KEZDŐ `<` KARAKTERT curl fájl-
+    beolvasásként értelmezi (`field=<filename` szintaxis), NEM literál szövegként — emiatt a form
+    HTML body helyett sima szöveget kellett küldeni a teszthez, ez NEM a backend viselkedése, tisztán
+    curl-specifikus buktató. Minden teszt adat (ticket #21-24, üzenetek, audit log, notification, email
+    queue sorok) a tesztelés után SQL-lel törölve (`docker exec sp_db mysql ...`, mert a `mysql` CLI
+    nincs telepítve a hoszton) — a dev DB `MAX(Tickets.Id)` visszaáll 20-ra, a lépés előtti állapotra
+  - `tsc -b`, `npm run build` (production) és `oxlint` (`TicketDetailPage.tsx`, `ReplyComposer.tsx`,
+    `MessageThread.tsx`, `TicketDetailPage.module.css`) tiszta — 0 warning. `dotnet build` tiszta,
+    0 warning/error
+  - BÖNGÉSZŐS vizuális ellenőrzés ehhez a lépéshez SEM történt (ugyanaz a Playwright/`libnspr4.so`
+    korlát, lásd 19. lépés TODO-ja) — az elválasztó vizuális elhelyezése, a banner megjelenése, és a
+    composer tényleges (kattintás/gépelés-blokkoló) viselkedése manuális kipróbálást igényel
 
 ## Seed adatok
 - Admin user: admin@supportportal.dev / Admin1234!
@@ -907,6 +964,11 @@ cd frontend && npm run dev               # port 5173
       MinIO-ban FIZIKAILAG bent maradtak (a DB-sorokat töröltem, de a MinIO objektumokat nem) — ez
       ugyanaz a minta, amit a korábbi lépések is követtek (a DB takarítás dokumentálva volt, a MinIO
       blob-ok törlése nem), ártalmatlan, csak dev-bucket helyfoglalás
+- [ ] 21. lépés UI vizuális ellenőrzése böngészőben NEM TÖRTÉNT MEG (ugyanaz a Playwright/`libnspr4.so`
+      korlát) — konkrétan a "Beolvasztva a(z) #X jegyből" elválasztó vizuális elhelyezése/stílusa a
+      thread-ben, az amber "Összevonva" banner megjelenése a fejléc alatt, és a composer tényleges
+      letiltott (nem kattintható/nem gépelhető) állapota merge-elt ticketen — csak `tsc`/build/oxlint
+      szinten és backend curl-teszttel (`sourceTicketId` mezővel) lett ellenőrizve
 
 ## Rich text editor — később implementálandó (18. lépés terv 4. pontja, dokumentálva, NEM implementálva)
 - Képbeszúrás inline — a StarterKit nem tartalmaz Image extension-t (`@tiptap/extension-image` külön

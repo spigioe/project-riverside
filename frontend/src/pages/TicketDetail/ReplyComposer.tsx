@@ -33,12 +33,14 @@ interface ReplyComposerProps {
   // undefined = a preferenciák/üzenetek még töltődnek, még nem tudjuk eldönteni mit szúrjunk be
   signature?: string
   lastInboundBody?: string | null
+  // true = a ticket összevonásra került, a composer teljesen readonly/disabled
+  disabled?: boolean
 }
 
 export function ReplyComposer({
   ticketSubject, requesterEmail, body, onBodyChange, cc, onCcChange, bcc, onBccChange,
   isInternalNote, onInternalNoteChange, attachments, onAttachmentsChange, onSend, sending, editorMinHeight,
-  signature, lastInboundBody,
+  signature, lastInboundBody, disabled = false,
 }: ReplyComposerProps) {
   const [ccBccOpen, setCcBccOpen] = useState(false)
   const [cannedOpen, setCannedOpen] = useState(false)
@@ -93,6 +95,12 @@ export function ReplyComposer({
 
   return (
     <div className={styles.card}>
+      {disabled && (
+        <div className={styles.mergedBanner} style={{ margin: '14px 14px 0' }}>
+          ⚠ Ez a jegy összevonásra került, nem lehet rá válaszolni.
+        </div>
+      )}
+      <div className={disabled ? styles.composerDisabled : undefined}>
       <div className={styles.composerTabs}>
         <button
           type="button"
@@ -171,6 +179,7 @@ export function ReplyComposer({
         onChange={onBodyChange}
         placeholder={isInternalNote ? 'Belső jegyzet írása…' : `Válasz írása ${requesterEmail} részére…`}
         highlighted={isInternalNote}
+        editable={!disabled}
         minHeight={editorMinHeight}
         onCannedResponseClick={() => setCannedOpen(true)}
         onAttachClick={() => fileInputRef.current?.click()}
@@ -201,7 +210,7 @@ export function ReplyComposer({
           <button
             type="button"
             className={shared.secondaryButton}
-            disabled={isHtmlEmpty(body)}
+            disabled={isHtmlEmpty(body) || disabled}
             onClick={() => setPreviewOpen(true)}
           >
             Előnézet
@@ -210,11 +219,12 @@ export function ReplyComposer({
         <button
           type="button"
           className={styles.sendButton}
-          disabled={isHtmlEmpty(body) || sending}
+          disabled={isHtmlEmpty(body) || sending || disabled}
           onClick={onSend}
         >
           {isInternalNote ? (sending ? 'Mentés…' : 'Mentés →') : (sending ? 'Küldés…' : 'Küldés →')}
         </button>
+      </div>
       </div>
 
       {previewOpen && (

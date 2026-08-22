@@ -5,6 +5,7 @@ namespace SupportPortal.Application.DTOs.Tickets;
 public record TicketMessageDto(
     int Id,
     int TicketId,
+    int? SourceTicketId,
     int? SenderUserId,
     string? SenderUserName,
     string? SenderEmail,

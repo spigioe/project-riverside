@@ -51,14 +51,18 @@ export function MessageThread({ ticket, messages, attachments, detailed = false 
         {messages.length === 0 && (
           <div className={styles.emptyThread}>Még nincs üzenet ebben a jegyben.</div>
         )}
-        {messages.map((msg) => (
-          <MessageBubble
-            key={msg.id}
-            ticket={ticket}
-            msg={msg}
-            attachments={attachments.filter((a) => a.messageId === msg.id)}
-            detailed={detailed}
-          />
+        {messages.map((msg, idx) => (
+          <div key={msg.id}>
+            {msg.sourceTicketId != null && messages[idx - 1]?.sourceTicketId !== msg.sourceTicketId && (
+              <div className={styles.mergeSeparator}>Beolvasztva a(z) #{msg.sourceTicketId} jegyből</div>
+            )}
+            <MessageBubble
+              ticket={ticket}
+              msg={msg}
+              attachments={attachments.filter((a) => a.messageId === msg.id)}
+              detailed={detailed}
+            />
+          </div>
         ))}
       </div>
     </div>

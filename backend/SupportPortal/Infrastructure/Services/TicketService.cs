@@ -320,9 +320,15 @@ public class TicketService(
         // csatolmányok automatikusan "átkerülnek" a message-ekkel együtt, külön migrálás nélkül.
         // A CreatedAt nem változik, ezért a target szálában időrendben, a többi üzenet közé
         // interleave-elve jelennek meg.
+        // SourceTicketId csak akkor kerül beállításra, ha még nincs (null) — ha az üzenet egy
+        // korábbi merge során már migrált (pl. C→A, majd most A→B), az EREDETI forrás (C) marad
+        // megjelölve, nem a köztes ticket (A).
         var messagesToMove = await db.TicketMessages.Where(m => m.TicketId == id).ToListAsync();
         foreach (var message in messagesToMove)
+        {
+            message.SourceTicketId ??= id;
             message.TicketId = targetTicketId;
+        }
 
         ticket.IsMerged = true;
         ticket.MergedIntoTicketId = targetTicketId;
@@ -390,7 +396,7 @@ public class TicketService(
             .Where(m => m.TicketId == ticketId)
             .OrderBy(m => m.CreatedAt)
             .Select(m => new TicketMessageDto(
-                m.Id, m.TicketId,
+                m.Id, m.TicketId, m.SourceTicketId,
                 m.SenderUserId, m.SenderUser != null ? m.SenderUser.FullName : null,
                 m.SenderEmail, m.Body, m.Cc, m.Bcc, m.IsInternalNote, m.Direction, m.CreatedAt))
             .ToListAsync();
@@ -462,7 +468,7 @@ public class TicketService(
             .AsNoTracking()
             .Where(m => m.Id == message.Id)
             .Select(m => new TicketMessageDto(
-                m.Id, m.TicketId,
+                m.Id, m.TicketId, m.SourceTicketId,
                 m.SenderUserId, m.SenderUser != null ? m.SenderUser.FullName : null,
                 m.SenderEmail, m.Body, m.Cc, m.Bcc, m.IsInternalNote, m.Direction, m.CreatedAt))
             .FirstAsync();

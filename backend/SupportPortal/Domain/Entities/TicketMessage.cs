@@ -6,6 +6,8 @@ public class TicketMessage
     public int Id { get; set; }
     public int TicketId { get; set; }
     public Ticket Ticket { get; set; } = null!;
+    public int? SourceTicketId { get; set; }
+    public Ticket? SourceTicket { get; set; }
     public int? SenderUserId { get; set; }
     public User? SenderUser { get; set; }
     public string? SenderEmail { get; set; }

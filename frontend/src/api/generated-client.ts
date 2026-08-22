@@ -8195,6 +8195,7 @@ export interface IMergeTicketRequest {
 export class TicketMessageDto implements ITicketMessageDto {
     id?: number;
     ticketId?: number;
+    sourceTicketId?: number | undefined;
     senderUserId?: number | undefined;
     senderUserName?: string | undefined;
     senderEmail?: string | undefined;
@@ -8218,6 +8219,7 @@ export class TicketMessageDto implements ITicketMessageDto {
         if (_data) {
             this.id = _data["id"];
             this.ticketId = _data["ticketId"];
+            this.sourceTicketId = _data["sourceTicketId"];
             this.senderUserId = _data["senderUserId"];
             this.senderUserName = _data["senderUserName"];
             this.senderEmail = _data["senderEmail"];
@@ -8241,6 +8243,7 @@ export class TicketMessageDto implements ITicketMessageDto {
         data = typeof data === 'object' ? data : {};
         data["id"] = this.id;
         data["ticketId"] = this.ticketId;
+        data["sourceTicketId"] = this.sourceTicketId;
         data["senderUserId"] = this.senderUserId;
         data["senderUserName"] = this.senderUserName;
         data["senderEmail"] = this.senderEmail;
@@ -8257,6 +8260,7 @@ export class TicketMessageDto implements ITicketMessageDto {
 export interface ITicketMessageDto {
     id?: number;
     ticketId?: number;
+    sourceTicketId?: number | undefined;
     senderUserId?: number | undefined;
     senderUserName?: string | undefined;
     senderEmail?: string | undefined;
