@@ -1865,6 +1865,54 @@ export class ContactsClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    buildFromTickets( cancelToken?: CancelToken): Promise<BuildFromTicketsResult> {
+        let url_ = this.baseUrl + "/api/portal/contacts/build-from-tickets";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processBuildFromTickets(_response);
+        });
+    }
+
+    protected processBuildFromTickets(response: AxiosResponse): Promise<BuildFromTicketsResult> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = BuildFromTicketsResult.fromJS(resultData200);
+            return Promise.resolve<BuildFromTicketsResult>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<BuildFromTicketsResult>(null as any);
+    }
 }
 
 export class CsmClient {
@@ -7403,6 +7451,50 @@ export interface IUpdateContactRequest {
     email?: string;
     name?: string;
     companyId?: number | undefined;
+}
+
+export class BuildFromTicketsResult implements IBuildFromTicketsResult {
+    contactsCreated?: number;
+    contactsLinked?: number;
+    ticketsUpdated?: number;
+
+    constructor(data?: IBuildFromTicketsResult) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.contactsCreated = _data["contactsCreated"];
+            this.contactsLinked = _data["contactsLinked"];
+            this.ticketsUpdated = _data["ticketsUpdated"];
+        }
+    }
+
+    static fromJS(data: any): BuildFromTicketsResult {
+        data = typeof data === 'object' ? data : {};
+        let result = new BuildFromTicketsResult();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["contactsCreated"] = this.contactsCreated;
+        data["contactsLinked"] = this.contactsLinked;
+        data["ticketsUpdated"] = this.ticketsUpdated;
+        return data;
+    }
+}
+
+export interface IBuildFromTicketsResult {
+    contactsCreated?: number;
+    contactsLinked?: number;
+    ticketsUpdated?: number;
 }
 
 export class CsmDto implements ICsmDto {

@@ -14,4 +14,5 @@ public interface IContactService
     Task<ContactSaveResult> UpdateAsync(int id, UpdateContactRequest request);
     Task<ContactDeleteResult> DeleteAsync(int id);
     Task<ContactDto> UpsertAsync(string email, string name);
+    Task<BuildFromTicketsResult> BuildContactsFromTicketsAsync();
 }

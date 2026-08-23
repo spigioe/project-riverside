@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { companiesClient, contactsClient, CompanyDto, ContactDto, CreateContactRequest, UpdateContactRequest } from '../../api'
+import { companiesClient, contactsClient, BuildFromTicketsResult, CompanyDto, ContactDto, CreateContactRequest, UpdateContactRequest } from '../../api'
 import { Modal } from '../../components/Modal/Modal'
 import { getErrorMessage } from '../../lib/errors'
 import { formatDateTime } from '../../lib/format'
@@ -12,6 +12,15 @@ export function SettingsContactsPage() {
   const [editContact, setEditContact] = useState<ContactDto | null>(null)
   const [search, setSearch] = useState('')
   const [filterCompanyId, setFilterCompanyId] = useState<number | null>(null)
+  const [buildResult, setBuildResult] = useState<BuildFromTicketsResult | null>(null)
+
+  const buildMutation = useMutation({
+    mutationFn: () => contactsClient.buildFromTickets(),
+    onSuccess: (result) => {
+      setBuildResult(result)
+      queryClient.invalidateQueries({ queryKey: ['settings-contacts'] })
+    },
+  })
 
   const contactsQuery = useQuery({
     queryKey: ['settings-contacts', search, filterCompanyId],
@@ -39,10 +48,49 @@ export function SettingsContactsPage() {
           <h1 className={shared.title}>Kontaktok</h1>
           <div className={shared.subtitle}>{contactsQuery.data?.totalCount ?? 0} kontakt</div>
         </div>
-        <button type="button" className={shared.primaryButton} onClick={() => setCreateOpen(true)}>
-          + Új kontakt
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            type="button"
+            className={shared.secondaryButton}
+            onClick={() => {
+              if (confirm('Végigmegy az összes ticketen és kontaktokat generál a feladók alapján. Folytatod?'))
+                buildMutation.mutate()
+            }}
+            disabled={buildMutation.isPending}
+            title="Kontaktok és cégkapcsolatok generálása a meglévő ticketek feladói alapján"
+          >
+            {buildMutation.isPending ? 'Generálás…' : '⟳ Generálás ticketekből'}
+          </button>
+          <button type="button" className={shared.primaryButton} onClick={() => setCreateOpen(true)}>
+            + Új kontakt
+          </button>
+        </div>
       </div>
+
+      {buildResult && (
+        <div style={{
+          padding: '10px 14px', marginBottom: 12, borderRadius: 'var(--radius)',
+          background: 'var(--green-bg, #f0fdf4)', border: '1px solid var(--green-border, #86efac)',
+          fontSize: 13, color: 'var(--green-text, #166534)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <span>
+            Kész — {buildResult.contactsCreated} új kontakt létrehozva, {buildResult.contactsLinked} már létező egyeztetve,
+            {' '}{buildResult.ticketsUpdated} ticket frissítve.
+          </span>
+          <button
+            type="button"
+            onClick={() => setBuildResult(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {buildMutation.isError && (
+        <div className={shared.formError}>Nem sikerült a generálás. Próbáld újra.</div>
+      )}
 
       <div className={shared.filterRow}>
         <input

@@ -52,3 +52,5 @@ public record UpdateContactRequest(
 );
 
 public record AssignTicketContactRequest(int? ContactId);
+
+public record BuildFromTicketsResult(int ContactsCreated, int ContactsLinked, int TicketsUpdated);

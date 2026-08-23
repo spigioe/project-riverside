@@ -89,4 +89,13 @@ public class ContactsController(IContactService contactService) : ControllerBase
             _ => Problem(statusCode: StatusCodes.Status500InternalServerError),
         };
     }
+
+    [HttpPost("build-from-tickets")]
+    [Authorize(Roles = "MasterAdmin,Admin")]
+    [ProducesResponseType(typeof(BuildFromTicketsResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> BuildFromTickets()
+    {
+        var result = await contactService.BuildContactsFromTicketsAsync();
+        return Ok(result);
+    }
 }
