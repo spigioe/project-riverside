@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faTrash } from '@fortawesome/free-solid-svg-icons'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -261,8 +263,8 @@ export function TicketDetailPage() {
               }}
               title={`#${ticketId} törlése`}
             >
-              🗑
-            </button>
+              <FontAwesomeIcon icon={faTrash} />
+</button>
 
             {/* Csere ikon gomb — csak split módban */}
             {detailView === TicketDetailView.Split && (
