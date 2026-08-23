@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -177,25 +178,65 @@ interface InlineDropdownProps {
 
 function InlineDropdown({ value, options, onChange }: InlineDropdownProps) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
     function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) setOpen(false)
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
   }, [open])
 
+  function handleOpen(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setMenuStyle({
+        position: 'fixed',
+        top: rect.bottom + 3,
+        right: window.innerWidth - rect.right,
+        minWidth: Math.max(rect.width, 130),
+      })
+    }
+    setOpen((o) => !o)
+  }
+
   const current = options.find((o) => o.value === value)
 
+  const menu = open && createPortal(
+    <div ref={menuRef} className={dc.dropdownMenu} style={menuStyle}>
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          className={`${dc.dropdownItem} ${opt.value === value ? dc.dropdownItemActive : ''}`}
+          onClick={(e) => { e.stopPropagation(); onChange(opt.value); setOpen(false) }}
+        >
+          {opt.dotClass && <span className={`${dc.dot} ${opt.dotClass}`} />}
+          {opt.icon && (
+            <FontAwesomeIcon icon={opt.icon} style={{ color: opt.iconColor, fontSize: 11, width: 12 }} />
+          )}
+          {opt.label}
+        </button>
+      ))}
+    </div>,
+    document.body,
+  )
+
   return (
-    <div className={dc.dropdownWrapper} ref={ref}>
+    <div className={dc.dropdownWrapper}>
       <button
+        ref={triggerRef}
         type="button"
         className={dc.dropdownTrigger}
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o) }}
+        onClick={handleOpen}
       >
         <span className={dc.dropdownLabel}>
           {current?.dotClass && <span className={`${dc.dot} ${current.dotClass}`} />}
@@ -206,24 +247,7 @@ function InlineDropdown({ value, options, onChange }: InlineDropdownProps) {
         </span>
         <FontAwesomeIcon icon={faChevronDown} className={dc.dropdownCaret} />
       </button>
-      {open && (
-        <div className={dc.dropdownMenu}>
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              className={`${dc.dropdownItem} ${opt.value === value ? dc.dropdownItemActive : ''}`}
-              onClick={(e) => { e.stopPropagation(); onChange(opt.value); setOpen(false) }}
-            >
-              {opt.dotClass && <span className={`${dc.dot} ${opt.dotClass}`} />}
-              {opt.icon && (
-                <FontAwesomeIcon icon={opt.icon} style={{ color: opt.iconColor, fontSize: 11, width: 12 }} />
-              )}
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {menu}
     </div>
   )
 }
