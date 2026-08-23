@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { AttachmentDto, MessageDirection, TicketDetailDto, TicketMessageDto, ticketAttachmentsClient } from '../../api'
 import { SafeHtml } from '../../components/SafeHtml/SafeHtml'
 import { formatDateTime, formatFileSize } from '../../lib/format'
@@ -31,6 +31,91 @@ async function triggerDownload(attachment: AttachmentDto) {
   link.click()
   link.remove()
   URL.revokeObjectURL(url)
+}
+
+// Idézett tartalom elválasztása az aktuálistól.
+// Sorrendben ellenőrzött minták: <blockquote>, "---" elválasztó, "On ... wrote:" sor.
+function splitQuotedContent(html: string): { main: string; quoted: string | null } {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const body = doc.body
+
+  // 1. Ha van <blockquote> elem a gyökérben (vagy a gyökér első szintjén)
+  const blockquote = body.querySelector('blockquote')
+  if (blockquote) {
+    // Az összes blockquote-ot és az előttük lévő szeparátort (tipikusan <p>---</p> v. <br>) is kiemeljük
+    const quotedNodes: Node[] = []
+    let node: Node | null = blockquote
+    // Gyűjtsük össze a blockquote-ot és az összes utána következő testvér-csomópontot
+    while (node) {
+      quotedNodes.push(node)
+      node = node.nextSibling
+    }
+    // Ha van egy közvetlenül megelőző üres/elválasztó szövegcsomópont, azt is idesoroljuk
+    const prevSibling = blockquote.previousSibling
+    if (prevSibling && prevSibling.nodeType === Node.TEXT_NODE && (prevSibling.textContent ?? '').trim() === '') {
+      quotedNodes.unshift(prevSibling)
+    }
+
+    const quotedDiv = doc.createElement('div')
+    quotedNodes.forEach((n) => quotedDiv.appendChild(n.cloneNode(true)))
+
+    // Töröljük az eredeti dokumentumból a quoted részeket
+    quotedNodes.forEach((n) => { if (n.parentNode) n.parentNode.removeChild(n) })
+
+    const mainHtml = body.innerHTML.trim()
+    const quotedHtml = quotedDiv.innerHTML.trim()
+
+    if (quotedHtml) return { main: mainHtml, quoted: quotedHtml }
+  }
+
+  // 2. "---" elválasztó szöveges sorként (plain-text emailek jellemzője)
+  const rawText = body.textContent ?? ''
+  const dashSepIdx = rawText.search(/\n[-]{3,}\n/)
+  if (dashSepIdx !== -1) {
+    // HTML-ben keressük meg a pozíciót közelítőleg a innerHTML alapján
+    const plainHtml = body.innerHTML
+    const sepIdx = plainHtml.indexOf('---')
+    if (sepIdx !== -1) {
+      return {
+        main: plainHtml.slice(0, sepIdx).trim(),
+        quoted: plainHtml.slice(sepIdx).trim(),
+      }
+    }
+  }
+
+  // 3. "On <dátum> ... wrote:" sor (Gmail / Outlook stílus)
+  const onWrotePattern = /On .{10,120} wrote:/
+  const onWroteMatch = rawText.match(onWrotePattern)
+  if (onWroteMatch && onWroteMatch.index !== undefined) {
+    const plainHtml = body.innerHTML
+    const matchIdx = plainHtml.search(/On .{10,120} wrote:/)
+    if (matchIdx !== -1) {
+      return {
+        main: plainHtml.slice(0, matchIdx).trim(),
+        quoted: plainHtml.slice(matchIdx).trim(),
+      }
+    }
+  }
+
+  return { main: html, quoted: null }
+}
+
+interface EmailPartJson {
+  from: string
+  body: string
+  sentAt: string
+}
+
+function parseRawEmailParts(raw: string | undefined): EmailPartJson[] | null {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed as EmailPartJson[]
+  } catch {
+    // invalid JSON — ignore
+  }
+  return null
 }
 
 interface MessageThreadProps {
@@ -77,6 +162,14 @@ function MessageBubble({
   const authorEmail = isOutbound ? undefined : (msg.senderEmail ?? ticket.requesterEmail)
   const hasCcBcc = Boolean(msg.cc || msg.bcc)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [quoteOpen, setQuoteOpen] = useState(false)
+
+  const emailParts = useMemo(() => parseRawEmailParts(msg.rawEmailParts), [msg.rawEmailParts])
+
+  const { main: mainHtml, quoted: quotedHtml } = useMemo(
+    () => (emailParts ? { main: msg.body ?? '', quoted: null } : splitQuotedContent(msg.body ?? '')),
+    [msg.body, emailParts],
+  )
 
   return (
     <div className={`${styles.messageRow} ${isOutbound ? styles.outbound : styles.inbound}`}>
@@ -108,7 +201,44 @@ function MessageBubble({
           {msg.bcc && <div>BCC: {msg.bcc}</div>}
         </div>
       )}
-      <SafeHtml html={msg.body ?? ''} className={styles.bubble} />
+
+      {/* Multi-sender szétbontott rész (jövőbeli feature, most mindig null) */}
+      {emailParts ? (
+        <div className={styles.bubble}>
+          <div className={styles.subBubbles}>
+            {emailParts.map((part, i) => (
+              <div key={i} className={styles.subBubble}>
+                <div className={styles.subBubbleHeader}>
+                  From: {part.from} · {formatDateTime(new Date(part.sentAt))}
+                </div>
+                <SafeHtml html={part.body} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className={styles.bubble}>
+          <SafeHtml html={mainHtml} />
+          {quotedHtml && (
+            <>
+              <button
+                type="button"
+                className={styles.quoteToggle}
+                onClick={() => setQuoteOpen((o) => !o)}
+                title={quoteOpen ? 'Idézett rész elrejtése' : 'Idézett rész megjelenítése'}
+              >
+                · · ·
+              </button>
+              {quoteOpen && (
+                <div className={styles.quotedContent}>
+                  <SafeHtml html={quotedHtml} />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       {attachments.length > 0 && (
         <div className={styles.attachmentList}>
           {attachments.map((a) => <AttachmentItem key={a.id} attachment={a} />)}

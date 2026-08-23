@@ -17,6 +17,7 @@ public class TicketMessage
     public bool IsInternalNote { get; set; } = false;
     public MessageDirection Direction { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? RawEmailParts { get; set; }
 
     public ICollection<FileStorage> Attachments { get; set; } = [];
 }

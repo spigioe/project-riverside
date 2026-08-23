@@ -14,5 +14,6 @@ public record TicketMessageDto(
     string? Bcc,
     bool IsInternalNote,
     MessageDirection Direction,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? RawEmailParts
 );

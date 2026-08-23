@@ -12,5 +12,7 @@ public class TicketMessageConfiguration : IEntityTypeConfiguration<TicketMessage
             .WithMany()
             .HasForeignKey(m => m.SourceTicketId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Property(m => m.RawEmailParts).HasColumnType("longtext");
     }
 }

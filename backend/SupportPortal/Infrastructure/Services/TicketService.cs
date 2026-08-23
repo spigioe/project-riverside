@@ -453,7 +453,8 @@ public class TicketService(
             .Select(m => new TicketMessageDto(
                 m.Id, m.TicketId, m.SourceTicketId,
                 m.SenderUserId, m.SenderUser != null ? m.SenderUser.FullName : null,
-                m.SenderEmail, m.Body, m.Cc, m.Bcc, m.IsInternalNote, m.Direction, m.CreatedAt))
+                m.SenderEmail, m.Body, m.Cc, m.Bcc, m.IsInternalNote, m.Direction, m.CreatedAt,
+                m.RawEmailParts))
             .ToListAsync();
     }
 
@@ -525,7 +526,8 @@ public class TicketService(
             .Select(m => new TicketMessageDto(
                 m.Id, m.TicketId, m.SourceTicketId,
                 m.SenderUserId, m.SenderUser != null ? m.SenderUser.FullName : null,
-                m.SenderEmail, m.Body, m.Cc, m.Bcc, m.IsInternalNote, m.Direction, m.CreatedAt))
+                m.SenderEmail, m.Body, m.Cc, m.Bcc, m.IsInternalNote, m.Direction, m.CreatedAt,
+                m.RawEmailParts))
             .FirstAsync();
     }
 

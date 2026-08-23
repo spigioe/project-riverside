@@ -67,6 +67,7 @@ cd frontend && npm run dev               # port 5173
 21. Merge UX (amber banner, disabled composer, source ticket elválasztó)
 22. SLA visszaszámláló a ticket detail fejlécben (metaRow jobb oldalán, zöld/amber/piros badge)
 23. Részletes kártya nézet (DetailedCard) + jobb oldali szűrőpanel, PATCH /tickets/{id}/priority
+24. Idézett reply toggle (blockquote / "---" / "On...wrote:" parse, "···" gomb, grey expand), multi-sender RawEmailParts scaffold (longtext nullable, TicketMessageDto, frontend render logic kész, mindig null egyelőre)
 
 ## MCP szerver
 - /mcp/server.js | cd mcp && node server.js
@@ -87,6 +88,7 @@ cd frontend && npm run dev               # port 5173
 - Spam jelölés funkció
 - Ticket felosztás (split)
 - [x] ~~SLA visszaszámláló a fejlécen~~ — KÉSZ (22. lépés)
+- [x] ~~Idézett reply toggle + RawEmailParts scaffold~~ — KÉSZ (24. lépés)
 - [ ] Részletes kártya nézet vizuális ellenőrzése böngészőben (nincs Playwright)
 
 ## Később implementálandó

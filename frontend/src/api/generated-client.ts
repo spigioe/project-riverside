@@ -8413,6 +8413,7 @@ export class TicketMessageDto implements ITicketMessageDto {
     isInternalNote?: boolean;
     direction?: MessageDirection;
     createdAt?: Date;
+    rawEmailParts?: string | undefined;
 
     constructor(data?: ITicketMessageDto) {
         if (data) {
@@ -8437,6 +8438,7 @@ export class TicketMessageDto implements ITicketMessageDto {
             this.isInternalNote = _data["isInternalNote"];
             this.direction = _data["direction"];
             this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.rawEmailParts = _data["rawEmailParts"];
         }
     }
 
@@ -8461,6 +8463,7 @@ export class TicketMessageDto implements ITicketMessageDto {
         data["isInternalNote"] = this.isInternalNote;
         data["direction"] = this.direction;
         data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["rawEmailParts"] = this.rawEmailParts;
         return data;
     }
 }
@@ -8478,6 +8481,7 @@ export interface ITicketMessageDto {
     isInternalNote?: boolean;
     direction?: MessageDirection;
     createdAt?: Date;
+    rawEmailParts?: string | undefined;
 }
 
 export enum MessageDirection {

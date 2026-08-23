@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -75,12 +76,17 @@ public partial class TicketEmailProcessor(
             // teljessége miatt, lásd TicketService.CreateTicketAsync ugyanezt teszi portál/API eredetű
             // ticketeknél) mindig létrejön egy kezdő bejövő TicketMessage is ugyanazzal a tartalommal —
             // ehhez kapcsolódnak a csatolmányok (ha vannak).
+            var rawPartsJson = email.RawParts is { Count: > 0 }
+                ? JsonSerializer.Serialize(email.RawParts.Select(p => new { from = p.From, body = p.Body, sentAt = p.SentAt }))
+                : null;
+
             var initialMessage = new TicketMessage
             {
                 TicketId = ticket.Id,
                 SenderEmail = fromAddress.Address,
                 Body = email.Body,
                 Direction = MessageDirection.Inbound,
+                RawEmailParts = rawPartsJson,
             };
             db.TicketMessages.Add(initialMessage);
             await db.SaveChangesAsync();
@@ -90,12 +96,17 @@ public partial class TicketEmailProcessor(
         }
         else
         {
+            var rawPartsJson = email.RawParts is { Count: > 0 }
+                ? JsonSerializer.Serialize(email.RawParts.Select(p => new { from = p.From, body = p.Body, sentAt = p.SentAt }))
+                : null;
+
             var message = new TicketMessage
             {
                 TicketId = ticket.Id,
                 SenderEmail = fromAddress.Address,
                 Body = email.Body,
                 Direction = MessageDirection.Inbound,
+                RawEmailParts = rawPartsJson,
             };
             db.TicketMessages.Add(message);
             await db.SaveChangesAsync();

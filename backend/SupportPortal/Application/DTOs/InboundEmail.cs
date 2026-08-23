@@ -9,7 +9,11 @@ public record InboundEmail(
     string? InReplyTo,
     string? References,
     DateTime ReceivedAt,
-    IReadOnlyList<InboundEmailAttachment> Attachments
+    IReadOnlyList<InboundEmailAttachment> Attachments,
+    IReadOnlyList<EmailPart>? RawParts = null
 );
 
 public record InboundEmailAttachment(string Filename, string ContentType, byte[] Data);
+
+// Placeholder a jövőbeli multi-sender szétbontáshoz; egyelőre mindig null
+public record EmailPart(string From, string Body, DateTime SentAt);
