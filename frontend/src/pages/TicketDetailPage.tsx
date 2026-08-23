@@ -193,7 +193,7 @@ export function TicketDetailPage() {
       onAttachmentsChange={setAttachments}
       onSend={handleSend}
       sending={sendMessageMutation.isPending}
-      editorMinHeight={detailView === TicketDetailView.Split ? 300 : undefined}
+      
       signature={signature}
       lastInboundBody={lastInboundBody}
       disabled={ticket.isMerged}

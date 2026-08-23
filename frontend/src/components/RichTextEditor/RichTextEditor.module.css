@@ -1,14 +1,21 @@
 .wrapper {
+  flex: 1;
   display: flex;
   flex-direction: column;
   background: var(--surface);
 }
 
 .wrapperInternal .editorArea {
+  flex: 1;
+  overflow-y: auto;
   background: var(--amber-bg);
 }
 
 .toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -58,6 +65,8 @@
 }
 
 .editorArea {
+  flex: 1;
+  overflow-y: auto;
   position: relative;
 }
 
