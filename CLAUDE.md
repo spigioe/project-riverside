@@ -68,6 +68,7 @@ cd frontend && npm run dev               # port 5173
 22. SLA visszaszámláló a ticket detail fejlécben (metaRow jobb oldalán, zöld/amber/piros badge)
 23. Részletes kártya nézet (DetailedCard) + jobb oldali szűrőpanel, PATCH /tickets/{id}/priority
 24. Idézett reply toggle (blockquote / "---" / "On...wrote:" parse, "···" gomb, grey expand), multi-sender RawEmailParts scaffold (longtext nullable, TicketMessageDto, frontend render logic kész, mindig null egyelőre)
+25. Kontaktok és cégek — Company + Contact entitás, auto-upsert ticket létrehozáskor/email feldolgozáskor, REST API (/api/portal/contacts + /api/portal/companies), PATCH /tickets/{id}/contact, TicketDetailDto kibővítve, settings oldalak (/settings/contacts, /settings/companies), ticket lista céges szűrő, KONTAKT ADATOK panel a ticket detail sidebarban
 
 ## MCP szerver
 - /mcp/server.js | cd mcp && node server.js
