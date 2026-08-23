@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -88,6 +88,7 @@ export function TicketDetailPage() {
     queryFn: () => ticketAttachmentsClient.getAttachments(ticketId),
     enabled: Number.isFinite(ticketId),
   })
+  const ticketAttachments = useMemo(() => attachmentsQuery.data ?? [], [attachmentsQuery.data])
 
   const sendMessageMutation = useMutation({
     mutationFn: () =>
@@ -159,6 +160,7 @@ export function TicketDetailPage() {
         </div>
       </div>
     )
+
   }
 
   const ticket = ticketQuery.data
@@ -207,7 +209,7 @@ export function TicketDetailPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.left}>
+      <div className={`${styles.left} ${detailView === TicketDetailView.Split ? styles.leftSplit : ''}`}>
         <button className={styles.backLink} onClick={() => navigate('/tickets')}>
           ← Vissza a jegyekhez
         </button>
@@ -315,29 +317,31 @@ export function TicketDetailPage() {
         {detailView === TicketDetailView.Classic ? (
           <>
             {composer}
-            <MessageThread ticket={ticket} messages={messages} attachments={attachmentsQuery.data ?? []} />
+            <MessageThread ticket={ticket} messages={messages} attachments={ticketAttachments} />
             <TicketActivityLog ticketId={ticketId} />
           </>
         ) : (
-          <div className={styles.splitLayout}>
+          <div className={`${styles.splitLayout} ${styles.splitLayoutActive}`}>
             {splitReversed ? (
               <>
-                <div className={styles.splitPanel}>
+                <div className={`${styles.splitPanel} ${styles.splitPanelComposer}`}>
                   {composer}
+                  <div className={styles.splitInfoPanel}>{infoPanel(true)}</div>
                 </div>
-                <div className={styles.splitPanel}>
-                  <MessageThread ticket={ticket} messages={messages} attachments={attachmentsQuery.data ?? []} detailed />
+                <div className={`${styles.splitPanel} ${styles.splitPanelThread}`}>
+                  <MessageThread ticket={ticket} messages={messages} attachments={ticketAttachments} detailed />
                   <TicketActivityLog ticketId={ticketId} />
                 </div>
               </>
             ) : (
               <>
-                <div className={styles.splitPanel}>
-                  <MessageThread ticket={ticket} messages={messages} attachments={attachmentsQuery.data ?? []} detailed />
+                <div className={`${styles.splitPanel} ${styles.splitPanelThread}`}>
+                  <MessageThread ticket={ticket} messages={messages} attachments={ticketAttachments} detailed />
                   <TicketActivityLog ticketId={ticketId} />
                 </div>
-                <div className={styles.splitPanel}>
+                <div className={`${styles.splitPanel} ${styles.splitPanelComposer}`}>
                   {composer}
+                  <div className={styles.splitInfoPanel}>{infoPanel(true)}</div>
                 </div>
               </>
             )}

@@ -1,4 +1,6 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, memo, useEffect, useMemo, useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faNoteSticky } from '@fortawesome/free-solid-svg-icons'
 import { AttachmentDto, MessageDirection, TicketDetailDto, TicketMessageDto, ticketAttachmentsClient } from '../../api'
 import { SafeHtml } from '../../components/SafeHtml/SafeHtml'
 import { formatDateTime, formatFileSize } from '../../lib/format'
@@ -125,7 +127,7 @@ interface MessageThreadProps {
   detailed?: boolean
 }
 
-export function MessageThread({ ticket, messages, attachments, detailed = true }: MessageThreadProps) {
+export const MessageThread = memo(function MessageThread({ ticket, messages, attachments, detailed = true }: MessageThreadProps) {
   return (
     <div className={styles.card}>
       <div className={styles.cardHeader}>
@@ -152,7 +154,7 @@ export function MessageThread({ ticket, messages, attachments, detailed = true }
       </div>
     </div>
   )
-}
+})
 
 function MessageBubble({
   ticket, msg, attachments, detailed,
@@ -176,8 +178,10 @@ function MessageBubble({
       <div className={styles.messageMeta}>
         <div className={styles.avatarSm}>{getInitials(author)}</div>
         {detailed && (
-          <span className={styles.directionIcon} title={isOutbound ? 'Kimenő' : 'Bejövő'}>
-            {isOutbound ? '↑' : '↓'}
+          <span className={styles.directionIcon} title={msg.isInternalNote ? 'Belső jegyzet' : isOutbound ? 'Kimenő' : 'Bejövő'}>
+            {msg.isInternalNote
+              ? <FontAwesomeIcon icon={faNoteSticky} style={{ fontSize: 11 }} />
+              : isOutbound ? '↑' : '↓'}
           </span>
         )}
         <span className={styles.authorName}>{author}</span>
@@ -204,7 +208,7 @@ function MessageBubble({
 
       {/* Multi-sender szétbontott rész (jövőbeli feature, most mindig null) */}
       {emailParts ? (
-        <div className={styles.bubble}>
+        <div className={`${styles.bubble} ${msg.isInternalNote ? styles.internalBubble : ''}`}>
           <div className={styles.subBubbles}>
             {emailParts.map((part, i) => (
               <div key={i} className={styles.subBubble}>
@@ -217,7 +221,7 @@ function MessageBubble({
           </div>
         </div>
       ) : (
-        <div className={styles.bubble}>
+        <div className={`${styles.bubble} ${msg.isInternalNote ? styles.internalBubble : ''}`}>
           <SafeHtml html={mainHtml} />
           {quotedHtml && (
             <>

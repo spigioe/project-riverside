@@ -46,7 +46,6 @@ export function ReplyComposer({
   const [cannedOpen, setCannedOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [attachmentError, setAttachmentError] = useState<string | null>(null)
-  const [autoQuoteEnabled, setAutoQuoteEnabled] = useState(true)
   const editorRef = useRef<RichTextEditorHandle>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const initializedRef = useRef(false)
@@ -62,7 +61,7 @@ export function ReplyComposer({
     if (!isHtmlEmpty(body)) return
 
     const parts: string[] = []
-    if (autoQuoteEnabled && lastInboundBody) parts.push(buildQuoteHtml(lastInboundBody))
+    if (lastInboundBody) parts.push(buildQuoteHtml(lastInboundBody))
     if (signature.trim()) parts.push(buildSignatureHtml(signature, rteStyles.emailSignatureLine))
     if (parts.length === 0) return
 
@@ -70,7 +69,7 @@ export function ReplyComposer({
     editorRef.current?.setContentAndFocusStart(html)
     onBodyChange(html)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature, lastInboundBody, autoQuoteEnabled])
+  }, [signature, lastInboundBody])
 
   function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files ?? [])
@@ -100,7 +99,7 @@ export function ReplyComposer({
           ⚠ Ez a jegy összevonásra került, nem lehet rá válaszolni.
         </div>
       )}
-      <div className={disabled ? styles.composerDisabled : undefined}>
+      <div className={`${styles.composerInner}${disabled ? ` ${styles.composerDisabled}` : ''}`}>
       <div className={styles.composerTabs}>
         <button
           type="button"
@@ -150,17 +149,6 @@ export function ReplyComposer({
                 />
               </div>
             </>
-          )}
-          {lastInboundBody && (
-            <label className={styles.previewCheckboxRow}>
-              <input
-                type="checkbox"
-                checked={autoQuoteEnabled}
-                onChange={(e) => setAutoQuoteEnabled(e.target.checked)}
-                style={{ width: 'auto' }}
-              />
-              Eredeti üzenet idézése a válaszban
-            </label>
           )}
         </div>
       )}

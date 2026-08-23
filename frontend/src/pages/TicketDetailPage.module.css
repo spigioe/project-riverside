@@ -614,6 +614,7 @@
   align-items: stretch;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
   gap: 14px;
   padding-bottom: 28px;
   box-sizing: border-box;
@@ -701,7 +702,6 @@
 .splitPanelComposer .composerInner > div:not(.composerTabs):not(.emailFields):not(.composerFooter):not(.attachmentChips):not(.attachmentError) {
   flex: 1;
   min-height: 80px;
-  max-height: 250px;
   overflow-y: auto;
 }
 
