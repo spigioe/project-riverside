@@ -23,6 +23,7 @@ public class TicketService(
     IFileStorageService fileStorageService,
     IAuditLogService auditLogService,
     ISlaService slaService,
+    ISlaCalculationService slaCalculationService,
     ILogger<TicketService> logger) : ITicketService
 {
     public async Task<PagedResult<TicketListItemDto>> GetTicketsAsync(TicketListQuery query)
@@ -157,7 +158,7 @@ public class TicketService(
             CsmId = await csmService.FindCsmIdForEmailAsync(request.RequesterEmail),
             ContactId = contact.Id,
             CreatedAt = createdAt,
-            SlaDueAt = await slaService.CalculateSlaDueAtAsync(request.Priority, createdAt),
+            SlaDueAt = await ComputeSlaDueAtAsync(request.RequesterEmail, request.Priority, createdAt),
         };
 
         db.Tickets.Add(ticket);
@@ -672,5 +673,12 @@ public class TicketService(
         }
 
         await db.SaveChangesAsync();
+    }
+
+    private async Task<DateTime?> ComputeSlaDueAtAsync(string requesterEmail, TicketPriority priority, DateTime createdAt)
+    {
+        var slaParams = await slaService.FindPolicyForTicketAsync(requesterEmail, priority);
+        if (slaParams is null) return null;
+        return await slaCalculationService.CalculateDueAtAsync(createdAt, slaParams.Value.ResponseTimeMinutes, slaParams.Value.BusinessHoursOnly);
     }
 }

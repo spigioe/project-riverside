@@ -12,7 +12,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<TicketMessage> TicketMessages => Set<TicketMessage>();
     public DbSet<FileStorage> FileStorages => Set<FileStorage>();
     public DbSet<SlaPolicy> SlaPolicies => Set<SlaPolicy>();
-    public DbSet<SlaPolicyDomain> SlaPolicyDomains => Set<SlaPolicyDomain>();
+    public DbSet<SlaPolicyPriority> SlaPolicyPriorities => Set<SlaPolicyPriority>();
+    public DbSet<SlaPolicyCompany> SlaPolicyCompanies => Set<SlaPolicyCompany>();
     public DbSet<BusinessHours> BusinessHours => Set<BusinessHours>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();

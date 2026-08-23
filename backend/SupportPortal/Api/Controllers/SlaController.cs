@@ -14,56 +14,72 @@ public class SlaController(ISlaService slaService) : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<SlaPolicyDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPolicies()
     {
-        return Ok(await slaService.GetPoliciesAsync());
+        return Ok(await slaService.GetAllAsync());
     }
 
-    [HttpPut("policies/{id:int}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [HttpGet("policies/{id:int}")]
+    [ProducesResponseType(typeof(SlaPolicyDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdatePolicy(int id, [FromBody] UpdateSlaPolicyRequest request)
+    public async Task<IActionResult> GetPolicy(int id)
     {
-        var result = await slaService.UpdatePolicyAsync(id, request);
-        if (result == UpdateSlaPolicyResult.NotFound)
+        var policy = await slaService.GetByIdAsync(id);
+        if (policy is null)
             return Problem(statusCode: StatusCodes.Status404NotFound, title: "Az SLA policy nem található.");
-
-        return NoContent();
+        return Ok(policy);
     }
 
-    [HttpGet("domains")]
-    [ProducesResponseType(typeof(IReadOnlyList<SlaDomainDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetDomains()
-    {
-        return Ok(await slaService.GetDomainsAsync());
-    }
-
-    [HttpPost("domains")]
-    [ProducesResponseType(typeof(SlaDomainDto), StatusCodes.Status201Created)]
+    [HttpPost("policies")]
+    [ProducesResponseType(typeof(SlaPolicyDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> CreateDomain([FromBody] CreateSlaDomainRequest request)
+    public async Task<IActionResult> CreatePolicy([FromBody] CreateSlaPolicyRequest request)
     {
-        var (result, domain) = await slaService.CreateDomainAsync(request);
+        var (result, policy) = await slaService.CreateAsync(request);
         return result switch
         {
-            CreateSlaDomainResult.Success => CreatedAtAction(nameof(GetDomains), null, domain),
-            CreateSlaDomainResult.PolicyNotFound =>
-                Problem(statusCode: StatusCodes.Status400BadRequest, title: "A megadott SLA policy nem található."),
-            CreateSlaDomainResult.DomainTaken =>
-                Problem(statusCode: StatusCodes.Status409Conflict, title: "Ez a domain már hozzá van rendelve egy policyhoz."),
+            CreateSlaPolicyResult.Success => CreatedAtAction(nameof(GetPolicy), new { id = policy!.Id }, policy),
+            CreateSlaPolicyResult.DefaultAlreadyExists =>
+                Problem(statusCode: StatusCodes.Status409Conflict, title: "Már létezik alapértelmezett SLA policy."),
+            CreateSlaPolicyResult.CompanyNotFound =>
+                Problem(statusCode: StatusCodes.Status400BadRequest, title: "A megadott cég nem található."),
             _ => Problem(statusCode: StatusCodes.Status500InternalServerError),
         };
     }
 
-    [HttpDelete("domains/{id:int}")]
+    [HttpPut("policies/{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteDomain(int id)
+    public async Task<IActionResult> UpdatePolicy(int id, [FromBody] UpdateSlaPolicyRequest request)
     {
-        var success = await slaService.DeleteDomainAsync(id);
-        if (!success)
-            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A domain kivétel nem található.");
+        var result = await slaService.UpdateAsync(id, request);
+        return result switch
+        {
+            UpdateSlaPolicyResult.Success => NoContent(),
+            UpdateSlaPolicyResult.NotFound =>
+                Problem(statusCode: StatusCodes.Status404NotFound, title: "Az SLA policy nem található."),
+            UpdateSlaPolicyResult.CompanyNotFound =>
+                Problem(statusCode: StatusCodes.Status400BadRequest, title: "A megadott cég nem található."),
+            _ => Problem(statusCode: StatusCodes.Status500InternalServerError),
+        };
+    }
 
-        return NoContent();
+    [HttpDelete("policies/{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletePolicy(int id)
+    {
+        var result = await slaService.DeleteAsync(id);
+        return result switch
+        {
+            DeleteSlaPolicyResult.Success => NoContent(),
+            DeleteSlaPolicyResult.NotFound =>
+                Problem(statusCode: StatusCodes.Status404NotFound, title: "Az SLA policy nem található."),
+            DeleteSlaPolicyResult.CannotDeleteDefault =>
+                Problem(statusCode: StatusCodes.Status400BadRequest, title: "Az alapértelmezett SLA policy nem törölhető."),
+            _ => Problem(statusCode: StatusCodes.Status500InternalServerError),
+        };
     }
 
     [HttpGet("business-hours")]

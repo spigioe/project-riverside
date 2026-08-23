@@ -9,63 +9,175 @@ namespace SupportPortal.Infrastructure.Services;
 
 public class SlaService(AppDbContext db) : ISlaService
 {
-    public async Task<IReadOnlyList<SlaPolicyDto>> GetPoliciesAsync()
+    public async Task<IReadOnlyList<SlaPolicyDto>> GetAllAsync()
     {
-        return await db.SlaPolicies
+        var policies = await db.SlaPolicies
             .AsNoTracking()
-            .OrderBy(p => p.Priority)
-            .Select(p => new SlaPolicyDto(
-                p.Id, p.Name, p.Priority, p.IsDefault, p.BusinessHoursOnly,
-                p.ResponseTimeMinutes, p.ResolutionTimeMinutes))
+            .Include(p => p.Priorities)
+            .Include(p => p.Companies)
+            .OrderByDescending(p => p.IsDefault)
+            .ThenBy(p => p.Name)
             .ToListAsync();
+
+        return policies.Select(MapToDto).ToList();
     }
 
-    public async Task<UpdateSlaPolicyResult> UpdatePolicyAsync(int id, UpdateSlaPolicyRequest request)
+    public async Task<SlaPolicyDto?> GetByIdAsync(int id)
     {
-        var policy = await db.SlaPolicies.FirstOrDefaultAsync(p => p.Id == id);
+        var policy = await db.SlaPolicies
+            .AsNoTracking()
+            .Include(p => p.Priorities)
+            .Include(p => p.Companies)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        return policy is null ? null : MapToDto(policy);
+    }
+
+    public async Task<(CreateSlaPolicyResult Result, SlaPolicyDto? Policy)> CreateAsync(CreateSlaPolicyRequest request)
+    {
+        if (request.IsDefault && await db.SlaPolicies.AnyAsync(p => p.IsDefault))
+            return (CreateSlaPolicyResult.DefaultAlreadyExists, null);
+
+        foreach (var companyId in request.CompanyIds)
+        {
+            if (!await db.Companies.AnyAsync(c => c.Id == companyId))
+                return (CreateSlaPolicyResult.CompanyNotFound, null);
+        }
+
+        var policy = new SlaPolicy
+        {
+            Name = request.Name.Trim(),
+            IsDefault = request.IsDefault,
+            BusinessHoursOnly = request.BusinessHoursOnly,
+        };
+        db.SlaPolicies.Add(policy);
+        await db.SaveChangesAsync();
+
+        foreach (var p in request.Priorities)
+        {
+            db.SlaPolicyPriorities.Add(new SlaPolicyPriority
+            {
+                SlaPolicyId = policy.Id,
+                Priority = p.Priority,
+                ResponseTimeMinutes = p.ResponseTimeMinutes,
+                ResolutionTimeMinutes = p.ResolutionTimeMinutes,
+            });
+        }
+
+        foreach (var companyId in request.CompanyIds)
+        {
+            db.SlaPolicyCompanies.Add(new SlaPolicyCompany
+            {
+                SlaPolicyId = policy.Id,
+                CompanyId = companyId,
+            });
+        }
+
+        await db.SaveChangesAsync();
+
+        var created = await db.SlaPolicies
+            .AsNoTracking()
+            .Include(p => p.Priorities)
+            .Include(p => p.Companies)
+            .FirstAsync(p => p.Id == policy.Id);
+
+        return (CreateSlaPolicyResult.Success, MapToDto(created));
+    }
+
+    public async Task<UpdateSlaPolicyResult> UpdateAsync(int id, UpdateSlaPolicyRequest request)
+    {
+        var policy = await db.SlaPolicies
+            .Include(p => p.Priorities)
+            .Include(p => p.Companies)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
         if (policy is null) return UpdateSlaPolicyResult.NotFound;
 
-        policy.ResponseTimeMinutes = request.ResponseTimeMinutes;
-        policy.ResolutionTimeMinutes = request.ResolutionTimeMinutes;
+        foreach (var companyId in request.CompanyIds)
+        {
+            if (!await db.Companies.AnyAsync(c => c.Id == companyId))
+                return UpdateSlaPolicyResult.CompanyNotFound;
+        }
+
+        policy.Name = request.Name.Trim();
         policy.BusinessHoursOnly = request.BusinessHoursOnly;
+        policy.UpdatedAt = DateTime.UtcNow;
+
+        db.SlaPolicyPriorities.RemoveRange(policy.Priorities);
+        db.SlaPolicyCompanies.RemoveRange(policy.Companies);
+
+        foreach (var p in request.Priorities)
+        {
+            db.SlaPolicyPriorities.Add(new SlaPolicyPriority
+            {
+                SlaPolicyId = policy.Id,
+                Priority = p.Priority,
+                ResponseTimeMinutes = p.ResponseTimeMinutes,
+                ResolutionTimeMinutes = p.ResolutionTimeMinutes,
+            });
+        }
+
+        foreach (var companyId in request.CompanyIds)
+        {
+            db.SlaPolicyCompanies.Add(new SlaPolicyCompany
+            {
+                SlaPolicyId = policy.Id,
+                CompanyId = companyId,
+            });
+        }
 
         await db.SaveChangesAsync();
         return UpdateSlaPolicyResult.Success;
     }
 
-    public async Task<IReadOnlyList<SlaDomainDto>> GetDomainsAsync()
+    public async Task<DeleteSlaPolicyResult> DeleteAsync(int id)
     {
-        return await db.SlaPolicyDomains
+        var policy = await db.SlaPolicies.FirstOrDefaultAsync(p => p.Id == id);
+        if (policy is null) return DeleteSlaPolicyResult.NotFound;
+        if (policy.IsDefault) return DeleteSlaPolicyResult.CannotDeleteDefault;
+
+        db.SlaPolicies.Remove(policy);
+        await db.SaveChangesAsync();
+        return DeleteSlaPolicyResult.Success;
+    }
+
+    public async Task<(int ResponseTimeMinutes, bool BusinessHoursOnly)?> FindPolicyForTicketAsync(
+        string requesterEmail, TicketPriority priority)
+    {
+        var domain = requesterEmail.Contains('@')
+            ? requesterEmail.Split('@')[1].ToLowerInvariant()
+            : null;
+
+        SlaPolicy? policy = null;
+
+        if (domain is not null)
+        {
+            var company = await db.Companies
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Domain != null && c.Domain.ToLower() == domain);
+
+            if (company is not null)
+            {
+                policy = await db.SlaPolicies
+                    .AsNoTracking()
+                    .Include(p => p.Priorities)
+                    .Include(p => p.Companies)
+                    .FirstOrDefaultAsync(p => p.Companies.Any(c => c.CompanyId == company.Id));
+            }
+        }
+
+        policy ??= await db.SlaPolicies
             .AsNoTracking()
-            .OrderBy(d => d.EmailDomain)
-            .Select(d => new SlaDomainDto(d.Id, d.SlaPolicyId, d.SlaPolicy.Name, d.EmailDomain))
-            .ToListAsync();
-    }
+            .Include(p => p.Priorities)
+            .FirstOrDefaultAsync(p => p.IsDefault);
 
-    public async Task<(CreateSlaDomainResult Result, SlaDomainDto? Domain)> CreateDomainAsync(CreateSlaDomainRequest request)
-    {
-        var policy = await db.SlaPolicies.FirstOrDefaultAsync(p => p.Id == request.SlaPolicyId);
-        if (policy is null) return (CreateSlaDomainResult.PolicyNotFound, null);
+        if (policy is null) return null;
 
-        var normalizedDomain = request.EmailDomain.Trim().ToLowerInvariant();
-        var domainTaken = await db.SlaPolicyDomains.AnyAsync(d => d.EmailDomain == normalizedDomain);
-        if (domainTaken) return (CreateSlaDomainResult.DomainTaken, null);
+        var priorityKey = priority.ToString();
+        var row = policy.Priorities.FirstOrDefault(p => p.Priority == priorityKey);
+        if (row is null) return null;
 
-        var entity = new SlaPolicyDomain { SlaPolicyId = request.SlaPolicyId, EmailDomain = normalizedDomain };
-        db.SlaPolicyDomains.Add(entity);
-        await db.SaveChangesAsync();
-
-        return (CreateSlaDomainResult.Success, new SlaDomainDto(entity.Id, policy.Id, policy.Name, entity.EmailDomain));
-    }
-
-    public async Task<bool> DeleteDomainAsync(int id)
-    {
-        var domain = await db.SlaPolicyDomains.FirstOrDefaultAsync(d => d.Id == id);
-        if (domain is null) return false;
-
-        db.SlaPolicyDomains.Remove(domain);
-        await db.SaveChangesAsync();
-        return true;
+        return (row.ResponseTimeMinutes, policy.BusinessHoursOnly);
     }
 
     public async Task<IReadOnlyList<BusinessHoursDayDto>> GetBusinessHoursAsync()
@@ -74,7 +186,7 @@ public class SlaService(AppDbContext db) : ISlaService
         var byDay = configured.ToDictionary(b => b.DayOfWeek);
 
         return Enum.GetValues<DayOfWeek>()
-            .OrderBy(d => ((int)d + 6) % 7) // hétfővel kezdve (H-V)
+            .OrderBy(d => ((int)d + 6) % 7)
             .Select(d => byDay.TryGetValue(d, out var bh)
                 ? new BusinessHoursDayDto(d, true, bh.StartTime, bh.EndTime)
                 : new BusinessHoursDayDto(d, false, null, null))
@@ -115,92 +227,15 @@ public class SlaService(AppDbContext db) : ISlaService
         return await GetBusinessHoursAsync();
     }
 
-    public async Task<DateTime?> CalculateSlaDueAtAsync(TicketPriority priority, DateTime createdAt)
-    {
-        var policy = await db.SlaPolicies
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Priority == priority);
-
-        if (policy is null) return null;
-
-        if (!policy.BusinessHoursOnly)
-            return createdAt.AddMinutes(policy.ResponseTimeMinutes);
-
-        var schedule = await db.BusinessHours.AsNoTracking().ToListAsync();
-        if (schedule.Count == 0)
-            return createdAt.AddMinutes(policy.ResponseTimeMinutes);
-
-        return AddWorkingMinutes(createdAt, policy.ResponseTimeMinutes, schedule);
-    }
-
-    private static DateTime AddWorkingMinutes(DateTime start, int minutes, List<BusinessHours> schedule)
-    {
-        var byDay = schedule.ToDictionary(b => b.DayOfWeek);
-        var current = AdvanceToWorkingTime(start, byDay);
-        var remaining = minutes;
-
-        while (remaining > 0)
-        {
-            if (!byDay.TryGetValue(current.DayOfWeek, out var bh))
-            {
-                current = NextWorkingDayStart(current, byDay);
-                continue;
-            }
-
-            var dayEnd = current.Date.Add(bh.EndTime.ToTimeSpan());
-            var minutesUntilEnd = (int)(dayEnd - current).TotalMinutes;
-
-            if (minutesUntilEnd <= 0)
-            {
-                current = NextWorkingDayStart(current, byDay);
-                continue;
-            }
-
-            if (remaining <= minutesUntilEnd)
-            {
-                current = current.AddMinutes(remaining);
-                remaining = 0;
-            }
-            else
-            {
-                remaining -= minutesUntilEnd;
-                current = NextWorkingDayStart(current, byDay);
-            }
-        }
-
-        return current;
-    }
-
-    private static DateTime AdvanceToWorkingTime(DateTime dt, Dictionary<DayOfWeek, BusinessHours> byDay)
-    {
-        for (int i = 0; i < 14; i++)
-        {
-            if (!byDay.TryGetValue(dt.DayOfWeek, out var bh))
-            {
-                dt = dt.Date.AddDays(1);
-                continue;
-            }
-
-            var dayStart = dt.Date.Add(bh.StartTime.ToTimeSpan());
-            var dayEnd = dt.Date.Add(bh.EndTime.ToTimeSpan());
-
-            if (dt < dayStart) return dayStart;
-            if (dt < dayEnd) return dt;
-
-            dt = dt.Date.AddDays(1);
-        }
-        return dt;
-    }
-
-    private static DateTime NextWorkingDayStart(DateTime dt, Dictionary<DayOfWeek, BusinessHours> byDay)
-    {
-        dt = dt.Date.AddDays(1);
-        for (int i = 0; i < 14; i++)
-        {
-            if (byDay.TryGetValue(dt.DayOfWeek, out var bh))
-                return dt.Add(bh.StartTime.ToTimeSpan());
-            dt = dt.AddDays(1);
-        }
-        return dt;
-    }
+    private static SlaPolicyDto MapToDto(SlaPolicy p) => new(
+        p.Id,
+        p.Name,
+        p.IsDefault,
+        p.BusinessHoursOnly,
+        p.CreatedAt,
+        p.UpdatedAt,
+        p.Priorities.OrderBy(r => r.Priority).Select(r => new SlaPriorityRowDto(
+            r.Priority, r.ResponseTimeMinutes, r.ResolutionTimeMinutes)).ToList(),
+        p.Companies.Select(c => c.CompanyId).ToList()
+    );
 }

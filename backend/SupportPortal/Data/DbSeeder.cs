@@ -111,15 +111,17 @@ public static class DbSeeder
         db.Tickets.AddRange(tickets);
         await db.SaveChangesAsync();
 
-        // SLA master policy (mind a 4 prioritáshoz)
-        var slaPolicies = new[]
-        {
-            new SlaPolicy { Name = "Master SLA", IsDefault = true, Priority = TicketPriority.Low,    ResponseTimeMinutes = 480,  ResolutionTimeMinutes = 4320 },
-            new SlaPolicy { Name = "Master SLA", IsDefault = true, Priority = TicketPriority.Medium, ResponseTimeMinutes = 240,  ResolutionTimeMinutes = 1440 },
-            new SlaPolicy { Name = "Master SLA", IsDefault = true, Priority = TicketPriority.High,   ResponseTimeMinutes = 120,  ResolutionTimeMinutes = 480  },
-            new SlaPolicy { Name = "Master SLA", IsDefault = true, Priority = TicketPriority.Urgent, ResponseTimeMinutes = 30,   ResolutionTimeMinutes = 240  },
-        };
-        db.SlaPolicies.AddRange(slaPolicies);
+        // SLA master policy + prioritás sorok
+        var masterPolicy = new SlaPolicy { Name = "Master SLA", IsDefault = true, BusinessHoursOnly = true };
+        db.SlaPolicies.Add(masterPolicy);
+        await db.SaveChangesAsync();
+
+        db.SlaPolicyPriorities.AddRange(
+            new SlaPolicyPriority { SlaPolicyId = masterPolicy.Id, Priority = "Low",    ResponseTimeMinutes = 480,  ResolutionTimeMinutes = 4320 },
+            new SlaPolicyPriority { SlaPolicyId = masterPolicy.Id, Priority = "Medium", ResponseTimeMinutes = 240,  ResolutionTimeMinutes = 1440 },
+            new SlaPolicyPriority { SlaPolicyId = masterPolicy.Id, Priority = "High",   ResponseTimeMinutes = 120,  ResolutionTimeMinutes = 480  },
+            new SlaPolicyPriority { SlaPolicyId = masterPolicy.Id, Priority = "Urgent", ResponseTimeMinutes = 30,   ResolutionTimeMinutes = 240  }
+        );
 
         // Munkaidő (H-P, 8:00-17:00)
         var workDays = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday };

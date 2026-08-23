@@ -3802,6 +3802,130 @@ export class SlaClient {
         return Promise.resolve<SlaPolicyDto[]>(null as any);
     }
 
+    createPolicy(request: CreateSlaPolicyRequest, cancelToken?: CancelToken): Promise<SlaPolicyDto> {
+        let url_ = this.baseUrl + "/api/portal/sla/policies";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreatePolicy(_response);
+        });
+    }
+
+    protected processCreatePolicy(response: AxiosResponse): Promise<SlaPolicyDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = SlaPolicyDto.fromJS(resultData201);
+            return Promise.resolve<SlaPolicyDto>(result201);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SlaPolicyDto>(null as any);
+    }
+
+    getPolicy(id: number, cancelToken?: CancelToken): Promise<SlaPolicyDto> {
+        let url_ = this.baseUrl + "/api/portal/sla/policies/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetPolicy(_response);
+        });
+    }
+
+    protected processGetPolicy(response: AxiosResponse): Promise<SlaPolicyDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = SlaPolicyDto.fromJS(resultData200);
+            return Promise.resolve<SlaPolicyDto>(result200);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SlaPolicyDto>(null as any);
+    }
+
     updatePolicy(id: number, request: UpdateSlaPolicyRequest, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/portal/sla/policies/{id}";
         if (id === undefined || id === null)
@@ -3846,6 +3970,13 @@ export class SlaClient {
             const _responseText = response.data;
             return Promise.resolve<void>(null as any);
 
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
         } else if (status === 404) {
             const _responseText = response.data;
             let result404: any = null;
@@ -3860,129 +3991,8 @@ export class SlaClient {
         return Promise.resolve<void>(null as any);
     }
 
-    getDomains( cancelToken?: CancelToken): Promise<SlaDomainDto[]> {
-        let url_ = this.baseUrl + "/api/portal/sla/domains";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "GET",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processGetDomains(_response);
-        });
-    }
-
-    protected processGetDomains(response: AxiosResponse): Promise<SlaDomainDto[]> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(SlaDomainDto.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return Promise.resolve<SlaDomainDto[]>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<SlaDomainDto[]>(null as any);
-    }
-
-    createDomain(request: CreateSlaDomainRequest, cancelToken?: CancelToken): Promise<SlaDomainDto> {
-        let url_ = this.baseUrl + "/api/portal/sla/domains";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(request);
-
-        let options_: AxiosRequestConfig = {
-            data: content_,
-            method: "POST",
-            url: url_,
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processCreateDomain(_response);
-        });
-    }
-
-    protected processCreateDomain(response: AxiosResponse): Promise<SlaDomainDto> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 201) {
-            const _responseText = response.data;
-            let result201: any = null;
-            let resultData201  = _responseText;
-            result201 = SlaDomainDto.fromJS(resultData201);
-            return Promise.resolve<SlaDomainDto>(result201);
-
-        } else if (status === 400) {
-            const _responseText = response.data;
-            let result400: any = null;
-            let resultData400  = _responseText;
-            result400 = ProblemDetails.fromJS(resultData400);
-            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
-
-        } else if (status === 409) {
-            const _responseText = response.data;
-            let result409: any = null;
-            let resultData409  = _responseText;
-            result409 = ProblemDetails.fromJS(resultData409);
-            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<SlaDomainDto>(null as any);
-    }
-
-    deleteDomain(id: number, cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/portal/sla/domains/{id}";
+    deletePolicy(id: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/sla/policies/{id}";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
         url_ = url_.replace("{id}", encodeURIComponent("" + id));
@@ -4003,11 +4013,11 @@ export class SlaClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processDeleteDomain(_response);
+            return this.processDeletePolicy(_response);
         });
     }
 
-    protected processDeleteDomain(response: AxiosResponse): Promise<void> {
+    protected processDeletePolicy(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -4020,6 +4030,13 @@ export class SlaClient {
         if (status === 204) {
             const _responseText = response.data;
             return Promise.resolve<void>(null as any);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
 
         } else if (status === 404) {
             const _responseText = response.data;
@@ -9500,11 +9517,12 @@ export interface ITestEmailConnectionRequest {
 export class SlaPolicyDto implements ISlaPolicyDto {
     id?: number;
     name?: string;
-    priority?: TicketPriority;
     isDefault?: boolean;
     businessHoursOnly?: boolean;
-    responseTimeMinutes?: number;
-    resolutionTimeMinutes?: number;
+    createdAt?: Date;
+    updatedAt?: Date;
+    priorities?: SlaPriorityRowDto[];
+    companyIds?: number[];
 
     constructor(data?: ISlaPolicyDto) {
         if (data) {
@@ -9519,11 +9537,20 @@ export class SlaPolicyDto implements ISlaPolicyDto {
         if (_data) {
             this.id = _data["id"];
             this.name = _data["name"];
-            this.priority = _data["priority"];
             this.isDefault = _data["isDefault"];
             this.businessHoursOnly = _data["businessHoursOnly"];
-            this.responseTimeMinutes = _data["responseTimeMinutes"];
-            this.resolutionTimeMinutes = _data["resolutionTimeMinutes"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.updatedAt = _data["updatedAt"] ? new Date(_data["updatedAt"].toString()) : undefined as any;
+            if (Array.isArray(_data["priorities"])) {
+                this.priorities = [] as any;
+                for (let item of _data["priorities"])
+                    this.priorities!.push(SlaPriorityRowDto.fromJS(item));
+            }
+            if (Array.isArray(_data["companyIds"])) {
+                this.companyIds = [] as any;
+                for (let item of _data["companyIds"])
+                    this.companyIds!.push(item);
+            }
         }
     }
 
@@ -9538,11 +9565,20 @@ export class SlaPolicyDto implements ISlaPolicyDto {
         data = typeof data === 'object' ? data : {};
         data["id"] = this.id;
         data["name"] = this.name;
-        data["priority"] = this.priority;
         data["isDefault"] = this.isDefault;
         data["businessHoursOnly"] = this.businessHoursOnly;
-        data["responseTimeMinutes"] = this.responseTimeMinutes;
-        data["resolutionTimeMinutes"] = this.resolutionTimeMinutes;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["updatedAt"] = this.updatedAt ? this.updatedAt.toISOString() : undefined as any;
+        if (Array.isArray(this.priorities)) {
+            data["priorities"] = [];
+            for (let item of this.priorities)
+                data["priorities"].push(item ? item.toJSON() : undefined as any);
+        }
+        if (Array.isArray(this.companyIds)) {
+            data["companyIds"] = [];
+            for (let item of this.companyIds)
+                data["companyIds"].push(item);
+        }
         return data;
     }
 }
@@ -9550,24 +9586,175 @@ export class SlaPolicyDto implements ISlaPolicyDto {
 export interface ISlaPolicyDto {
     id?: number;
     name?: string;
-    priority?: TicketPriority;
     isDefault?: boolean;
     businessHoursOnly?: boolean;
-    responseTimeMinutes?: number;
-    resolutionTimeMinutes?: number;
+    createdAt?: Date;
+    updatedAt?: Date;
+    priorities?: SlaPriorityRowDto[];
+    companyIds?: number[];
 }
 
-export enum TicketPriority {
-    Low = "Low",
-    Medium = "Medium",
-    High = "High",
-    Urgent = "Urgent",
+export class SlaPriorityRowDto implements ISlaPriorityRowDto {
+    priority?: string;
+    responseTimeMinutes?: number;
+    resolutionTimeMinutes?: number | undefined;
+
+    constructor(data?: ISlaPriorityRowDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.priority = _data["priority"];
+            this.responseTimeMinutes = _data["responseTimeMinutes"];
+            this.resolutionTimeMinutes = _data["resolutionTimeMinutes"];
+        }
+    }
+
+    static fromJS(data: any): SlaPriorityRowDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new SlaPriorityRowDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["priority"] = this.priority;
+        data["responseTimeMinutes"] = this.responseTimeMinutes;
+        data["resolutionTimeMinutes"] = this.resolutionTimeMinutes;
+        return data;
+    }
+}
+
+export interface ISlaPriorityRowDto {
+    priority?: string;
+    responseTimeMinutes?: number;
+    resolutionTimeMinutes?: number | undefined;
+}
+
+export class CreateSlaPolicyRequest implements ICreateSlaPolicyRequest {
+    name?: string;
+    isDefault?: boolean;
+    businessHoursOnly?: boolean;
+    priorities?: SlaPriorityRowRequest[];
+    companyIds?: number[];
+
+    constructor(data?: ICreateSlaPolicyRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.isDefault = _data["isDefault"];
+            this.businessHoursOnly = _data["businessHoursOnly"];
+            if (Array.isArray(_data["priorities"])) {
+                this.priorities = [] as any;
+                for (let item of _data["priorities"])
+                    this.priorities!.push(SlaPriorityRowRequest.fromJS(item));
+            }
+            if (Array.isArray(_data["companyIds"])) {
+                this.companyIds = [] as any;
+                for (let item of _data["companyIds"])
+                    this.companyIds!.push(item);
+            }
+        }
+    }
+
+    static fromJS(data: any): CreateSlaPolicyRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateSlaPolicyRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["isDefault"] = this.isDefault;
+        data["businessHoursOnly"] = this.businessHoursOnly;
+        if (Array.isArray(this.priorities)) {
+            data["priorities"] = [];
+            for (let item of this.priorities)
+                data["priorities"].push(item ? item.toJSON() : undefined as any);
+        }
+        if (Array.isArray(this.companyIds)) {
+            data["companyIds"] = [];
+            for (let item of this.companyIds)
+                data["companyIds"].push(item);
+        }
+        return data;
+    }
+}
+
+export interface ICreateSlaPolicyRequest {
+    name?: string;
+    isDefault?: boolean;
+    businessHoursOnly?: boolean;
+    priorities?: SlaPriorityRowRequest[];
+    companyIds?: number[];
+}
+
+export class SlaPriorityRowRequest implements ISlaPriorityRowRequest {
+    priority?: string;
+    responseTimeMinutes?: number;
+    resolutionTimeMinutes?: number | undefined;
+
+    constructor(data?: ISlaPriorityRowRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.priority = _data["priority"];
+            this.responseTimeMinutes = _data["responseTimeMinutes"];
+            this.resolutionTimeMinutes = _data["resolutionTimeMinutes"];
+        }
+    }
+
+    static fromJS(data: any): SlaPriorityRowRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new SlaPriorityRowRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["priority"] = this.priority;
+        data["responseTimeMinutes"] = this.responseTimeMinutes;
+        data["resolutionTimeMinutes"] = this.resolutionTimeMinutes;
+        return data;
+    }
+}
+
+export interface ISlaPriorityRowRequest {
+    priority?: string;
+    responseTimeMinutes?: number;
+    resolutionTimeMinutes?: number | undefined;
 }
 
 export class UpdateSlaPolicyRequest implements IUpdateSlaPolicyRequest {
-    responseTimeMinutes?: number;
-    resolutionTimeMinutes?: number;
+    name?: string;
     businessHoursOnly?: boolean;
+    priorities?: SlaPriorityRowRequest[];
+    companyIds?: number[];
 
     constructor(data?: IUpdateSlaPolicyRequest) {
         if (data) {
@@ -9580,9 +9767,18 @@ export class UpdateSlaPolicyRequest implements IUpdateSlaPolicyRequest {
 
     init(_data?: any) {
         if (_data) {
-            this.responseTimeMinutes = _data["responseTimeMinutes"];
-            this.resolutionTimeMinutes = _data["resolutionTimeMinutes"];
+            this.name = _data["name"];
             this.businessHoursOnly = _data["businessHoursOnly"];
+            if (Array.isArray(_data["priorities"])) {
+                this.priorities = [] as any;
+                for (let item of _data["priorities"])
+                    this.priorities!.push(SlaPriorityRowRequest.fromJS(item));
+            }
+            if (Array.isArray(_data["companyIds"])) {
+                this.companyIds = [] as any;
+                for (let item of _data["companyIds"])
+                    this.companyIds!.push(item);
+            }
         }
     }
 
@@ -9595,105 +9791,27 @@ export class UpdateSlaPolicyRequest implements IUpdateSlaPolicyRequest {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["responseTimeMinutes"] = this.responseTimeMinutes;
-        data["resolutionTimeMinutes"] = this.resolutionTimeMinutes;
+        data["name"] = this.name;
         data["businessHoursOnly"] = this.businessHoursOnly;
+        if (Array.isArray(this.priorities)) {
+            data["priorities"] = [];
+            for (let item of this.priorities)
+                data["priorities"].push(item ? item.toJSON() : undefined as any);
+        }
+        if (Array.isArray(this.companyIds)) {
+            data["companyIds"] = [];
+            for (let item of this.companyIds)
+                data["companyIds"].push(item);
+        }
         return data;
     }
 }
 
 export interface IUpdateSlaPolicyRequest {
-    responseTimeMinutes?: number;
-    resolutionTimeMinutes?: number;
+    name?: string;
     businessHoursOnly?: boolean;
-}
-
-export class SlaDomainDto implements ISlaDomainDto {
-    id?: number;
-    slaPolicyId?: number;
-    slaPolicyName?: string;
-    emailDomain?: string;
-
-    constructor(data?: ISlaDomainDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.id = _data["id"];
-            this.slaPolicyId = _data["slaPolicyId"];
-            this.slaPolicyName = _data["slaPolicyName"];
-            this.emailDomain = _data["emailDomain"];
-        }
-    }
-
-    static fromJS(data: any): SlaDomainDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new SlaDomainDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["id"] = this.id;
-        data["slaPolicyId"] = this.slaPolicyId;
-        data["slaPolicyName"] = this.slaPolicyName;
-        data["emailDomain"] = this.emailDomain;
-        return data;
-    }
-}
-
-export interface ISlaDomainDto {
-    id?: number;
-    slaPolicyId?: number;
-    slaPolicyName?: string;
-    emailDomain?: string;
-}
-
-export class CreateSlaDomainRequest implements ICreateSlaDomainRequest {
-    slaPolicyId?: number;
-    emailDomain?: string;
-
-    constructor(data?: ICreateSlaDomainRequest) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.slaPolicyId = _data["slaPolicyId"];
-            this.emailDomain = _data["emailDomain"];
-        }
-    }
-
-    static fromJS(data: any): CreateSlaDomainRequest {
-        data = typeof data === 'object' ? data : {};
-        let result = new CreateSlaDomainRequest();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["slaPolicyId"] = this.slaPolicyId;
-        data["emailDomain"] = this.emailDomain;
-        return data;
-    }
-}
-
-export interface ICreateSlaDomainRequest {
-    slaPolicyId?: number;
-    emailDomain?: string;
+    priorities?: SlaPriorityRowRequest[];
+    companyIds?: number[];
 }
 
 export class BusinessHoursDayDto implements IBusinessHoursDayDto {
@@ -9912,6 +10030,13 @@ export interface IAiClassifyResponse {
     suggestedCategoryId?: number | undefined;
     suggestedCategoryName?: string | undefined;
     suggestedPriority?: TicketPriority;
+}
+
+export enum TicketPriority {
+    Low = "Low",
+    Medium = "Medium",
+    High = "High",
+    Urgent = "Urgent",
 }
 
 export class AttachmentDto implements IAttachmentDto {

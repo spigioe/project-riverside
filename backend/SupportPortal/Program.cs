@@ -120,6 +120,7 @@ builder.Services.AddScoped<ITicketEmailProcessor, TicketEmailProcessor>();
 builder.Services.AddHostedService<EmailPollingService>();
 builder.Services.AddSingleton<INotificationService, NotificationService>();
 builder.Services.AddScoped<ISlaService, SlaService>();
+builder.Services.AddScoped<ISlaCalculationService, SlaCalculationService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ICannedResponseService, CannedResponseService>();
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();

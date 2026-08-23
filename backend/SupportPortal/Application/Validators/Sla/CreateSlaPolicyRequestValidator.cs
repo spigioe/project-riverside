@@ -3,11 +3,11 @@ using SupportPortal.Application.DTOs.Sla;
 
 namespace SupportPortal.Application.Validators.Sla;
 
-public class UpdateSlaPolicyRequestValidator : AbstractValidator<UpdateSlaPolicyRequest>
+public class CreateSlaPolicyRequestValidator : AbstractValidator<CreateSlaPolicyRequest>
 {
     private static readonly string[] ValidPriorities = ["Low", "Medium", "High", "Urgent"];
 
-    public UpdateSlaPolicyRequestValidator()
+    public CreateSlaPolicyRequestValidator()
     {
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("A policy neve nem lehet üres.")

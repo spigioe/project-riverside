@@ -1,13 +1,12 @@
-using SupportPortal.Domain.Enums;
-
 namespace SupportPortal.Application.DTOs.Sla;
 
 public record SlaPolicyDto(
     int Id,
     string Name,
-    TicketPriority Priority,
     bool IsDefault,
     bool BusinessHoursOnly,
-    int ResponseTimeMinutes,
-    int ResolutionTimeMinutes
+    DateTime CreatedAt,
+    DateTime UpdatedAt,
+    IReadOnlyList<SlaPriorityRowDto> Priorities,
+    IReadOnlyList<int> CompanyIds
 );

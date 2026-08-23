@@ -19,6 +19,7 @@ public partial class TicketEmailProcessor(
     IFileStorageService fileStorageService,
     IOptions<MinioSettings> minioOptions,
     ISlaService slaService,
+    ISlaCalculationService slaCalculationService,
     ILogger<TicketEmailProcessor> logger) : ITicketEmailProcessor
 {
     [GeneratedRegex(@"\[#(\d+)\]")]
@@ -71,7 +72,7 @@ public partial class TicketEmailProcessor(
                 CsmId = await csmService.FindCsmIdForEmailAsync(fromAddress.Address),
                 ContactId = contact.Id,
                 CreatedAt = createdAt,
-                SlaDueAt = await slaService.CalculateSlaDueAtAsync(defaultPriority, createdAt),
+                SlaDueAt = await ComputeSlaDueAtAsync(fromAddress.Address, defaultPriority, createdAt),
             };
             db.Tickets.Add(ticket);
             await db.SaveChangesAsync();
@@ -202,5 +203,12 @@ public partial class TicketEmailProcessor(
         }
 
         await db.SaveChangesAsync();
+    }
+
+    private async Task<DateTime?> ComputeSlaDueAtAsync(string requesterEmail, TicketPriority priority, DateTime createdAt)
+    {
+        var slaParams = await slaService.FindPolicyForTicketAsync(requesterEmail, priority);
+        if (slaParams is null) return null;
+        return await slaCalculationService.CalculateDueAtAsync(createdAt, slaParams.Value.ResponseTimeMinutes, slaParams.Value.BusinessHoursOnly);
     }
 }
