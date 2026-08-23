@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  categoriesClient,
   contactsClient,
   csmClient,
   meClient,
@@ -14,6 +15,7 @@ import {
   AssignCustomStatusRequest,
   AssignTicketContactRequest,
   AssignTicketRequest,
+  CategoryDto,
   ClickUpLinkDto,
   CreateClickUpLinkRequest,
   CsmAssignRequest,
@@ -23,11 +25,15 @@ import {
   TicketDetailDto,
   TicketDetailView,
   TicketListView,
+  TicketPriority,
   TicketSource,
   TicketStatus,
+  TicketType,
   UpdateCustomFieldValueItem,
+  UpdateTicketPriorityRequest,
   UpdateTicketRequest,
   UpdateTicketStatusRequest,
+  UpdateTicketTypeRequest,
   UpdateUserPreferenceRequest,
 } from '../api'
 import { useCustomStatuses } from '../lib/customStatuses'
@@ -96,6 +102,29 @@ const SOURCE_LABELS: Record<TicketSource, string> = {
   [TicketSource.Portal]: 'Portál',
   [TicketSource.Manual]: 'Kézi',
   [TicketSource.Api]: 'API',
+}
+
+const PRIORITY_OPTIONS: { value: TicketPriority; label: string }[] = [
+  { value: TicketPriority.Low, label: 'Alacsony' },
+  { value: TicketPriority.Medium, label: 'Közepes' },
+  { value: TicketPriority.High, label: 'Magas' },
+  { value: TicketPriority.Urgent, label: 'Sürgős' },
+]
+
+const TYPE_OPTIONS: { value: TicketType; label: string }[] = [
+  { value: TicketType.Question, label: 'Kérdés' },
+  { value: TicketType.Incident, label: 'Incidens' },
+  { value: TicketType.Problem, label: 'Probléma' },
+  { value: TicketType.FeatureRequest, label: 'Funkció kérés' },
+]
+
+function flatCategories(nodes: CategoryDto[], depth = 0): { id: number; name: string; depth: number }[] {
+  const result: { id: number; name: string; depth: number }[] = []
+  for (const n of nodes) {
+    result.push({ id: n.id!, name: n.name!, depth })
+    if (n.children?.length) result.push(...flatCategories(n.children, depth + 1))
+  }
+  return result
 }
 
 const STATUS_OPTIONS: { value: TicketStatus; label: string }[] = [
@@ -214,6 +243,48 @@ export function TicketDetailPage() {
     },
   })
 
+  const categoriesQuery = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoriesClient.getTree(),
+  })
+  const flatCats = flatCategories(categoriesQuery.data ?? [])
+
+  const priorityMutation = useMutation({
+    mutationFn: (priority: TicketPriority) =>
+      ticketClient.updatePriority(ticketId, new UpdateTicketPriorityRequest({ priority })),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
+    },
+  })
+
+  const typeMutation = useMutation({
+    mutationFn: (type: TicketType | undefined) =>
+      ticketClient.updateType(ticketId, new UpdateTicketTypeRequest({ type })),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
+    },
+  })
+
+  const categoryMutation = useMutation({
+    mutationFn: (categoryId: number | undefined) => {
+      const t = ticketQuery.data
+      return ticketClient.updateTicket(ticketId, new UpdateTicketRequest({
+        subject: t?.subject,
+        body: t?.body,
+        priority: t?.priority,
+        categoryId,
+        requesterEmail: t?.requesterEmail,
+        requesterName: t?.requesterName,
+      }))
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
+    },
+  })
+
   const customFieldsQuery = useQuery({
     queryKey: ['ticket-custom-fields', ticketId],
     queryFn: () => ticketCustomFieldsClient.getValues(ticketId),
@@ -256,6 +327,9 @@ export function TicketDetailPage() {
   const [draftStatus, setDraftStatus] = useState<TicketStatus | undefined>(undefined)
   const [draftCustomStatusKey, setDraftCustomStatusKey] = useState<string | null>(null)
   const [draftCsmId, setDraftCsmId] = useState<number | undefined>(undefined)
+  const [draftPriority, setDraftPriority] = useState<TicketPriority | undefined>(undefined)
+  const [draftType, setDraftType] = useState<TicketType | undefined>(undefined)
+  const [draftCategoryId, setDraftCategoryId] = useState<number | undefined>(undefined)
   const [propertiesDirty, setPropertiesDirty] = useState(false)
 
   useEffect(() => {
@@ -264,6 +338,9 @@ export function TicketDetailPage() {
       setDraftStatus(ticketQuery.data.status)
       setDraftCustomStatusKey(ticketQuery.data.customStatusKey ?? null)
       setDraftCsmId(ticketQuery.data.csmId)
+      setDraftPriority(ticketQuery.data.priority)
+      setDraftType(ticketQuery.data.type)
+      setDraftCategoryId(ticketQuery.data.categoryId ?? undefined)
       setPropertiesDirty(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -310,6 +387,22 @@ export function TicketDetailPage() {
       }
       if (draftCsmId !== ticketQuery.data?.csmId) {
         tasks.push(ticketClient.assignCsm(ticketId, new CsmAssignRequest({ csmId: draftCsmId })))
+      }
+      if (draftPriority !== ticketQuery.data?.priority && draftPriority) {
+        tasks.push(ticketClient.updatePriority(ticketId, new UpdateTicketPriorityRequest({ priority: draftPriority })))
+      }
+      if (draftType !== ticketQuery.data?.type) {
+        tasks.push(ticketClient.updateType(ticketId, new UpdateTicketTypeRequest({ type: draftType })))
+      }
+      if (draftCategoryId !== (ticketQuery.data?.categoryId ?? undefined)) {
+        tasks.push(ticketClient.updateTicket(ticketId, new UpdateTicketRequest({
+          subject: ticketQuery.data?.subject,
+          body: ticketQuery.data?.body,
+          priority: ticketQuery.data?.priority,
+          categoryId: draftCategoryId,
+          requesterEmail: ticketQuery.data?.requesterEmail,
+          requesterName: ticketQuery.data?.requesterName,
+        })))
       }
       const changedCustomFields = (customFieldsQuery.data ?? [])
         .filter((f) => (customFieldValues[f.definitionId!] ?? '') !== (f.value ?? ''))
@@ -528,12 +621,17 @@ export function TicketDetailPage() {
       <div className={styles.right}>
         {detailView === TicketDetailView.Classic && infoPanel(true)}
 
-        <div className={styles.card}>
-          <div className={styles.panelHeader}>Tulajdonságok</div>
-          <div className={styles.panelBody}>
-            <div className={styles.field}>
-              <label>Felelős</label>
+        <ContactPanel ticket={ticket} ticketId={ticketId} />
+
+        <div className={styles.sidePanel}>
+          <div className={styles.sidePanelHeader}>Tulajdonságok</div>
+          <div className={styles.sidePanelBody}>
+
+            {/* Felelős */}
+            <div className={styles.sideSection}>
+              <label className={styles.sideLabel}>Felelős</label>
               <select
+                className={styles.sideSelect}
                 value={(autosave ? ticket.assignedToId : draftAssignedToId) ?? ''}
                 onChange={(e) => {
                   const value = e.target.value ? Number(e.target.value) : undefined
@@ -547,9 +645,12 @@ export function TicketDetailPage() {
                 ))}
               </select>
             </div>
-            <div className={styles.field}>
-              <label>Státusz</label>
+
+            {/* Státusz */}
+            <div className={styles.sideSection}>
+              <label className={styles.sideLabel}>Státusz</label>
               <select
+                className={styles.sideSelect}
                 value={autosave ? (ticket.customStatusKey ?? ticket.status) : (draftCustomStatusKey ?? draftStatus ?? ticket.status)}
                 onChange={(e) => {
                   const v = e.target.value
@@ -580,41 +681,102 @@ export function TicketDetailPage() {
                 ))}
               </select>
             </div>
-            {!autosave && (
-              <div className={shared.formActions} style={{ marginTop: 0 }}>
+
+            {/* Prioritás */}
+            <div className={styles.sideSection}>
+              <label className={styles.sideLabel}>Prioritás</label>
+              <select
+                className={styles.sideSelect}
+                value={(autosave ? ticket.priority : draftPriority) ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value as TicketPriority
+                  if (autosave) priorityMutation.mutate(value)
+                  else { setDraftPriority(value); setPropertiesDirty(true) }
+                }}
+              >
+                {PRIORITY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Típus */}
+            <div className={styles.sideSection}>
+              <label className={styles.sideLabel}>Típus</label>
+              <select
+                className={styles.sideSelect}
+                value={(autosave ? ticket.type : draftType) ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value ? (e.target.value as TicketType) : undefined
+                  if (autosave) typeMutation.mutate(value)
+                  else { setDraftType(value); setPropertiesDirty(true) }
+                }}
+              >
+                <option value="">— nincs megadva —</option>
+                {TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Kategória */}
+            <div className={styles.sideSection}>
+              <label className={styles.sideLabel}>Kategória</label>
+              <select
+                className={styles.sideSelect}
+                value={(autosave ? ticket.categoryId : draftCategoryId) ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value ? Number(e.target.value) : undefined
+                  if (autosave) categoryMutation.mutate(value)
+                  else { setDraftCategoryId(value); setPropertiesDirty(true) }
+                }}
+              >
+                <option value="">— nincs megadva —</option>
+                {flatCats.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.depth > 0 ? `${'  '.repeat(c.depth)}${c.name}` : c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Forrás (read-only) */}
+            <div className={styles.sideSection}>
+              <label className={styles.sideLabel}>Forrás</label>
+              <div className={styles.sideValue}>{SOURCE_LABELS[ticket.source!]}</div>
+            </div>
+
+            <hr className={styles.sideDivider} />
+
+            {/* CSM jelölés */}
+            <div className={styles.sideSection}>
+              <div className={styles.toggleRow}>
+                <div>
+                  <div className={styles.toggleLabel}>
+                    CSM jelölés
+                    {ticket.isCsmFlagged && (
+                      <span className={`${badgeStyles.badge} ${badgeStyles.purple}`}>Aktív</span>
+                    )}
+                  </div>
+                  <div className={styles.toggleSub}>Eszkalálás CSM felé</div>
+                </div>
                 <button
                   type="button"
-                  className={shared.primaryButton}
-                  disabled={!propertiesDirty || savePropertiesMutation.isPending}
-                  onClick={() => savePropertiesMutation.mutate()}
+                  className={`${styles.toggle} ${ticket.isCsmFlagged ? styles.toggleOn : ''}`}
+                  onClick={() => csmMutation.mutate()}
+                  aria-pressed={ticket.isCsmFlagged}
+                  aria-label="CSM jelölés váltása"
                 >
-                  {savePropertiesMutation.isPending ? 'Mentés…' : 'Mentés'}
+                  <span className={styles.toggleKnob} />
                 </button>
               </div>
-            )}
-            <div className={styles.toggleRow}>
-              <div>
-                <div className={styles.toggleLabel}>
-                  CSM jelölés
-                  {ticket.isCsmFlagged && (
-                    <span className={`${badgeStyles.badge} ${badgeStyles.purple}`}>Aktív</span>
-                  )}
-                </div>
-                <div className={styles.toggleSub}>Eszkalálás CSM felé</div>
-              </div>
-              <button
-                type="button"
-                className={`${styles.toggle} ${ticket.isCsmFlagged ? styles.toggleOn : ''}`}
-                onClick={() => csmMutation.mutate()}
-                aria-pressed={ticket.isCsmFlagged}
-                aria-label="CSM jelölés váltása"
-              >
-                <span className={styles.toggleKnob} />
-              </button>
             </div>
-            <div className={styles.field}>
-              <label>CSM felelős</label>
+
+            {/* CSM felelős */}
+            <div className={styles.sideSection}>
+              <label className={styles.sideLabel}>CSM felelős</label>
               <select
+                className={styles.sideSelect}
                 value={(autosave ? ticket.csmId : draftCsmId) ?? ''}
                 onChange={(e) => {
                   const value = e.target.value ? Number(e.target.value) : undefined
@@ -628,26 +790,37 @@ export function TicketDetailPage() {
                 ))}
               </select>
             </div>
-          </div>
-        </div>
 
-        <div className={styles.card}>
-          <div className={styles.panelHeader}>Tulajdonságok</div>
-          <div className={styles.panelBody}>
-            {customFieldsQuery.isLoading && <div className={styles.emptyState}>Betöltés…</div>}
-            {!customFieldsQuery.isLoading && (customFieldsQuery.data ?? []).length === 0 && (
-              <div className={styles.emptyState}>Nincsenek tulajdonságok definiálva.</div>
+            {/* SLA */}
+            {ticket.slaDueAt && (
+              <div className={styles.sideSection}>
+                <label className={styles.sideLabel}>SLA határidő</label>
+                <div className={`${styles.sideValue} ${slaCountdown ? styles[`slaCountdown_${slaCountdown.variant}`] : ''}`}
+                  style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                  {ticket.slaDueAt.toLocaleString('hu-HU')}
+                </div>
+              </div>
             )}
-            {(customFieldsQuery.data ?? []).map((field) => (
-              <CustomFieldField
-                key={field.definitionId}
-                field={field}
-                value={customFieldValues[field.definitionId!]}
-                onChange={(value) => handleCustomFieldChange(field.definitionId!, value)}
-              />
-            ))}
-            {!autosave && (customFieldsQuery.data ?? []).length > 0 && (
-              <div className={shared.formActions} style={{ marginTop: 0 }}>
+
+            {/* Egyéni mezők */}
+            {(customFieldsQuery.data ?? []).length > 0 && (
+              <>
+                <hr className={styles.sideDivider} />
+                {(customFieldsQuery.data ?? []).map((field) => (
+                  <div key={field.definitionId} className={styles.sideSection}>
+                    <CustomFieldField
+                      field={field}
+                      value={customFieldValues[field.definitionId!]}
+                      onChange={(value) => handleCustomFieldChange(field.definitionId!, value)}
+                    />
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Mentés gomb (manuális mód) */}
+            {!autosave && (
+              <div className={shared.formActions} style={{ marginTop: 4, marginBottom: 0 }}>
                 <button
                   type="button"
                   className={shared.primaryButton}
@@ -666,8 +839,6 @@ export function TicketDetailPage() {
         <ClickUpSection ticketId={ticketId} />
 
         <RelatedTicketsSection ticketId={ticketId} />
-
-        <ContactPanel ticket={ticket} ticketId={ticketId} />
       </div>
 
       {mergeModalOpen && <MergeModal ticketId={ticketId} onClose={() => setMergeModalOpen(false)} />}

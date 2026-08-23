@@ -4374,7 +4374,7 @@ export class TicketAttachmentsClient {
                 fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
                 fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
             }
-            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] as string | undefined }), headers: _headers });
+            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] }), headers: _headers });
         } else if (status === 404) {
             const _responseText = response.data;
             let result404: any = null;
@@ -9841,6 +9841,7 @@ export class TicketDetailDto implements ITicketDetailDto {
     body?: string;
     status?: TicketStatus;
     priority?: TicketPriority;
+    type?: TicketType | undefined;
     categoryId?: number | undefined;
     categoryName?: string | undefined;
     assignedToId?: number | undefined;
@@ -9881,6 +9882,7 @@ export class TicketDetailDto implements ITicketDetailDto {
             this.body = _data["body"];
             this.status = _data["status"];
             this.priority = _data["priority"];
+            this.type = _data["type"];
             this.categoryId = _data["categoryId"];
             this.categoryName = _data["categoryName"];
             this.assignedToId = _data["assignedToId"];
@@ -9921,6 +9923,7 @@ export class TicketDetailDto implements ITicketDetailDto {
         data["body"] = this.body;
         data["status"] = this.status;
         data["priority"] = this.priority;
+        data["type"] = this.type;
         data["categoryId"] = this.categoryId;
         data["categoryName"] = this.categoryName;
         data["assignedToId"] = this.assignedToId;
@@ -9954,6 +9957,7 @@ export interface ITicketDetailDto {
     body?: string;
     status?: TicketStatus;
     priority?: TicketPriority;
+    type?: TicketType | undefined;
     categoryId?: number | undefined;
     categoryName?: string | undefined;
     assignedToId?: number | undefined;

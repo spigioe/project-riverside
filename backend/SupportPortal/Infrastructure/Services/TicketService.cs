@@ -113,7 +113,7 @@ public class TicketService(
             .AsNoTracking()
             .Where(t => t.Id == id)
             .Select(t => new TicketDetailDto(
-                t.Id, t.Subject, t.Body, t.Status, t.Priority,
+                t.Id, t.Subject, t.Body, t.Status, t.Priority, t.Type,
                 t.CategoryId, t.Category != null ? t.Category.Name : null,
                 t.AssignedToId, t.AssignedTo != null ? t.AssignedTo.FullName : null,
                 t.CreatedById, t.CreatedBy != null ? t.CreatedBy.FullName : null,

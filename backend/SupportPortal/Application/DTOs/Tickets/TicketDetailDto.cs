@@ -8,6 +8,7 @@ public record TicketDetailDto(
     string Body,
     TicketStatus Status,
     TicketPriority Priority,
+    TicketType? Type,
     int? CategoryId,
     string? CategoryName,
     int? AssignedToId,
