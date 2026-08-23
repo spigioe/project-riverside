@@ -35,7 +35,7 @@ public class TicketService(
         if (query.Status.HasValue)
             ticketsQuery = ticketsQuery.Where(t => t.Status == query.Status.Value);
         else if (!query.IncludeClosed)
-            ticketsQuery = ticketsQuery.Where(t => t.Status != TicketStatus.Closed);
+            ticketsQuery = ticketsQuery.Where(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved);
 
         if (query.Priority.HasValue)
             ticketsQuery = ticketsQuery.Where(t => t.Priority == query.Priority.Value);

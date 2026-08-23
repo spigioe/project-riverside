@@ -17,8 +17,6 @@ import {
   faLock,
   faInbox,
   faTrash,
-  faEye,
-  faEyeSlash,
 } from '@fortawesome/free-solid-svg-icons'
 import {
   categoriesClient,
@@ -375,7 +373,6 @@ interface FilterState {
   categoryId: string
   dateRange: 'any' | 'today' | 'week' | 'month'
   companyId: number | null
-  showClosed: boolean
 }
 
 const EMPTY_FILTER: FilterState = {
@@ -386,11 +383,42 @@ const EMPTY_FILTER: FilterState = {
   categoryId: '',
   dateRange: 'any',
   companyId: null,
-  showClosed: false,
 }
 
 function hasActiveFilters(f: FilterState): boolean {
-  return !!(f.assignedToId || f.statuses.length || f.priorities.length || f.source || f.categoryId || f.dateRange !== 'any' || f.companyId || f.showClosed)
+  return !!(f.assignedToId || f.statuses.length || f.priorities.length || f.source || f.categoryId || f.dateRange !== 'any' || f.companyId)
+}
+
+const FILTER_STORAGE_KEY = 'ticketListFilter'
+const VIEW_STORAGE_KEY = 'ticketListView'
+const COMPLETED_STATUSES = new Set<TicketStatus>([TicketStatus.Resolved, TicketStatus.Closed])
+
+function loadFilter(): FilterState {
+  try {
+    const raw = localStorage.getItem(FILTER_STORAGE_KEY)
+    if (!raw) return EMPTY_FILTER
+    const parsed = JSON.parse(raw) as FilterState
+    return { ...EMPTY_FILTER, ...parsed }
+  } catch {
+    return EMPTY_FILTER
+  }
+}
+
+function saveFilter(f: FilterState) {
+  try { localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(f)) } catch { /* noop */ }
+}
+
+function loadView(): TicketListView | null {
+  try {
+    const raw = localStorage.getItem(VIEW_STORAGE_KEY)
+    return raw ? (raw as TicketListView) : null
+  } catch {
+    return null
+  }
+}
+
+function saveView(v: TicketListView) {
+  try { localStorage.setItem(VIEW_STORAGE_KEY, v) } catch { /* noop */ }
 }
 
 interface FilterPanelProps {
@@ -619,9 +647,19 @@ export function TicketsPage() {
 
   const [searchInput, setSearchInput] = useState(search)
   const [selected, setSelected] = useState<Set<number>>(new Set())
-  const [view, setView] = useState<TicketListView>(TicketListView.Table)
+  const [view, setViewRaw] = useState<TicketListView>(() => loadView() ?? TicketListView.Table)
   const [viewInitialized, setViewInitialized] = useState(false)
-  const [detailedFilter, setDetailedFilter] = useState<FilterState>(EMPTY_FILTER)
+  const [detailedFilter, setDetailedFilterRaw] = useState<FilterState>(loadFilter)
+
+  function setDetailedFilter(f: FilterState) {
+    setDetailedFilterRaw(f)
+    saveFilter(f)
+  }
+
+  function changeView(v: TicketListView) {
+    setViewRaw(v)
+    saveView(v)
+  }
 
   const preferencesQuery = useQuery({
     queryKey: ['user-preferences'],
@@ -630,7 +668,7 @@ export function TicketsPage() {
 
   useEffect(() => {
     if (!viewInitialized && preferencesQuery.data) {
-      setView(preferencesQuery.data.ticketListView!)
+      if (!loadView()) setViewRaw(preferencesQuery.data.ticketListView!)
       setViewInitialized(true)
     }
   }, [preferencesQuery.data, viewInitialized])
@@ -682,8 +720,11 @@ export function TicketsPage() {
   const effectiveDateFrom = dateFromFilter()
   const effectiveCompanyId = detailedFilter.companyId ?? undefined
 
+  // Ha a szűrőben Resolved vagy Closed explicit ki van választva, mutassuk azokat is
+  const userWantsCompleted = detailedFilter.statuses.some((s) => COMPLETED_STATUSES.has(s))
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange, effectiveCompanyId, detailedFilter.showClosed],
+    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange, effectiveCompanyId, userWantsCompleted],
     queryFn: () =>
       ticketClient.getTickets(
         effectiveStatus,
@@ -698,7 +739,7 @@ export function TicketsPage() {
         effectiveSource,
         effectiveCompanyId,
         undefined,
-        detailedFilter.showClosed || undefined,
+        userWantsCompleted || undefined,
       ),
   })
 
@@ -793,36 +834,25 @@ export function TicketsPage() {
             onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
-        <button
-          type="button"
-          className={`${styles.viewToggleButton} ${detailedFilter.showClosed ? styles.viewToggleButtonActive : ''}`}
-          style={{ border: '1px solid var(--border-light)', borderRadius: 'var(--radius)', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
-          onClick={() => setDetailedFilter({ ...detailedFilter, showClosed: !detailedFilter.showClosed })}
-          title={detailedFilter.showClosed ? 'Lezártak elrejtése' : 'Lezártak mutatása'}
-        >
-          <FontAwesomeIcon icon={detailedFilter.showClosed ? faEye : faEyeSlash} style={{ fontSize: 12 }} />
-          Lezártak
-        </button>
-
         <div className={styles.viewToggle}>
           <button
             type="button"
             className={`${styles.viewToggleButton} ${view === TicketListView.Table ? styles.viewToggleButtonActive : ''}`}
-            onClick={() => setView(TicketListView.Table)}
+            onClick={() => changeView(TicketListView.Table)}
           >
             Táblázat
           </button>
           <button
             type="button"
             className={`${styles.viewToggleButton} ${view === TicketListView.Card ? styles.viewToggleButtonActive : ''}`}
-            onClick={() => setView(TicketListView.Card)}
+            onClick={() => changeView(TicketListView.Card)}
           >
             Kártyák
           </button>
           <button
             type="button"
             className={`${styles.viewToggleButton} ${view === TicketListView.Detailed ? styles.viewToggleButtonActive : ''}`}
-            onClick={() => setView(TicketListView.Detailed)}
+            onClick={() => changeView(TicketListView.Detailed)}
           >
             Részletes
           </button>
