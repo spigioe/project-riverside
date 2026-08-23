@@ -21,8 +21,8 @@ import shared from '../components/Settings/SettingsShared.module.css'
 import { formatDateTime, formatTicketId } from '../lib/format'
 import { ReplyComposer } from './TicketDetail/ReplyComposer'
 import { MessageThread } from './TicketDetail/MessageThread'
-import { TicketInfoPanel } from './TicketDetail/TicketInfoPanel'
-import { TicketActivityLog } from './TicketDetail/TicketActivityLog'
+import { ActivityLogModal } from './TicketDetail/ActivityLogModal'
+import { TicketInfoModal } from './TicketDetail/TicketInfoModal'
 import { MergeModal } from './TicketDetail/MergeModal'
 import { TicketSidebar } from './TicketDetail/TicketSidebar'
 import styles from './TicketDetailPage.module.css'
@@ -70,6 +70,8 @@ export function TicketDetailPage() {
   const [isInternalNote, setIsInternalNote] = useState(false)
   const [attachments, setAttachments] = useState<File[]>([])
   const [mergeModalOpen, setMergeModalOpen] = useState(false)
+  const [activityLogOpen, setActivityLogOpen] = useState(false)
+  const [ticketInfoOpen, setTicketInfoOpen] = useState(false)
 
   const ticketQuery = useQuery({
     queryKey: ['ticket', ticketId],
@@ -198,15 +200,6 @@ export function TicketDetailPage() {
     />
   )
 
-  const infoPanel = (collapsible: boolean) => (
-    <TicketInfoPanel
-      ticket={ticket}
-      customFields={[]}
-      sourceLabel={SOURCE_LABELS[ticket.source!]}
-      collapsible={collapsible}
-    />
-  )
-
   return (
     <div className={styles.page}>
       <div className={`${styles.left} ${detailView === TicketDetailView.Split ? styles.leftSplit : ''}`}>
@@ -247,6 +240,12 @@ export function TicketDetailPage() {
               }}
             >
               Törlés
+            </button>
+            <button type="button" className={shared.secondaryButton} onClick={() => setActivityLogOpen(true)}>
+              Napló
+            </button>
+            <button type="button" className={shared.secondaryButton} onClick={() => setTicketInfoOpen(true)}>
+              Adatok
             </button>
             {detailView === TicketDetailView.Split && (
               <button
@@ -318,7 +317,6 @@ export function TicketDetailPage() {
           <>
             {composer}
             <MessageThread ticket={ticket} messages={messages} attachments={ticketAttachments} />
-            <TicketActivityLog ticketId={ticketId} />
           </>
         ) : (
           <div className={`${styles.splitLayout} ${styles.splitLayoutActive}`}>
@@ -326,22 +324,18 @@ export function TicketDetailPage() {
               <>
                 <div className={`${styles.splitPanel} ${styles.splitPanelComposer}`}>
                   {composer}
-                  <div className={styles.splitInfoPanel}>{infoPanel(true)}</div>
                 </div>
                 <div className={`${styles.splitPanel} ${styles.splitPanelThread}`}>
                   <MessageThread ticket={ticket} messages={messages} attachments={ticketAttachments} detailed />
-                  <TicketActivityLog ticketId={ticketId} />
                 </div>
               </>
             ) : (
               <>
                 <div className={`${styles.splitPanel} ${styles.splitPanelThread}`}>
                   <MessageThread ticket={ticket} messages={messages} attachments={ticketAttachments} detailed />
-                  <TicketActivityLog ticketId={ticketId} />
                 </div>
                 <div className={`${styles.splitPanel} ${styles.splitPanelComposer}`}>
                   {composer}
-                  <div className={styles.splitInfoPanel}>{infoPanel(true)}</div>
                 </div>
               </>
             )}
@@ -354,6 +348,8 @@ export function TicketDetailPage() {
       </div>
 
       {mergeModalOpen && <MergeModal ticketId={ticketId} onClose={() => setMergeModalOpen(false)} />}
+      {activityLogOpen && <ActivityLogModal ticketId={ticketId} onClose={() => setActivityLogOpen(false)} />}
+      {ticketInfoOpen && <TicketInfoModal ticket={ticket} sourceLabel={SOURCE_LABELS[ticket.source!]} onClose={() => setTicketInfoOpen(false)} />}
     </div>
   )
 }
