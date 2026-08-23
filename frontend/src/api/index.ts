@@ -8,6 +8,7 @@ import {
   ContactsClient,
   CsmClient,
   CustomFieldDefinitionsClient,
+  CustomStatusesClient,
   DashboardClient,
   IntegrationClient,
   MeClient,
@@ -47,3 +48,4 @@ export const ticketCustomFieldsClient = new TicketCustomFieldsClient(baseURL, ht
 export const ticketAttachmentsClient = new TicketAttachmentsClient(baseURL, httpClient)
 export const companiesClient = new CompaniesClient(baseURL, httpClient)
 export const contactsClient = new ContactsClient(baseURL, httpClient)
+export const customStatusesClient = new CustomStatusesClient(baseURL, httpClient)

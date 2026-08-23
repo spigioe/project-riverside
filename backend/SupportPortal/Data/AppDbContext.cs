@@ -34,6 +34,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Contact> Contacts => Set<Contact>();
+    public DbSet<TicketCustomStatus> TicketCustomStatuses => Set<TicketCustomStatus>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

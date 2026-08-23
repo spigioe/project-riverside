@@ -11,6 +11,7 @@ import {
   ticketCustomFieldsClient,
   usersClient,
   AiClassifyResponse,
+  AssignCustomStatusRequest,
   AssignTicketContactRequest,
   AssignTicketRequest,
   ClickUpLinkDto,
@@ -29,6 +30,7 @@ import {
   UpdateTicketStatusRequest,
   UpdateUserPreferenceRequest,
 } from '../api'
+import { useCustomStatuses } from '../lib/customStatuses'
 import { Modal } from '../components/Modal/Modal'
 import { StatusBadge } from '../components/Badge/StatusBadge'
 import { PriorityBadge } from '../components/Badge/PriorityBadge'
@@ -170,6 +172,18 @@ export function TicketDetailPage() {
     },
   })
 
+  const customStatusMutation = useMutation({
+    mutationFn: (key: string | null) =>
+      ticketClient.assignCustomStatus(ticketId, new AssignCustomStatusRequest({ key: key ?? undefined })),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
+    },
+  })
+
+  const customStatusesQuery = useCustomStatuses()
+  const customStatuses = customStatusesQuery.data ?? []
+
   const assignMutation = useMutation({
     mutationFn: (assignedToId: number | undefined) =>
       ticketClient.assignTicket(ticketId, new AssignTicketRequest({ assignedToId })),
@@ -240,6 +254,7 @@ export function TicketDetailPage() {
 
   const [draftAssignedToId, setDraftAssignedToId] = useState<number | undefined>(undefined)
   const [draftStatus, setDraftStatus] = useState<TicketStatus | undefined>(undefined)
+  const [draftCustomStatusKey, setDraftCustomStatusKey] = useState<string | null>(null)
   const [draftCsmId, setDraftCsmId] = useState<number | undefined>(undefined)
   const [propertiesDirty, setPropertiesDirty] = useState(false)
 
@@ -247,6 +262,7 @@ export function TicketDetailPage() {
     if (ticketQuery.data) {
       setDraftAssignedToId(ticketQuery.data.assignedToId)
       setDraftStatus(ticketQuery.data.status)
+      setDraftCustomStatusKey(ticketQuery.data.customStatusKey ?? null)
       setDraftCsmId(ticketQuery.data.csmId)
       setPropertiesDirty(false)
     }
@@ -286,7 +302,10 @@ export function TicketDetailPage() {
       if (draftAssignedToId !== ticketQuery.data?.assignedToId) {
         tasks.push(ticketClient.assignTicket(ticketId, new AssignTicketRequest({ assignedToId: draftAssignedToId })))
       }
-      if (draftStatus !== ticketQuery.data?.status) {
+      if (draftCustomStatusKey !== (ticketQuery.data?.customStatusKey ?? null)) {
+        tasks.push(ticketClient.assignCustomStatus(ticketId, new AssignCustomStatusRequest({ key: draftCustomStatusKey ?? undefined })))
+      }
+      if (draftCustomStatusKey === null && draftStatus !== ticketQuery.data?.status) {
         tasks.push(ticketClient.updateStatus(ticketId, new UpdateTicketStatusRequest({ status: draftStatus! })))
       }
       if (draftCsmId !== ticketQuery.data?.csmId) {
@@ -450,7 +469,7 @@ export function TicketDetailPage() {
               ÖSSZEVONVA → #{ticket.mergedIntoTicketId}
             </Link>
           )}
-          <StatusBadge status={ticket.status!} />
+          <StatusBadge status={ticket.status!} customStatusKey={ticket.customStatusKey} customStatuses={customStatuses} />
           <PriorityBadge priority={ticket.priority!} />
           {ticket.isCsmFlagged && (
             <span className={`${badgeStyles.badge} ${badgeStyles.purple}`}>CSM jelölt</span>
@@ -531,15 +550,33 @@ export function TicketDetailPage() {
             <div className={styles.field}>
               <label>Státusz</label>
               <select
-                value={autosave ? ticket.status : draftStatus}
+                value={autosave ? (ticket.customStatusKey ?? ticket.status) : (draftCustomStatusKey ?? draftStatus ?? ticket.status)}
                 onChange={(e) => {
-                  const value = e.target.value as TicketStatus
-                  if (autosave) statusMutation.mutate(value)
-                  else { setDraftStatus(value); setPropertiesDirty(true) }
+                  const v = e.target.value
+                  const isBuiltIn = (Object.values(TicketStatus) as string[]).includes(v)
+                  if (autosave) {
+                    if (isBuiltIn) {
+                      statusMutation.mutate(v as TicketStatus)
+                      if (ticket.customStatusKey) customStatusMutation.mutate(null)
+                    } else {
+                      customStatusMutation.mutate(v)
+                    }
+                  } else {
+                    if (isBuiltIn) {
+                      setDraftStatus(v as TicketStatus)
+                      setDraftCustomStatusKey(null)
+                    } else {
+                      setDraftCustomStatusKey(v)
+                    }
+                    setPropertiesDirty(true)
+                  }
                 }}
               >
                 {STATUS_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+                {customStatuses.filter((cs) => cs.isActive).map((cs) => (
+                  <option key={cs.key} value={cs.key!}>{cs.name}</option>
                 ))}
               </select>
             </div>

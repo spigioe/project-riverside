@@ -26,6 +26,7 @@ public class Ticket
     public bool IsMerged { get; set; } = false;
     public int? ContactId { get; set; }
     public Contact? Contact { get; set; }
+    public string? CustomStatusKey { get; set; }
     public DateTime? SlaDueAt { get; set; }
     public bool SlaBreach { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

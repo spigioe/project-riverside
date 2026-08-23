@@ -29,5 +29,6 @@ public record TicketDetailDto(
     int? ContactId,
     string? ContactName,
     int? CompanyId,
-    string? CompanyName
+    string? CompanyName,
+    string? CustomStatusKey
 );

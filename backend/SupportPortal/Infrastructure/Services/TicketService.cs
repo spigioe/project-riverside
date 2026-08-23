@@ -83,6 +83,7 @@ public class TicketService(
                 t.IsCsmFlagged, t.IsMerged,
                 t.SlaDueAt, t.SlaBreach,
                 t.CreatedAt, t.UpdatedAt,
+                t.CustomStatusKey,
                 LastMessageBody = t.Messages.OrderByDescending(m => m.CreatedAt).Select(m => m.Body).FirstOrDefault(),
                 LastMessageAt = t.Messages.OrderByDescending(m => m.CreatedAt).Select(m => (DateTime?)m.CreatedAt).FirstOrDefault(),
             })
@@ -99,7 +100,8 @@ public class TicketService(
                 r.IsCsmFlagged, r.IsMerged,
                 r.SlaDueAt, r.SlaBreach,
                 r.LastMessageBody, r.LastMessageAt,
-                r.CreatedAt, r.UpdatedAt, r.Source, r.Type))
+                r.CreatedAt, r.UpdatedAt, r.Source, r.Type,
+                r.CustomStatusKey))
             .ToList();
 
         return new PagedResult<TicketListItemDto>(items, page, pageSize, totalCount);
@@ -123,7 +125,8 @@ public class TicketService(
                 t.ContactId,
                 t.Contact != null ? t.Contact.Name : null,
                 t.Contact != null ? t.Contact.CompanyId : null,
-                t.Contact != null && t.Contact.Company != null ? t.Contact.Company.Name : null))
+                t.Contact != null && t.Contact.Company != null ? t.Contact.Company.Name : null,
+                t.CustomStatusKey))
             .FirstOrDefaultAsync();
     }
 
@@ -573,6 +576,22 @@ public class TicketService(
 
         await auditLogService.LogAsync(currentUserId, "ticket", id, "contact_assigned",
             ticket.ContactId?.ToString(), contactId?.ToString());
+
+        return true;
+    }
+
+    public async Task<bool?> AssignCustomStatusAsync(int id, string? key, int currentUserId)
+    {
+        var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
+        if (ticket is null) return null;
+
+        var oldKey = ticket.CustomStatusKey;
+        ticket.CustomStatusKey = key;
+        ticket.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        await auditLogService.LogAsync(currentUserId, "ticket", id, "custom_status_changed",
+            oldKey, key);
 
         return true;
     }

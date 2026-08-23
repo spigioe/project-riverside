@@ -22,8 +22,10 @@ import {
   meClient,
   ticketClient,
   usersClient,
+  AssignCustomStatusRequest,
   CategoryDto,
   CompanyDto,
+  CustomStatusDto,
   TicketListItemDto,
   TicketListView,
   TicketPriority,
@@ -34,6 +36,7 @@ import {
   UpdateTicketStatusRequest,
   UpdateTicketTypeRequest,
 } from '../api'
+import { useCustomStatuses, CUSTOM_STATUS_ICONS } from '../lib/customStatuses'
 import { StatusBadge } from '../components/Badge/StatusBadge'
 import { PriorityBadge } from '../components/Badge/PriorityBadge'
 import { formatDateTime, formatTicketId } from '../lib/format'
@@ -147,6 +150,16 @@ const STATUS_ICON: Record<TicketStatus, { icon: IconDefinition; color: string }>
   [TicketStatus.Closed]:   { icon: faLock,        color: 'var(--text-muted)' },
 }
 
+const CUSTOM_STATUS_COLOR_VAR: Record<string, string> = {
+  gray:    'var(--text-muted)',
+  primary: 'var(--primary)',
+  amber:   'var(--amber-text)',
+  green:   'var(--green-text)',
+  dark:    'var(--navy)',
+  purple:  'var(--purple)',
+  red:     'var(--red-text)',
+}
+
 interface DropdownOption {
   value: string
   label: string
@@ -216,12 +229,14 @@ function InlineDropdown({ value, options, onChange }: InlineDropdownProps) {
 
 interface DetailedCardProps {
   ticket: TicketListItemDto
+  customStatuses: CustomStatusDto[]
   onStatusChange: (id: number, status: TicketStatus) => void
+  onCustomStatusChange: (id: number, key: string | null) => void
   onPriorityChange: (id: number, priority: TicketPriority) => void
   onTypeChange: (id: number, type: TicketType | null) => void
 }
 
-function DetailedCard({ ticket, onStatusChange, onPriorityChange, onTypeChange }: DetailedCardProps) {
+function DetailedCard({ ticket, customStatuses, onStatusChange, onCustomStatusChange, onPriorityChange, onTypeChange }: DetailedCardProps) {
   const name = ticket.requesterName ?? ticket.requesterEmail ?? ''
   const initial = name.charAt(0).toUpperCase()
   const bgColor = hashAvatarColor(ticket.requesterEmail ?? name)
@@ -292,9 +307,25 @@ function DetailedCard({ ticket, onStatusChange, onPriorityChange, onTypeChange }
         />
 
         <InlineDropdown
-          value={ticket.status!}
-          options={Object.values(TicketStatus).map((s) => ({ value: s, label: STATUS_LABELS[s], ...STATUS_ICON[s] }))}
-          onChange={(v) => onStatusChange(ticket.id!, v as TicketStatus)}
+          value={ticket.customStatusKey ?? ticket.status!}
+          options={[
+            ...Object.values(TicketStatus).map((s) => ({ value: s, label: STATUS_LABELS[s], ...STATUS_ICON[s] })),
+            ...customStatuses.filter((cs) => cs.isActive).map((cs) => ({
+              value: cs.key!,
+              label: cs.name!,
+              icon: CUSTOM_STATUS_ICONS[cs.iconKey ?? ''],
+              iconColor: CUSTOM_STATUS_COLOR_VAR[cs.colorVariant ?? 'gray'] ?? 'var(--text-muted)',
+            })),
+          ]}
+          onChange={(v) => {
+            const isBuiltIn = (Object.values(TicketStatus) as string[]).includes(v)
+            if (isBuiltIn) {
+              onStatusChange(ticket.id!, v as TicketStatus)
+              if (ticket.customStatusKey) onCustomStatusChange(ticket.id!, null)
+            } else {
+              onCustomStatusChange(ticket.id!, v)
+            }
+          }}
         />
       </div>
     </div>
@@ -669,6 +700,15 @@ export function TicketsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tickets'] }),
   })
 
+  const customStatusesQuery = useCustomStatuses()
+  const customStatuses = customStatusesQuery.data ?? []
+
+  const customStatusMutation = useMutation({
+    mutationFn: ({ id, key }: { id: number; key: string | null }) =>
+      ticketClient.assignCustomStatus(id, new AssignCustomStatusRequest({ key: key ?? undefined })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tickets'] }),
+  })
+
   function toggleAll() {
     if (selected.size === tickets.length) setSelected(new Set())
     else setSelected(new Set(tickets.map((t) => t.id!)))
@@ -752,7 +792,9 @@ export function TicketsPage() {
                 <DetailedCard
                   key={ticket.id}
                   ticket={ticket}
+                  customStatuses={customStatuses}
                   onStatusChange={(id, s) => statusMutation.mutate({ id, s })}
+                  onCustomStatusChange={(id, key) => customStatusMutation.mutate({ id, key })}
                   onPriorityChange={(id, p) => priorityMutation.mutate({ id, p })}
                   onTypeChange={(id, t) => typeMutation.mutate({ id, t })}
                 />
@@ -835,7 +877,7 @@ export function TicketsPage() {
                           <Link to={`/tickets/${ticket.id}`} className={styles.subjectLink}>{ticket.subject}</Link>
                         </td>
                         <td className={styles.muted}>{ticket.requesterEmail}</td>
-                        <td><StatusBadge status={ticket.status!} isMerged={ticket.isMerged} /></td>
+                        <td><StatusBadge status={ticket.status!} isMerged={ticket.isMerged} customStatusKey={ticket.customStatusKey} customStatuses={customStatuses} /></td>
                         <td><PriorityBadge priority={ticket.priority!} /></td>
                         <td>{ticket.assignedToName ?? '—'}</td>
                         <td className={styles.muted}>{ticket.categoryName ?? '—'}</td>
@@ -886,7 +928,7 @@ export function TicketsPage() {
                   <Link key={ticket.id} to={`/tickets/${ticket.id}`} className={styles.ticketCard}>
                     <div className={styles.ticketCardHeader}>
                       <span className={styles.mono}>{formatTicketId(ticket.id!)}</span>
-                      <StatusBadge status={ticket.status!} isMerged={ticket.isMerged} />
+                      <StatusBadge status={ticket.status!} isMerged={ticket.isMerged} customStatusKey={ticket.customStatusKey} customStatuses={customStatuses} />
                     </div>
                     <div className={styles.ticketCardSubject}>{ticket.subject}</div>
                     <div className={styles.ticketCardMeta}>

@@ -2461,6 +2461,260 @@ export class CustomFieldDefinitionsClient {
     }
 }
 
+export class CustomStatusesClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getAll( cancelToken?: CancelToken): Promise<CustomStatusDto[]> {
+        let url_ = this.baseUrl + "/api/portal/settings/custom-statuses";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetAll(_response);
+        });
+    }
+
+    protected processGetAll(response: AxiosResponse): Promise<CustomStatusDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CustomStatusDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<CustomStatusDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CustomStatusDto[]>(null as any);
+    }
+
+    create(request: CreateCustomStatusRequest, cancelToken?: CancelToken): Promise<CustomStatusDto> {
+        let url_ = this.baseUrl + "/api/portal/settings/custom-statuses";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreate(_response);
+        });
+    }
+
+    protected processCreate(response: AxiosResponse): Promise<CustomStatusDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = CustomStatusDto.fromJS(resultData201);
+            return Promise.resolve<CustomStatusDto>(result201);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CustomStatusDto>(null as any);
+    }
+
+    update(id: number, request: UpdateCustomStatusRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/settings/custom-statuses/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdate(_response);
+        });
+    }
+
+    protected processUpdate(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    delete(id: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/settings/custom-statuses/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDelete(_response);
+        });
+    }
+
+    protected processDelete(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+}
+
 export class DashboardClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -5467,6 +5721,64 @@ export class TicketClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    assignCustomStatus(id: number, request: AssignCustomStatusRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}/custom-status";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PATCH",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processAssignCustomStatus(_response);
+        });
+    }
+
+    protected processAssignCustomStatus(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
 }
 
 export class TicketCustomFieldsClient {
@@ -7909,6 +8221,174 @@ export interface IUpdateCustomFieldDefinitionRequest {
     displayOrder?: number;
 }
 
+export class CustomStatusDto implements ICustomStatusDto {
+    id?: number;
+    key?: string;
+    name?: string;
+    colorVariant?: string;
+    iconKey?: string;
+    displayOrder?: number;
+    isActive?: boolean;
+
+    constructor(data?: ICustomStatusDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.key = _data["key"];
+            this.name = _data["name"];
+            this.colorVariant = _data["colorVariant"];
+            this.iconKey = _data["iconKey"];
+            this.displayOrder = _data["displayOrder"];
+            this.isActive = _data["isActive"];
+        }
+    }
+
+    static fromJS(data: any): CustomStatusDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new CustomStatusDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["key"] = this.key;
+        data["name"] = this.name;
+        data["colorVariant"] = this.colorVariant;
+        data["iconKey"] = this.iconKey;
+        data["displayOrder"] = this.displayOrder;
+        data["isActive"] = this.isActive;
+        return data;
+    }
+}
+
+export interface ICustomStatusDto {
+    id?: number;
+    key?: string;
+    name?: string;
+    colorVariant?: string;
+    iconKey?: string;
+    displayOrder?: number;
+    isActive?: boolean;
+}
+
+export class CreateCustomStatusRequest implements ICreateCustomStatusRequest {
+    key?: string;
+    name?: string;
+    colorVariant?: string;
+    iconKey?: string;
+    displayOrder?: number;
+
+    constructor(data?: ICreateCustomStatusRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.key = _data["key"];
+            this.name = _data["name"];
+            this.colorVariant = _data["colorVariant"];
+            this.iconKey = _data["iconKey"];
+            this.displayOrder = _data["displayOrder"];
+        }
+    }
+
+    static fromJS(data: any): CreateCustomStatusRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateCustomStatusRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["key"] = this.key;
+        data["name"] = this.name;
+        data["colorVariant"] = this.colorVariant;
+        data["iconKey"] = this.iconKey;
+        data["displayOrder"] = this.displayOrder;
+        return data;
+    }
+}
+
+export interface ICreateCustomStatusRequest {
+    key?: string;
+    name?: string;
+    colorVariant?: string;
+    iconKey?: string;
+    displayOrder?: number;
+}
+
+export class UpdateCustomStatusRequest implements IUpdateCustomStatusRequest {
+    key?: string;
+    name?: string;
+    colorVariant?: string;
+    iconKey?: string;
+    displayOrder?: number;
+    isActive?: boolean;
+
+    constructor(data?: IUpdateCustomStatusRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.key = _data["key"];
+            this.name = _data["name"];
+            this.colorVariant = _data["colorVariant"];
+            this.iconKey = _data["iconKey"];
+            this.displayOrder = _data["displayOrder"];
+            this.isActive = _data["isActive"];
+        }
+    }
+
+    static fromJS(data: any): UpdateCustomStatusRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateCustomStatusRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["key"] = this.key;
+        data["name"] = this.name;
+        data["colorVariant"] = this.colorVariant;
+        data["iconKey"] = this.iconKey;
+        data["displayOrder"] = this.displayOrder;
+        data["isActive"] = this.isActive;
+        return data;
+    }
+}
+
+export interface IUpdateCustomStatusRequest {
+    key?: string;
+    name?: string;
+    colorVariant?: string;
+    iconKey?: string;
+    displayOrder?: number;
+    isActive?: boolean;
+}
+
 export class DashboardWidgetDto implements IDashboardWidgetDto {
     id?: number;
     widgetType?: DashboardWidgetType;
@@ -9187,6 +9667,7 @@ export class TicketListItemDto implements ITicketListItemDto {
     updatedAt?: Date;
     source?: TicketSource;
     type?: TicketType | undefined;
+    customStatusKey?: string | undefined;
 
     constructor(data?: ITicketListItemDto) {
         if (data) {
@@ -9220,6 +9701,7 @@ export class TicketListItemDto implements ITicketListItemDto {
             this.updatedAt = _data["updatedAt"] ? new Date(_data["updatedAt"].toString()) : undefined as any;
             this.source = _data["source"];
             this.type = _data["type"];
+            this.customStatusKey = _data["customStatusKey"];
         }
     }
 
@@ -9253,6 +9735,7 @@ export class TicketListItemDto implements ITicketListItemDto {
         data["updatedAt"] = this.updatedAt ? this.updatedAt.toISOString() : undefined as any;
         data["source"] = this.source;
         data["type"] = this.type;
+        data["customStatusKey"] = this.customStatusKey;
         return data;
     }
 }
@@ -9279,6 +9762,7 @@ export interface ITicketListItemDto {
     updatedAt?: Date;
     source?: TicketSource;
     type?: TicketType | undefined;
+    customStatusKey?: string | undefined;
 }
 
 export enum TicketStatus {
@@ -9379,6 +9863,7 @@ export class TicketDetailDto implements ITicketDetailDto {
     contactName?: string | undefined;
     companyId?: number | undefined;
     companyName?: string | undefined;
+    customStatusKey?: string | undefined;
 
     constructor(data?: ITicketDetailDto) {
         if (data) {
@@ -9418,6 +9903,7 @@ export class TicketDetailDto implements ITicketDetailDto {
             this.contactName = _data["contactName"];
             this.companyId = _data["companyId"];
             this.companyName = _data["companyName"];
+            this.customStatusKey = _data["customStatusKey"];
         }
     }
 
@@ -9457,6 +9943,7 @@ export class TicketDetailDto implements ITicketDetailDto {
         data["contactName"] = this.contactName;
         data["companyId"] = this.companyId;
         data["companyName"] = this.companyName;
+        data["customStatusKey"] = this.customStatusKey;
         return data;
     }
 }
@@ -9489,6 +9976,7 @@ export interface ITicketDetailDto {
     contactName?: string | undefined;
     companyId?: number | undefined;
     companyName?: string | undefined;
+    customStatusKey?: string | undefined;
 }
 
 export class CreateTicketRequest implements ICreateTicketRequest {
@@ -10218,6 +10706,42 @@ export class AssignTicketContactRequest implements IAssignTicketContactRequest {
 
 export interface IAssignTicketContactRequest {
     contactId?: number | undefined;
+}
+
+export class AssignCustomStatusRequest implements IAssignCustomStatusRequest {
+    key?: string | undefined;
+
+    constructor(data?: IAssignCustomStatusRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.key = _data["key"];
+        }
+    }
+
+    static fromJS(data: any): AssignCustomStatusRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new AssignCustomStatusRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["key"] = this.key;
+        return data;
+    }
+}
+
+export interface IAssignCustomStatusRequest {
+    key?: string | undefined;
 }
 
 export class CustomFieldValueDto implements ICustomFieldValueDto {

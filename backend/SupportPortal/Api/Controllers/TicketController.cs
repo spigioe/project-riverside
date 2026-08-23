@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SupportPortal.Api.Extensions;
 using SupportPortal.Application.DTOs.Common;
 using SupportPortal.Application.DTOs.Contacts;
+using SupportPortal.Application.DTOs.CustomStatuses;
 using SupportPortal.Application.DTOs.Tickets;
 using SupportPortal.Application.Interfaces;
 using SupportPortal.Domain.Enums;
@@ -296,6 +297,17 @@ public class TicketController(
         if (result is false)
             return Problem(statusCode: StatusCodes.Status400BadRequest, title: "A megadott kontakt nem található.");
 
+        return NoContent();
+    }
+
+    [HttpPatch("{id:int}/custom-status")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AssignCustomStatus(int id, [FromBody] AssignCustomStatusRequest request)
+    {
+        var result = await ticketService.AssignCustomStatusAsync(id, request.Key, User.GetUserId());
+        if (result is null)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
         return NoContent();
     }
 
