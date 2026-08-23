@@ -41,9 +41,9 @@ public class ImapEmailService(MailSettings settings, ILogger<ImapEmailService> l
         }
 
         using var client = new SmtpClient();
-        var sslOption = settings.UseSsl
-            ? SecureSocketOptions.SslOnConnect
-            : SecureSocketOptions.StartTlsWhenAvailable;
+        var sslOption = settings.SmtpPort == 587
+            ? SecureSocketOptions.StartTls
+            : SecureSocketOptions.SslOnConnect;
 
         await client.ConnectAsync(settings.SmtpHost, settings.SmtpPort, sslOption);
 
