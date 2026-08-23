@@ -34,6 +34,8 @@ public class TicketService(
 
         if (query.Status.HasValue)
             ticketsQuery = ticketsQuery.Where(t => t.Status == query.Status.Value);
+        else if (!query.IncludeClosed)
+            ticketsQuery = ticketsQuery.Where(t => t.Status != TicketStatus.Closed);
 
         if (query.Priority.HasValue)
             ticketsQuery = ticketsQuery.Where(t => t.Priority == query.Priority.Value);
@@ -592,6 +594,20 @@ public class TicketService(
 
         await auditLogService.LogAsync(currentUserId, "ticket", id, "custom_status_changed",
             oldKey, key);
+
+        return true;
+    }
+
+    public async Task<bool> DeleteTicketAsync(int id, int currentUserId)
+    {
+        var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
+        if (ticket is null) return false;
+
+        ticket.IsDeleted = true;
+        ticket.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        await auditLogService.LogAsync(currentUserId, "ticket", id, "deleted", null, null);
 
         return true;
     }

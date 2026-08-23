@@ -33,6 +33,8 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
             .HasForeignKey(t => t.ContactId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        builder.HasQueryFilter(t => !t.IsDeleted);
+
         builder.Property(t => t.Status).HasConversion<string>();
         builder.Property(t => t.Priority).HasConversion<string>();
         builder.Property(t => t.Source).HasConversion<string>();

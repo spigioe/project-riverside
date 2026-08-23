@@ -31,4 +31,5 @@ public interface ITicketService
     Task<IReadOnlyList<TicketRelatedDto>?> GetRelatedAsync(int id);
     Task<bool?> AssignContactAsync(int id, int? contactId, int currentUserId);
     Task<bool?> AssignCustomStatusAsync(int id, string? key, int currentUserId);
+    Task<bool> DeleteTicketAsync(int id, int currentUserId);
 }

@@ -113,14 +113,20 @@
 }
 
 .ticketCardSubject {
+  display: -webkit-box;
   font-weight: 600;
   font-size: 13.5px;
   margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.ticketCardSubject:hover {
+  text-decoration: underline;
 }
 
 .ticketCardMeta {
@@ -270,3 +276,21 @@
   font-weight: 700;
   color: var(--text);
 }
+
+.deleteRowBtn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 4px 6px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.deleteRowBtn:hover {
+  background: var(--red-bg, #fff0f0);
+  border-color: var(--red-border, #fca5a5);
+  color: var(--red-text);
+}
+

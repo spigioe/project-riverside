@@ -3626,7 +3626,7 @@ export class SettingsClient {
         let url_ = this.baseUrl + "/api/portal/settings/email";
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(request.toJSON());
+        const content_ = JSON.stringify(request);
 
         let options_: AxiosRequestConfig = {
             data: content_,
@@ -3646,26 +3646,46 @@ export class SettingsClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            const status = _response.status;
-            const _headers: any = {};
-            if (_response.headers && typeof _response.headers === "object") {
-                for (const k in _response.headers) {
-                    if (_response.headers.hasOwnProperty(k)) _headers[k] = _response.headers[k];
+            return this.processUpdateEmailSettings(_response);
+        });
+    }
+
+    protected processUpdateEmailSettings(response: AxiosResponse): Promise<EmailSettingsDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
                 }
             }
-            if (status === 200) {
-                return Promise.resolve<EmailSettingsDto>(EmailSettingsDto.fromJS(_response.data));
-            } else {
-                return throwException("An unexpected server error occurred.", status, _response.data, _headers);
-            }
-        });
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = EmailSettingsDto.fromJS(resultData200);
+            return Promise.resolve<EmailSettingsDto>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<EmailSettingsDto>(null as any);
     }
 
     testEmailConnection(request: TestEmailConnectionRequest, cancelToken?: CancelToken): Promise<TestEmailConnectionResponse> {
         let url_ = this.baseUrl + "/api/portal/settings/email/test";
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(request.toJSON());
+        const content_ = JSON.stringify(request);
 
         let options_: AxiosRequestConfig = {
             data: content_,
@@ -3685,19 +3705,32 @@ export class SettingsClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            const status = _response.status;
-            const _headers: any = {};
-            if (_response.headers && typeof _response.headers === "object") {
-                for (const k in _response.headers) {
-                    if (_response.headers.hasOwnProperty(k)) _headers[k] = _response.headers[k];
+            return this.processTestEmailConnection(_response);
+        });
+    }
+
+    protected processTestEmailConnection(response: AxiosResponse): Promise<TestEmailConnectionResponse> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
                 }
             }
-            if (status === 200) {
-                return Promise.resolve<TestEmailConnectionResponse>(TestEmailConnectionResponse.fromJS(_response.data));
-            } else {
-                return throwException("An unexpected server error occurred.", status, _response.data, _headers);
-            }
-        });
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = TestEmailConnectionResponse.fromJS(resultData200);
+            return Promise.resolve<TestEmailConnectionResponse>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<TestEmailConnectionResponse>(null as any);
     }
 }
 
@@ -4452,7 +4485,7 @@ export class TicketAttachmentsClient {
                 fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
                 fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
             }
-            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] as string | undefined }), headers: _headers });
+            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] }), headers: _headers });
         } else if (status === 404) {
             const _responseText = response.data;
             let result404: any = null;
@@ -4481,7 +4514,7 @@ export class TicketClient {
 
     }
 
-    getTickets(status?: TicketStatus | null | undefined, priority?: TicketPriority | null | undefined, categoryId?: number | null | undefined, search?: string | null | undefined, dateFrom?: Date | null | undefined, dateTo?: Date | null | undefined, page?: number | undefined, pageSize?: number | undefined, assignedToId?: number | null | undefined, source?: TicketSource | null | undefined, companyId?: number | null | undefined, contactId?: number | null | undefined, cancelToken?: CancelToken): Promise<PagedResultOfTicketListItemDto> {
+    getTickets(status?: TicketStatus | null | undefined, priority?: TicketPriority | null | undefined, categoryId?: number | null | undefined, search?: string | null | undefined, dateFrom?: Date | null | undefined, dateTo?: Date | null | undefined, page?: number | undefined, pageSize?: number | undefined, assignedToId?: number | null | undefined, source?: TicketSource | null | undefined, companyId?: number | null | undefined, contactId?: number | null | undefined, includeClosed?: boolean | undefined, cancelToken?: CancelToken): Promise<PagedResultOfTicketListItemDto> {
         let url_ = this.baseUrl + "/api/portal/tickets?";
         if (status !== undefined && status !== null)
             url_ += "Status=" + encodeURIComponent("" + status) + "&";
@@ -4511,6 +4544,10 @@ export class TicketClient {
             url_ += "CompanyId=" + encodeURIComponent("" + companyId) + "&";
         if (contactId !== undefined && contactId !== null)
             url_ += "ContactId=" + encodeURIComponent("" + contactId) + "&";
+        if (includeClosed === null)
+            throw new globalThis.Error("The parameter 'includeClosed' cannot be null.");
+        else if (includeClosed !== undefined)
+            url_ += "IncludeClosed=" + encodeURIComponent("" + includeClosed) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -4759,6 +4796,60 @@ export class TicketClient {
     }
 
     protected processUpdateTicket(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    deleteTicket(id: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDeleteTicket(_response);
+        });
+    }
+
+    protected processDeleteTicket(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -9290,6 +9381,46 @@ export interface IUpdateEmailSettingsRequest {
     fromAddress?: string;
 }
 
+export class TestEmailConnectionResponse implements ITestEmailConnectionResponse {
+    success?: boolean;
+    message?: string;
+
+    constructor(data?: ITestEmailConnectionResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.success = _data["success"];
+            this.message = _data["message"];
+        }
+    }
+
+    static fromJS(data: any): TestEmailConnectionResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new TestEmailConnectionResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["success"] = this.success;
+        data["message"] = this.message;
+        return data;
+    }
+}
+
+export interface ITestEmailConnectionResponse {
+    success?: boolean;
+    message?: string;
+}
+
 export class TestEmailConnectionRequest implements ITestEmailConnectionRequest {
     provider?: string;
     smtpHost?: string;
@@ -9360,46 +9491,6 @@ export interface ITestEmailConnectionRequest {
     username?: string;
     password?: string;
     fromAddress?: string;
-}
-
-export class TestEmailConnectionResponse implements ITestEmailConnectionResponse {
-    success?: boolean;
-    message?: string;
-
-    constructor(data?: ITestEmailConnectionResponse) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.success = _data["success"];
-            this.message = _data["message"];
-        }
-    }
-
-    static fromJS(data: any): TestEmailConnectionResponse {
-        data = typeof data === 'object' ? data : {};
-        let result = new TestEmailConnectionResponse();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["success"] = this.success;
-        data["message"] = this.message;
-        return data;
-    }
-}
-
-export interface ITestEmailConnectionResponse {
-    success?: boolean;
-    message?: string;
 }
 
 export class SlaPolicyDto implements ISlaPolicyDto {

@@ -27,8 +27,7 @@ cd frontend && npm run dev               # port 5173
 - Login: admin@supportportal.dev / Admin1234!
 
 ## Fontos technikai döntések
-- EmailServiceRouter: runtime provider-választás DB-ből (integration_settings, AES-256 titkosítva). Provider=mailpit → MailpitEmailService (HTTP API), Provider=imap → ImapEmailService (MailKit)
-- Mailpit-nek NINCS IMAP — MailpitEmailService a Mailpit HTTP API-t pollozza (ne változtasd)
+- Mailpit-nek NINCS IMAP — EmailService a Mailpit HTTP API-t pollozza (ne változtasd)
 - IEmailService.SendAsync → Task<string> (Message-ID visszaadva thread matchinghez)
 - API kulcs: SHA-256 hash-elve, csak létrehozáskor látható egyszer
 - AiService model: claude-sonnet-4-6
@@ -71,8 +70,7 @@ cd frontend && npm run dev               # port 5173
 24. Idézett reply toggle (blockquote / "---" / "On...wrote:" parse, "···" gomb, grey expand), multi-sender RawEmailParts scaffold (longtext nullable, TicketMessageDto, frontend render logic kész, mindig null egyelőre)
 25. Kontaktok és cégek — Company + Contact entitás, auto-upsert ticket létrehozáskor/email feldolgozáskor, REST API (/api/portal/contacts + /api/portal/companies), PATCH /tickets/{id}/contact, TicketDetailDto kibővítve, settings oldalak (/settings/contacts, /settings/companies), ticket lista céges szűrő, KONTAKT ADATOK panel a ticket detail sidebarban
 26. Egyéni státuszok — TicketCustomStatus entitás (Key/Name/ColorVariant/IconKey/DisplayOrder/IsActive), migráció, CRUD API (/api/portal/settings/custom-statuses), PATCH /tickets/{id}/custom-status, 14 FA ikon + 7 szín, /settings/custom-statuses beállítások oldal, StatusBadge custom megjelenítéssel, DetailedCard status dropdown (beépített + egyéni státuszok), TicketDetailPage státusz select kibővítve, minden nézetben customStatusKey alapján badge
-27. IMAP/Gmail email connector — MailSettings kiterjesztve (Provider/ImapHost/ImapPort/UseSsl/Username/Password), ImapEmailService (MailKit ImapClient+SmtpClient, UNSEEN fetch+SEEN jelölés, csatolmányok), EmailServiceRouter (runtime provider-választás DB-ből, AES-256 titkosított config), GET/PUT /api/portal/settings/email + POST /test endpoint, appsettings.Gmail.json.example, frontend SettingsEmailPage szerkeszthetővé téve (provider switch, IMAP/SMTP/auth/általános szekciók, teszt gomb)
-28. Egységes ticket sidebar — TicketSidebar komponens (TicketSidebar.tsx + TicketSidebar.module.css): 1. KONTAKT szekció (név, email, cég badge, max 3 korábbi jegy, hozzárendelés keresővel), 2. TULAJDONSÁGOK szekció (felelős/státusz/prioritás/kategória/típus/CSM/custom fieldek, autosave-aware, Mentés gomb manual módban), 3. CLICKUP szekció (linkek, szinkron, törlés, + Link gomb fejlécben). Classic nézetben: sticky full-height (100vh-54px), bal oldali border, 0 gap a .page gridon. Split nézetben: inline scrollable blokk (sidebarInline CSS osztály). CSM toggle + SLA kiírás + AI szekció eltávolítva a sidebarból.
+27. Soft-delete, lezártak elrejtése, inline property editing — IsDeleted flag (migráció, global query filter), DELETE /tickets/{id} endpoint, alapértelmezetten lezártak elrejtve (IncludeClosed query param), "Lezártak" toggle gomb a filter barban, inline státusz/prioritás/típus dropdownok minden nézetben (Táblázat, Kártyák, Részletes), törlés gomb minden sorban/kártyán és TicketDetailPage-en
 
 ## MCP szerver
 - /mcp/server.js | cd mcp && node server.js
@@ -94,7 +92,6 @@ cd frontend && npm run dev               # port 5173
 - Ticket felosztás (split)
 - [x] ~~SLA visszaszámláló a fejlécen~~ — KÉSZ (22. lépés)
 - [x] ~~Idézett reply toggle + RawEmailParts scaffold~~ — KÉSZ (24. lépés)
-- [x] ~~IMAP/Gmail email connector~~ — KÉSZ (27. lépés)
 - [ ] Részletes kártya nézet vizuális ellenőrzése böngészőben (nincs Playwright)
 
 ## Később implementálandó
@@ -102,7 +99,7 @@ cd frontend && npm run dev               # port 5173
 - Dashboard TrendChart/RecentActivity (Developer API adatforrás kell)
 - Email auto-routing, ünnepnapok kezelése, ClickUp webhook
 
-## Következő feladat (22. lépés)
+## Előző feladat
 Kontaktok és cégek — automatikus mentés, CRUD, ticket panel.
 
 ### Adatmodell (migráció)
@@ -174,4 +171,89 @@ Jobb oldalsávban új szekció "KONTAKT ADATOK" (a TICKET ADATOK alatt, összecs
 - NE futtass docker compose build
 - NSwag újragenerálás szükséges
 - Commit: "feat: contacts and companies - auto-save, CRUD, ticket panel"
+- CLAUDE.md frissítése
+
+## ## Következő feladat (23. lépés)
+IMAP/SMTP email connector — Gmail és általános IMAP támogatás.
+
+### Backend
+
+Új implementáció: `ImapEmailService` (/Infrastructure/Services/ImapEmailService.cs)
+- Implementálja az `IEmailService` interface-t (SendAsync + FetchNewAsync)
+- NuGet: MailKit már telepítve van
+
+FetchNewAsync:
+- ImapClient → IMAP host:port (SSL), bejelentkezés user/pass-szal
+- INBOX mappa, csak olvasatlan (Unseen) üzenetek
+- Feldolgozás után: jelöld Seen-nek (SetFlags Seen)
+- InboundEmail record visszaadása (From, Subject, Body, MessageId, InReplyTo, References)
+- Ha csatlakozás sikertelen: loggolj és adj vissza üres listát (ne crashelj)
+
+SendAsync:
+- SmtpClient → SMTP host:port (TLS/SSL), bejelentkezés user/pass-szal
+- MimeMessage összeállítás (From = a konfigurált support email cím)
+- CC/BCC támogatás (már megvan a base implementációban, ugyanúgy)
+- Message-ID visszaadása thread matchinghez
+
+Konfiguráció (MailSettings kiterjesztése):
+```json
+{
+  "Mail": {
+    "Provider": "Mailpit",
+    "SmtpHost": "localhost",
+    "SmtpPort": 1025,
+    "ImapHost": "localhost",
+    "ImapPort": 1143,
+    "Username": "",
+    "Password": "",
+    "FromAddress": "support@supportportal.dev",
+    "UseSsl": false,
+    "PollIntervalSeconds": 60
+  }
+}
+```
+
+Provider alapján DI factory:
+- Ha Provider == "Mailpit" → MailpitEmailService (jelenlegi HTTP API alapú)
+- Ha Provider == "Gmail" vagy "Imap" → ImapEmailService
+- Program.cs-ben: switch a Mail:Provider értéke alapján
+
+appsettings.Development.json maradjon Mailpit-es.
+Új appsettings.Gmail.json.example fájl (nem commitolni valós adatokkal):
+```json
+{
+  "Mail": {
+    "Provider": "Gmail",
+    "SmtpHost": "smtp.gmail.com",
+    "SmtpPort": 587,
+    "ImapHost": "imap.gmail.com",
+    "ImapPort": 993,
+    "Username": "support.teszt@gmail.com",
+    "Password": "xxxx xxxx xxxx xxxx",
+    "FromAddress": "support.teszt@gmail.com",
+    "UseSsl": true
+  }
+}
+```
+
+### Frontend — Email konfiguráció beállítások oldal
+
+A /settings/email oldal jelenleg read-only. Tedd szerkeszthetővé:
+- Provider választó: Mailpit / Gmail+IMAP
+- Ha Mailpit: SMTP host/port, Mailpit API URL (jelenlegi mezők)
+- Ha Gmail/IMAP: SMTP host/port, IMAP host/port, Username, Password (masked), From address, SSL toggle
+- "Kapcsolat tesztelése" gomb → GET /api/portal/settings/email/test
+  Backend: próbál IMAP-on bejelentkezni → siker/hiba visszaadása
+- "Mentés" gomb → PUT /api/portal/settings/email
+  A konfig appsettings-be NEM írható vissza runtime-ban — a backend menti integration_settings táblába
+  (ugyanúgy mint a ClickUp API kulcs, AES-256 titkosítva)
+  Restart után az integration_settings-ből tölti be felül az appsettings értékeit
+
+Backend: GET/PUT /api/portal/settings/email + GET /api/portal/settings/email/test
+[ProducesResponseType] + FluentValidation + magyar hibák
+
+### Konvenciók
+- NE futtass docker compose build
+- NSwag újragenerálás
+- Commit: "feat: IMAP/SMTP email connector, Gmail support, email settings UI"
 - CLAUDE.md frissítése

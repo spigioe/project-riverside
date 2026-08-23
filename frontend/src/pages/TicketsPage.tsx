@@ -15,6 +15,9 @@ import {
   faCircleCheck,
   faLock,
   faInbox,
+  faTrash,
+  faEye,
+  faEyeSlash,
 } from '@fortawesome/free-solid-svg-icons'
 import {
   categoriesClient,
@@ -37,8 +40,6 @@ import {
   UpdateTicketTypeRequest,
 } from '../api'
 import { useCustomStatuses, CUSTOM_STATUS_ICONS } from '../lib/customStatuses'
-import { StatusBadge } from '../components/Badge/StatusBadge'
-import { PriorityBadge } from '../components/Badge/PriorityBadge'
 import { formatDateTime, formatTicketId } from '../lib/format'
 import styles from './TicketsPage.module.css'
 import dc from './DetailedCard.module.css'
@@ -234,9 +235,10 @@ interface DetailedCardProps {
   onCustomStatusChange: (id: number, key: string | null) => void
   onPriorityChange: (id: number, priority: TicketPriority) => void
   onTypeChange: (id: number, type: TicketType | null) => void
+  onDelete: (id: number) => void
 }
 
-function DetailedCard({ ticket, customStatuses, onStatusChange, onCustomStatusChange, onPriorityChange, onTypeChange }: DetailedCardProps) {
+function DetailedCard({ ticket, customStatuses, onStatusChange, onCustomStatusChange, onPriorityChange, onTypeChange, onDelete }: DetailedCardProps) {
   const name = ticket.requesterName ?? ticket.requesterEmail ?? ''
   const initial = name.charAt(0).toUpperCase()
   const bgColor = hashAvatarColor(ticket.requesterEmail ?? name)
@@ -327,6 +329,15 @@ function DetailedCard({ ticket, customStatuses, onStatusChange, onCustomStatusCh
             }
           }}
         />
+
+        <button
+          type="button"
+          className={dc.deleteBtn}
+          title="Törlés"
+          onClick={(e) => { e.stopPropagation(); onDelete(ticket.id!) }}
+        >
+          <FontAwesomeIcon icon={faTrash} />
+        </button>
       </div>
     </div>
   )
@@ -340,6 +351,7 @@ interface FilterState {
   categoryId: string
   dateRange: 'any' | 'today' | 'week' | 'month'
   companyId: number | null
+  showClosed: boolean
 }
 
 const EMPTY_FILTER: FilterState = {
@@ -350,10 +362,11 @@ const EMPTY_FILTER: FilterState = {
   categoryId: '',
   dateRange: 'any',
   companyId: null,
+  showClosed: false,
 }
 
 function hasActiveFilters(f: FilterState): boolean {
-  return !!(f.assignedToId || f.statuses.length || f.priorities.length || f.source || f.categoryId || f.dateRange !== 'any' || f.companyId)
+  return !!(f.assignedToId || f.statuses.length || f.priorities.length || f.source || f.categoryId || f.dateRange !== 'any' || f.companyId || f.showClosed)
 }
 
 interface FilterPanelProps {
@@ -635,8 +648,6 @@ export function TicketsPage() {
     return undefined
   }
 
-  const isDetailed = view === TicketListView.Detailed
-
   // FilterPanel is used in all views — apply its state universally
   // Backend supports single status/priority; multi-select is resolved client-side
   const effectiveStatus = detailedFilter.statuses.length === 1 ? detailedFilter.statuses[0] : undefined
@@ -648,7 +659,7 @@ export function TicketsPage() {
   const effectiveCompanyId = detailedFilter.companyId ?? undefined
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange, effectiveCompanyId],
+    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange, effectiveCompanyId, detailedFilter.showClosed],
     queryFn: () =>
       ticketClient.getTickets(
         effectiveStatus,
@@ -662,6 +673,8 @@ export function TicketsPage() {
         effectiveAssignedTo,
         effectiveSource,
         effectiveCompanyId,
+        undefined,
+        detailedFilter.showClosed || undefined,
       ),
   })
 
@@ -709,6 +722,17 @@ export function TicketsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tickets'] }),
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => ticketClient.deleteTicket(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tickets'] }),
+  })
+
+  function handleDelete(id: number) {
+    if (window.confirm(`Biztosan törölni szeretnéd a(z) #${id} jegyet? Ez a művelet nem vonható vissza.`)) {
+      deleteMutation.mutate(id)
+    }
+  }
+
   function toggleAll() {
     if (selected.size === tickets.length) setSelected(new Set())
     else setSelected(new Set(tickets.map((t) => t.id!)))
@@ -745,6 +769,17 @@ export function TicketsPage() {
             onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
+        <button
+          type="button"
+          className={`${styles.viewToggleButton} ${detailedFilter.showClosed ? styles.viewToggleButtonActive : ''}`}
+          style={{ border: '1px solid var(--border-light)', borderRadius: 'var(--radius)', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
+          onClick={() => setDetailedFilter({ ...detailedFilter, showClosed: !detailedFilter.showClosed })}
+          title={detailedFilter.showClosed ? 'Lezártak elrejtése' : 'Lezártak mutatása'}
+        >
+          <FontAwesomeIcon icon={detailedFilter.showClosed ? faEye : faEyeSlash} style={{ fontSize: 12 }} />
+          Lezártak
+        </button>
+
         <div className={styles.viewToggle}>
           <button
             type="button"
@@ -797,6 +832,7 @@ export function TicketsPage() {
                   onCustomStatusChange={(id, key) => customStatusMutation.mutate({ id, key })}
                   onPriorityChange={(id, p) => priorityMutation.mutate({ id, p })}
                   onTypeChange={(id, t) => typeMutation.mutate({ id, t })}
+                  onDelete={handleDelete}
                 />
               ))}
 
@@ -848,20 +884,22 @@ export function TicketsPage() {
                       <th>Kérelmező</th>
                       <th>Státusz</th>
                       <th>Prioritás</th>
+                      <th>Típus</th>
                       <th>Felelős</th>
                       <th>Kategória</th>
                       <th>Dátum</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {isLoading && (
-                      <tr><td colSpan={9} className={styles.emptyCell}>Betöltés…</td></tr>
+                      <tr><td colSpan={11} className={styles.emptyCell}>Betöltés…</td></tr>
                     )}
                     {isError && (
-                      <tr><td colSpan={9} className={styles.emptyCell}>Hiba történt a jegyek betöltésekor.</td></tr>
+                      <tr><td colSpan={11} className={styles.emptyCell}>Hiba történt a jegyek betöltésekor.</td></tr>
                     )}
                     {!isLoading && !isError && tickets.length === 0 && (
-                      <tr><td colSpan={9} className={styles.emptyCell}>Nincs a szűrésnek megfelelő jegy.</td></tr>
+                      <tr><td colSpan={11} className={styles.emptyCell}>Nincs a szűrésnek megfelelő jegy.</td></tr>
                     )}
                     {tickets.map((ticket) => (
                       <tr key={ticket.id}>
@@ -877,11 +915,59 @@ export function TicketsPage() {
                           <Link to={`/tickets/${ticket.id}`} className={styles.subjectLink}>{ticket.subject}</Link>
                         </td>
                         <td className={styles.muted}>{ticket.requesterEmail}</td>
-                        <td><StatusBadge status={ticket.status!} isMerged={ticket.isMerged} customStatusKey={ticket.customStatusKey} customStatuses={customStatuses} /></td>
-                        <td><PriorityBadge priority={ticket.priority!} /></td>
+                        <td>
+                          <InlineDropdown
+                            value={ticket.customStatusKey ?? ticket.status!}
+                            options={[
+                              ...Object.values(TicketStatus).map((s) => ({ value: s, label: STATUS_LABELS[s], ...STATUS_ICON[s] })),
+                              ...customStatuses.filter((cs) => cs.isActive).map((cs) => ({
+                                value: cs.key!,
+                                label: cs.name!,
+                                icon: CUSTOM_STATUS_ICONS[cs.iconKey ?? ''],
+                                iconColor: CUSTOM_STATUS_COLOR_VAR[cs.colorVariant ?? 'gray'] ?? 'var(--text-muted)',
+                              })),
+                            ]}
+                            onChange={(v) => {
+                              const isBuiltIn = (Object.values(TicketStatus) as string[]).includes(v)
+                              if (isBuiltIn) {
+                                statusMutation.mutate({ id: ticket.id!, s: v as TicketStatus })
+                                if (ticket.customStatusKey) customStatusMutation.mutate({ id: ticket.id!, key: null })
+                              } else {
+                                customStatusMutation.mutate({ id: ticket.id!, key: v })
+                              }
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <InlineDropdown
+                            value={ticket.priority!}
+                            options={Object.values(TicketPriority).map((p) => ({ value: p, label: PRIORITY_LABELS[p], dotClass: PRIORITY_DOT[p] }))}
+                            onChange={(v) => priorityMutation.mutate({ id: ticket.id!, p: v as TicketPriority })}
+                          />
+                        </td>
+                        <td>
+                          <InlineDropdown
+                            value={ticket.type ?? ''}
+                            options={[
+                              { value: '', label: 'Nincs típus', ...TYPE_ICON[''] },
+                              ...Object.values(TicketType).map((t) => ({ value: t, label: TYPE_LABELS[t], ...TYPE_ICON[t] })),
+                            ]}
+                            onChange={(v) => typeMutation.mutate({ id: ticket.id!, t: v === '' ? null : v as TicketType })}
+                          />
+                        </td>
                         <td>{ticket.assignedToName ?? '—'}</td>
                         <td className={styles.muted}>{ticket.categoryName ?? '—'}</td>
                         <td className={styles.mono}>{formatDateTime(ticket.createdAt)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className={styles.deleteRowBtn}
+                            title="Törlés"
+                            onClick={() => handleDelete(ticket.id!)}
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -925,12 +1011,42 @@ export function TicketsPage() {
                   <div className={styles.emptyCell}>Nincs a szűrésnek megfelelő jegy.</div>
                 )}
                 {tickets.map((ticket) => (
-                  <Link key={ticket.id} to={`/tickets/${ticket.id}`} className={styles.ticketCard}>
+                  <div key={ticket.id} className={styles.ticketCard}>
                     <div className={styles.ticketCardHeader}>
                       <span className={styles.mono}>{formatTicketId(ticket.id!)}</span>
-                      <StatusBadge status={ticket.status!} isMerged={ticket.isMerged} customStatusKey={ticket.customStatusKey} customStatuses={customStatuses} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <InlineDropdown
+                          value={ticket.customStatusKey ?? ticket.status!}
+                          options={[
+                            ...Object.values(TicketStatus).map((s) => ({ value: s, label: STATUS_LABELS[s], ...STATUS_ICON[s] })),
+                            ...customStatuses.filter((cs) => cs.isActive).map((cs) => ({
+                              value: cs.key!,
+                              label: cs.name!,
+                              icon: CUSTOM_STATUS_ICONS[cs.iconKey ?? ''],
+                              iconColor: CUSTOM_STATUS_COLOR_VAR[cs.colorVariant ?? 'gray'] ?? 'var(--text-muted)',
+                            })),
+                          ]}
+                          onChange={(v) => {
+                            const isBuiltIn = (Object.values(TicketStatus) as string[]).includes(v)
+                            if (isBuiltIn) {
+                              statusMutation.mutate({ id: ticket.id!, s: v as TicketStatus })
+                              if (ticket.customStatusKey) customStatusMutation.mutate({ id: ticket.id!, key: null })
+                            } else {
+                              customStatusMutation.mutate({ id: ticket.id!, key: v })
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className={styles.deleteRowBtn}
+                          title="Törlés"
+                          onClick={() => handleDelete(ticket.id!)}
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
+                      </div>
                     </div>
-                    <div className={styles.ticketCardSubject}>{ticket.subject}</div>
+                    <Link to={`/tickets/${ticket.id}`} className={styles.ticketCardSubject}>{ticket.subject}</Link>
                     <div className={styles.ticketCardMeta}>
                       {ticket.requesterName}
                       {ticket.requesterCompany && <span className={styles.muted}> · {ticket.requesterCompany}</span>}
@@ -941,11 +1057,22 @@ export function TicketsPage() {
                       </div>
                     )}
                     <div className={styles.ticketCardFooter}>
-                      <PriorityBadge priority={ticket.priority!} />
-                      <span className={styles.muted}>{ticket.assignedToName ?? 'Nincs hozzárendelve'}</span>
+                      <InlineDropdown
+                        value={ticket.priority!}
+                        options={Object.values(TicketPriority).map((p) => ({ value: p, label: PRIORITY_LABELS[p], dotClass: PRIORITY_DOT[p] }))}
+                        onChange={(v) => priorityMutation.mutate({ id: ticket.id!, p: v as TicketPriority })}
+                      />
+                      <InlineDropdown
+                        value={ticket.type ?? ''}
+                        options={[
+                          { value: '', label: 'Nincs típus', ...TYPE_ICON[''] },
+                          ...Object.values(TicketType).map((t) => ({ value: t, label: TYPE_LABELS[t], ...TYPE_ICON[t] })),
+                        ]}
+                        onChange={(v) => typeMutation.mutate({ id: ticket.id!, t: v === '' ? null : v as TicketType })}
+                      />
                     </div>
                     <div className={styles.mono}>{formatDateTime(ticket.lastMessageAt ?? ticket.createdAt)}</div>
-                  </Link>
+                  </div>
                 ))}
               </div>
               <div className={styles.pager}>

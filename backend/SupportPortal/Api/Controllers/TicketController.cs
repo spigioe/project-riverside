@@ -300,6 +300,18 @@ public class TicketController(
         return NoContent();
     }
 
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteTicket(int id)
+    {
+        var success = await ticketService.DeleteTicketAsync(id, User.GetUserId());
+        if (!success)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
+
+        return NoContent();
+    }
+
     [HttpPatch("{id:int}/custom-status")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

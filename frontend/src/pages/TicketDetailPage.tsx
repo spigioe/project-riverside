@@ -119,6 +119,11 @@ export function TicketDetailPage() {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: () => ticketClient.deleteTicket(ticketId),
+    onSuccess: () => navigate('/tickets'),
+  })
+
   const preferencesQuery = useQuery({
     queryKey: ['user-preferences'],
     queryFn: () => meClient.getPreferences(),
@@ -231,6 +236,16 @@ export function TicketDetailPage() {
                 Lezárás
               </button>
             )}
+            <button
+              type="button"
+              className={shared.dangerButton}
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (confirm(`Biztosan törölni szeretnéd a(z) #${ticketId} jegyet? Ez a művelet nem vonható vissza.`)) deleteMutation.mutate()
+              }}
+            >
+              Törlés
+            </button>
             {detailView === TicketDetailView.Split && (
               <button
                 type="button"

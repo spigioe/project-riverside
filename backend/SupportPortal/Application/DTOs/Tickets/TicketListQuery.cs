@@ -14,5 +14,6 @@ public record TicketListQuery(
     int? AssignedToId = null,
     TicketSource? Source = null,
     int? CompanyId = null,
-    int? ContactId = null
+    int? ContactId = null,
+    bool IncludeClosed = false
 );

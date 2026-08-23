@@ -408,3 +408,22 @@
   color: var(--text-muted);
   font-size: 13.5px;
 }
+
+.deleteBtn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 4px 6px;
+  cursor: pointer;
+  line-height: 1;
+  align-self: flex-end;
+  margin-top: 2px;
+}
+
+.deleteBtn:hover {
+  background: var(--red-bg, #fff0f0);
+  border-color: var(--red-border, #fca5a5);
+  color: var(--red-text);
+}
