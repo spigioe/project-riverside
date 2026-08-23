@@ -4514,7 +4514,7 @@ export class TicketClient {
 
     }
 
-    getTickets(status?: TicketStatus | null | undefined, priority?: TicketPriority | null | undefined, categoryId?: number | null | undefined, search?: string | null | undefined, dateFrom?: Date | null | undefined, dateTo?: Date | null | undefined, page?: number | undefined, pageSize?: number | undefined, assignedToId?: number | null | undefined, source?: TicketSource | null | undefined, companyId?: number | null | undefined, contactId?: number | null | undefined, includeClosed?: boolean | undefined, cancelToken?: CancelToken): Promise<PagedResultOfTicketListItemDto> {
+    getTickets(status?: TicketStatus | null | undefined, priority?: TicketPriority | null | undefined, categoryId?: number | null | undefined, search?: string | null | undefined, dateFrom?: Date | null | undefined, dateTo?: Date | null | undefined, page?: number | undefined, pageSize?: number | undefined, assignedToId?: number | null | undefined, source?: TicketSource | null | undefined, companyId?: number | null | undefined, contactId?: number | null | undefined, includeClosed?: boolean | undefined, showDeleted?: boolean | undefined, cancelToken?: CancelToken): Promise<PagedResultOfTicketListItemDto> {
         let url_ = this.baseUrl + "/api/portal/tickets?";
         if (status !== undefined && status !== null)
             url_ += "Status=" + encodeURIComponent("" + status) + "&";
@@ -4548,6 +4548,10 @@ export class TicketClient {
             throw new globalThis.Error("The parameter 'includeClosed' cannot be null.");
         else if (includeClosed !== undefined)
             url_ += "IncludeClosed=" + encodeURIComponent("" + includeClosed) + "&";
+        if (showDeleted === null)
+            throw new globalThis.Error("The parameter 'showDeleted' cannot be null.");
+        else if (showDeleted !== undefined)
+            url_ += "ShowDeleted=" + encodeURIComponent("" + showDeleted) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {

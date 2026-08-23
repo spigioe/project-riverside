@@ -30,12 +30,18 @@ public class TicketService(
         var page = query.Page < 1 ? 1 : query.Page;
         var pageSize = query.PageSize is < 1 or > 100 ? 20 : query.PageSize;
 
-        var ticketsQuery = db.Tickets.AsNoTracking().AsQueryable();
+        // ShowDeleted=true → global query filtert (IsDeleted) megkerüljük, csak törölteket mutatjuk
+        var ticketsQuery = query.ShowDeleted
+            ? db.Tickets.AsNoTracking().IgnoreQueryFilters().Where(t => t.IsDeleted)
+            : db.Tickets.AsNoTracking().AsQueryable();
 
-        if (query.Status.HasValue)
-            ticketsQuery = ticketsQuery.Where(t => t.Status == query.Status.Value);
-        else if (!query.IncludeClosed)
-            ticketsQuery = ticketsQuery.Where(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved);
+        if (!query.ShowDeleted)
+        {
+            if (query.Status.HasValue)
+                ticketsQuery = ticketsQuery.Where(t => t.Status == query.Status.Value);
+            else if (!query.IncludeClosed)
+                ticketsQuery = ticketsQuery.Where(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved);
+        }
 
         if (query.Priority.HasValue)
             ticketsQuery = ticketsQuery.Where(t => t.Priority == query.Priority.Value);

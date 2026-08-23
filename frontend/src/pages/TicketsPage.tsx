@@ -373,6 +373,7 @@ interface FilterState {
   categoryId: string
   dateRange: 'any' | 'today' | 'week' | 'month'
   companyId: number | null
+  showDeleted: boolean
 }
 
 const EMPTY_FILTER: FilterState = {
@@ -383,10 +384,11 @@ const EMPTY_FILTER: FilterState = {
   categoryId: '',
   dateRange: 'any',
   companyId: null,
+  showDeleted: false,
 }
 
 function hasActiveFilters(f: FilterState): boolean {
-  return !!(f.assignedToId || f.statuses.length || f.priorities.length || f.source || f.categoryId || f.dateRange !== 'any' || f.companyId)
+  return !!(f.assignedToId || f.statuses.length || f.priorities.length || f.source || f.categoryId || f.dateRange !== 'any' || f.companyId || f.showDeleted)
 }
 
 const FILTER_STORAGE_KEY = 'ticketListFilter'
@@ -574,6 +576,22 @@ function FilterPanel({ filter, setFilter, users, categories, companies }: Filter
         </>
       )}
 
+      <hr className={dc.filterDivider} />
+
+      {/* Deleted */}
+      <div className={dc.filterSection}>
+        <label className={dc.filterLabel}>Törölt jegyek</label>
+        <div className={dc.multiPills}>
+          <button
+            type="button"
+            className={`${dc.pill} ${filter.showDeleted ? dc.pillActive : ''}`}
+            onClick={() => setFilter({ ...filter, showDeleted: !filter.showDeleted })}
+          >
+            Törölt jegyek mutatása
+          </button>
+        </div>
+      </div>
+
       {hasActiveFilters(filter) && (
         <button type="button" className={dc.clearFiltersBtn} onClick={() => setFilter(EMPTY_FILTER)}>
           Szűrők törlése
@@ -620,6 +638,9 @@ function ActiveFilterPills({ filter, setFilter, users, categories, companies }: 
   if (filter.companyId) {
     const company = companies.find((c) => c.id === filter.companyId)
     pills.push({ label: `Cég: ${company?.name ?? filter.companyId}`, remove: () => setFilter({ ...filter, companyId: null }) })
+  }
+  if (filter.showDeleted) {
+    pills.push({ label: 'Törölt jegyek', remove: () => setFilter({ ...filter, showDeleted: false }) })
   }
 
   if (pills.length === 0) return null
@@ -724,7 +745,7 @@ export function TicketsPage() {
   const userWantsCompleted = detailedFilter.statuses.some((s) => COMPLETED_STATUSES.has(s))
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange, effectiveCompanyId, userWantsCompleted],
+    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange, effectiveCompanyId, userWantsCompleted, detailedFilter.showDeleted],
     queryFn: () =>
       ticketClient.getTickets(
         effectiveStatus,
@@ -740,6 +761,7 @@ export function TicketsPage() {
         effectiveCompanyId,
         undefined,
         userWantsCompleted || undefined,
+        detailedFilter.showDeleted || undefined,
       ),
   })
 
