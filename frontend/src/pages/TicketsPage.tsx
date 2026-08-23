@@ -308,6 +308,7 @@ interface FilterState {
   source: TicketSource | ''
   categoryId: string
   dateRange: 'any' | 'today' | 'week' | 'month'
+  companyId: number | null
 }
 
 const EMPTY_FILTER: FilterState = {
@@ -317,10 +318,11 @@ const EMPTY_FILTER: FilterState = {
   source: '',
   categoryId: '',
   dateRange: 'any',
+  companyId: null,
 }
 
 function hasActiveFilters(f: FilterState): boolean {
-  return !!(f.assignedToId || f.statuses.length || f.priorities.length || f.source || f.categoryId || f.dateRange !== 'any')
+  return !!(f.assignedToId || f.statuses.length || f.priorities.length || f.source || f.categoryId || f.dateRange !== 'any' || f.companyId)
 }
 
 interface FilterPanelProps {
@@ -328,9 +330,10 @@ interface FilterPanelProps {
   setFilter: (f: FilterState) => void
   users: { id?: number; fullName?: string }[]
   categories: CategoryDto[]
+  companies: CompanyDto[]
 }
 
-function FilterPanel({ filter, setFilter, users, categories }: FilterPanelProps) {
+function FilterPanel({ filter, setFilter, users, categories, companies }: FilterPanelProps) {
   function toggleStatus(s: TicketStatus) {
     const next = filter.statuses.includes(s)
       ? filter.statuses.filter((x) => x !== s)
@@ -456,6 +459,25 @@ function FilterPanel({ filter, setFilter, users, categories }: FilterPanelProps)
         </div>
       </div>
 
+      {companies.length > 0 && (
+        <>
+          <hr className={dc.filterDivider} />
+          <div className={dc.filterSection}>
+            <label className={dc.filterLabel}>Cég</label>
+            <select
+              className={dc.filterSelect}
+              value={filter.companyId ?? ''}
+              onChange={(e) => setFilter({ ...filter, companyId: e.target.value ? Number(e.target.value) : null })}
+            >
+              <option value="">Minden cég</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        </>
+      )}
+
       {hasActiveFilters(filter) && (
         <button type="button" className={dc.clearFiltersBtn} onClick={() => setFilter(EMPTY_FILTER)}>
           Szűrők törlése
@@ -472,9 +494,10 @@ interface ActivePillsProps {
   setFilter: (f: FilterState) => void
   users: { id?: number; fullName?: string }[]
   categories: CategoryDto[]
+  companies: CompanyDto[]
 }
 
-function ActiveFilterPills({ filter, setFilter, users, categories }: ActivePillsProps) {
+function ActiveFilterPills({ filter, setFilter, users, categories, companies }: ActivePillsProps) {
   const pills: { label: string; remove: () => void }[] = []
 
   if (filter.assignedToId) {
@@ -498,6 +521,10 @@ function ActiveFilterPills({ filter, setFilter, users, categories }: ActivePills
     const label = filter.dateRange === 'today' ? 'Ma' : filter.dateRange === 'week' ? 'E héten' : 'E hónapban'
     pills.push({ label: `Dátum: ${label}`, remove: () => setFilter({ ...filter, dateRange: 'any' }) })
   }
+  if (filter.companyId) {
+    const company = companies.find((c) => c.id === filter.companyId)
+    pills.push({ label: `Cég: ${company?.name ?? filter.companyId}`, remove: () => setFilter({ ...filter, companyId: null }) })
+  }
 
   if (pills.length === 0) return null
 
@@ -519,11 +546,8 @@ export function TicketsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
 
-  const status = (searchParams.get('status') as TicketStatus | null) ?? undefined
-  const priority = (searchParams.get('priority') as TicketPriority | null) ?? undefined
   const search = searchParams.get('search') ?? ''
   const page = Number(searchParams.get('page') ?? '1')
-  const companyId = searchParams.get('companyId') ? Number(searchParams.get('companyId')) : undefined
 
   const [searchInput, setSearchInput] = useState(search)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -580,24 +604,20 @@ export function TicketsPage() {
     return undefined
   }
 
-  // For the simple view, use URL params. For Detailed, also use detailedFilter.
   const isDetailed = view === TicketListView.Detailed
 
-  // Multi-status for detailed view: if statuses array non-empty, pick first for now (backend limitation)
-  // Workaround: detailed view uses first selected status only (UI allows multi-select for UX)
-  const effectiveStatus = isDetailed
-    ? (detailedFilter.statuses.length === 1 ? detailedFilter.statuses[0] : detailedFilter.statuses.length > 1 ? undefined : undefined)
-    : status
-  const effectivePriority = isDetailed
-    ? (detailedFilter.priorities.length === 1 ? detailedFilter.priorities[0] : undefined)
-    : priority
-  const effectiveCategory = isDetailed ? (detailedFilter.categoryId ? Number(detailedFilter.categoryId) : undefined) : undefined
-  const effectiveAssignedTo = isDetailed ? (detailedFilter.assignedToId ? Number(detailedFilter.assignedToId) : undefined) : undefined
-  const effectiveSource = isDetailed ? (detailedFilter.source || undefined) : undefined
-  const effectiveDateFrom = isDetailed ? dateFromFilter() : undefined
+  // FilterPanel is used in all views — apply its state universally
+  // Backend supports single status/priority; multi-select is resolved client-side
+  const effectiveStatus = detailedFilter.statuses.length === 1 ? detailedFilter.statuses[0] : undefined
+  const effectivePriority = detailedFilter.priorities.length === 1 ? detailedFilter.priorities[0] : undefined
+  const effectiveCategory = detailedFilter.categoryId ? Number(detailedFilter.categoryId) : undefined
+  const effectiveAssignedTo = detailedFilter.assignedToId ? Number(detailedFilter.assignedToId) : undefined
+  const effectiveSource = detailedFilter.source || undefined
+  const effectiveDateFrom = dateFromFilter()
+  const effectiveCompanyId = detailedFilter.companyId ?? undefined
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange, companyId],
+    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange, effectiveCompanyId],
     queryFn: () =>
       ticketClient.getTickets(
         effectiveStatus,
@@ -610,19 +630,17 @@ export function TicketsPage() {
         PAGE_SIZE,
         effectiveAssignedTo,
         effectiveSource,
-        companyId,
+        effectiveCompanyId,
       ),
   })
 
-  // For detailed view with multi-select filter, filter client-side for statuses/priorities not covered by backend
+  // Client-side multi-filter for statuses/priorities (backend only supports single value)
   let tickets = data?.items ?? []
-  if (isDetailed) {
-    if (detailedFilter.statuses.length > 1) {
-      tickets = tickets.filter((t) => detailedFilter.statuses.includes(t.status!))
-    }
-    if (detailedFilter.priorities.length > 1) {
-      tickets = tickets.filter((t) => detailedFilter.priorities.includes(t.priority!))
-    }
+  if (detailedFilter.statuses.length > 1) {
+    tickets = tickets.filter((t) => detailedFilter.statuses.includes(t.status!))
+  }
+  if (detailedFilter.priorities.length > 1) {
+    tickets = tickets.filter((t) => detailedFilter.priorities.includes(t.priority!))
   }
 
   const totalCount = data?.totalCount ?? 0
@@ -678,40 +696,6 @@ export function TicketsPage() {
       </div>
 
       <div className={styles.filterBar}>
-        {!isDetailed && (
-          <>
-            <select
-              className={styles.select}
-              value={status ?? ''}
-              onChange={(e) => updateParams({ status: e.target.value || null, page: null })}
-            >
-              <option value="">Minden státusz</option>
-              {Object.values(TicketStatus).map((s) => (
-                <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-              ))}
-            </select>
-            <select
-              className={styles.select}
-              value={priority ?? ''}
-              onChange={(e) => updateParams({ priority: e.target.value || null, page: null })}
-            >
-              <option value="">Minden prioritás</option>
-              {Object.values(TicketPriority).map((p) => (
-                <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
-              ))}
-            </select>
-            <select
-              className={styles.select}
-              value={companyId ?? ''}
-              onChange={(e) => updateParams({ companyId: e.target.value || null, page: null })}
-            >
-              <option value="">Összes cég</option>
-              {(companiesQuery.data ?? []).map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </>
-        )}
         <div className={styles.searchWrap}>
           <input
             type="text"
@@ -756,6 +740,7 @@ export function TicketsPage() {
                 setFilter={setDetailedFilter}
                 users={usersQuery.data ?? []}
                 categories={flatCategories}
+                companies={companiesQuery.data ?? []}
               />
 
               {isLoading && <div className={dc.empty}>Betöltés…</div>}
@@ -789,118 +774,155 @@ export function TicketsPage() {
               setFilter={setDetailedFilter}
               users={usersQuery.data ?? []}
               categories={flatCategories}
+              companies={companiesQuery.data ?? []}
             />
           </div>
         </div>
       ) : view === TicketListView.Table ? (
         /* ── Table view ── */
         <div className={styles.tableCard}>
-          <div className={styles.tableScroll}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th className={styles.checkCol}>
-                    <input
-                      type="checkbox"
-                      checked={tickets.length > 0 && selected.size === tickets.length}
-                      onChange={toggleAll}
-                    />
-                  </th>
-                  <th>#ID</th>
-                  <th>Tárgy</th>
-                  <th>Kérelmező</th>
-                  <th>Státusz</th>
-                  <th>Prioritás</th>
-                  <th>Felelős</th>
-                  <th>Kategória</th>
-                  <th>Dátum</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading && (
-                  <tr><td colSpan={9} className={styles.emptyCell}>Betöltés…</td></tr>
-                )}
-                {isError && (
-                  <tr><td colSpan={9} className={styles.emptyCell}>Hiba történt a jegyek betöltésekor.</td></tr>
-                )}
-                {!isLoading && !isError && tickets.length === 0 && (
-                  <tr><td colSpan={9} className={styles.emptyCell}>Nincs a szűrésnek megfelelő jegy.</td></tr>
-                )}
-                {tickets.map((ticket) => (
-                  <tr key={ticket.id}>
-                    <td className={styles.checkCol}>
-                      <input
-                        type="checkbox"
-                        checked={selected.has(ticket.id!)}
-                        onChange={() => toggleOne(ticket.id!)}
-                      />
-                    </td>
-                    <td className={styles.mono}>{formatTicketId(ticket.id!)}</td>
-                    <td className={styles.subjectCell}>
-                      <Link to={`/tickets/${ticket.id}`} className={styles.subjectLink}>{ticket.subject}</Link>
-                    </td>
-                    <td className={styles.muted}>{ticket.requesterEmail}</td>
-                    <td><StatusBadge status={ticket.status!} isMerged={ticket.isMerged} /></td>
-                    <td><PriorityBadge priority={ticket.priority!} /></td>
-                    <td>{ticket.assignedToName ?? '—'}</td>
-                    <td className={styles.muted}>{ticket.categoryName ?? '—'}</td>
-                    <td className={styles.mono}>{formatDateTime(ticket.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className={styles.pager}>
-            <span className={styles.mono}>{rangeStart}–{rangeEnd} / {totalCount}</span>
-            <div className={styles.pagerButtons}>
-              <button disabled={page <= 1} onClick={() => updateParams({ page: String(page - 1) })}>‹</button>
-              <span className={styles.pagerCurrent}>{page}</span>
-              <span className={styles.muted}>/ {totalPages || 1}</span>
-              <button disabled={page >= totalPages} onClick={() => updateParams({ page: String(page + 1) })}>›</button>
+          <div className={dc.detailedLayout}>
+            <div className={dc.detailedList}>
+              <ActiveFilterPills
+                filter={detailedFilter}
+                setFilter={setDetailedFilter}
+                users={usersQuery.data ?? []}
+                categories={flatCategories}
+                companies={companiesQuery.data ?? []}
+              />
+              <div className={styles.tableScroll}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th className={styles.checkCol}>
+                        <input
+                          type="checkbox"
+                          checked={tickets.length > 0 && selected.size === tickets.length}
+                          onChange={toggleAll}
+                        />
+                      </th>
+                      <th>#ID</th>
+                      <th>Tárgy</th>
+                      <th>Kérelmező</th>
+                      <th>Státusz</th>
+                      <th>Prioritás</th>
+                      <th>Felelős</th>
+                      <th>Kategória</th>
+                      <th>Dátum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading && (
+                      <tr><td colSpan={9} className={styles.emptyCell}>Betöltés…</td></tr>
+                    )}
+                    {isError && (
+                      <tr><td colSpan={9} className={styles.emptyCell}>Hiba történt a jegyek betöltésekor.</td></tr>
+                    )}
+                    {!isLoading && !isError && tickets.length === 0 && (
+                      <tr><td colSpan={9} className={styles.emptyCell}>Nincs a szűrésnek megfelelő jegy.</td></tr>
+                    )}
+                    {tickets.map((ticket) => (
+                      <tr key={ticket.id}>
+                        <td className={styles.checkCol}>
+                          <input
+                            type="checkbox"
+                            checked={selected.has(ticket.id!)}
+                            onChange={() => toggleOne(ticket.id!)}
+                          />
+                        </td>
+                        <td className={styles.mono}>{formatTicketId(ticket.id!)}</td>
+                        <td className={styles.subjectCell}>
+                          <Link to={`/tickets/${ticket.id}`} className={styles.subjectLink}>{ticket.subject}</Link>
+                        </td>
+                        <td className={styles.muted}>{ticket.requesterEmail}</td>
+                        <td><StatusBadge status={ticket.status!} isMerged={ticket.isMerged} /></td>
+                        <td><PriorityBadge priority={ticket.priority!} /></td>
+                        <td>{ticket.assignedToName ?? '—'}</td>
+                        <td className={styles.muted}>{ticket.categoryName ?? '—'}</td>
+                        <td className={styles.mono}>{formatDateTime(ticket.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className={styles.pager}>
+                <span className={styles.mono}>{rangeStart}–{rangeEnd} / {totalCount}</span>
+                <div className={styles.pagerButtons}>
+                  <button disabled={page <= 1} onClick={() => updateParams({ page: String(page - 1) })}>‹</button>
+                  <span className={styles.pagerCurrent}>{page}</span>
+                  <span className={styles.muted}>/ {totalPages || 1}</span>
+                  <button disabled={page >= totalPages} onClick={() => updateParams({ page: String(page + 1) })}>›</button>
+                </div>
+              </div>
             </div>
+            <FilterPanel
+              filter={detailedFilter}
+              setFilter={setDetailedFilter}
+              users={usersQuery.data ?? []}
+              categories={flatCategories}
+              companies={companiesQuery.data ?? []}
+            />
           </div>
         </div>
       ) : (
         /* ── Card view ── */
         <div className={styles.tableCard}>
-          <div className={styles.cardGrid}>
-            {isLoading && <div className={styles.emptyCell}>Betöltés…</div>}
-            {isError && <div className={styles.emptyCell}>Hiba történt a jegyek betöltésekor.</div>}
-            {!isLoading && !isError && tickets.length === 0 && (
-              <div className={styles.emptyCell}>Nincs a szűrésnek megfelelő jegy.</div>
-            )}
-            {tickets.map((ticket) => (
-              <Link key={ticket.id} to={`/tickets/${ticket.id}`} className={styles.ticketCard}>
-                <div className={styles.ticketCardHeader}>
-                  <span className={styles.mono}>{formatTicketId(ticket.id!)}</span>
-                  <StatusBadge status={ticket.status!} isMerged={ticket.isMerged} />
-                </div>
-                <div className={styles.ticketCardSubject}>{ticket.subject}</div>
-                <div className={styles.ticketCardMeta}>
-                  {ticket.requesterName}
-                  {ticket.requesterCompany && <span className={styles.muted}> · {ticket.requesterCompany}</span>}
-                </div>
-                {ticket.lastMessageBody && (
-                  <div className={styles.ticketCardLastMessage}>
-                    {ticket.lastMessageBody.length > 140 ? `${ticket.lastMessageBody.slice(0, 140)}…` : ticket.lastMessageBody}
-                  </div>
+          <div className={dc.detailedLayout}>
+            <div className={dc.detailedList}>
+              <ActiveFilterPills
+                filter={detailedFilter}
+                setFilter={setDetailedFilter}
+                users={usersQuery.data ?? []}
+                categories={flatCategories}
+                companies={companiesQuery.data ?? []}
+              />
+              <div className={styles.cardGrid}>
+                {isLoading && <div className={styles.emptyCell}>Betöltés…</div>}
+                {isError && <div className={styles.emptyCell}>Hiba történt a jegyek betöltésekor.</div>}
+                {!isLoading && !isError && tickets.length === 0 && (
+                  <div className={styles.emptyCell}>Nincs a szűrésnek megfelelő jegy.</div>
                 )}
-                <div className={styles.ticketCardFooter}>
-                  <PriorityBadge priority={ticket.priority!} />
-                  <span className={styles.muted}>{ticket.assignedToName ?? 'Nincs hozzárendelve'}</span>
+                {tickets.map((ticket) => (
+                  <Link key={ticket.id} to={`/tickets/${ticket.id}`} className={styles.ticketCard}>
+                    <div className={styles.ticketCardHeader}>
+                      <span className={styles.mono}>{formatTicketId(ticket.id!)}</span>
+                      <StatusBadge status={ticket.status!} isMerged={ticket.isMerged} />
+                    </div>
+                    <div className={styles.ticketCardSubject}>{ticket.subject}</div>
+                    <div className={styles.ticketCardMeta}>
+                      {ticket.requesterName}
+                      {ticket.requesterCompany && <span className={styles.muted}> · {ticket.requesterCompany}</span>}
+                    </div>
+                    {ticket.lastMessageBody && (
+                      <div className={styles.ticketCardLastMessage}>
+                        {ticket.lastMessageBody.length > 140 ? `${ticket.lastMessageBody.slice(0, 140)}…` : ticket.lastMessageBody}
+                      </div>
+                    )}
+                    <div className={styles.ticketCardFooter}>
+                      <PriorityBadge priority={ticket.priority!} />
+                      <span className={styles.muted}>{ticket.assignedToName ?? 'Nincs hozzárendelve'}</span>
+                    </div>
+                    <div className={styles.mono}>{formatDateTime(ticket.lastMessageAt ?? ticket.createdAt)}</div>
+                  </Link>
+                ))}
+              </div>
+              <div className={styles.pager}>
+                <span className={styles.mono}>{rangeStart}–{rangeEnd} / {totalCount}</span>
+                <div className={styles.pagerButtons}>
+                  <button disabled={page <= 1} onClick={() => updateParams({ page: String(page - 1) })}>‹</button>
+                  <span className={styles.pagerCurrent}>{page}</span>
+                  <span className={styles.muted}>/ {totalPages || 1}</span>
+                  <button disabled={page >= totalPages} onClick={() => updateParams({ page: String(page + 1) })}>›</button>
                 </div>
-                <div className={styles.mono}>{formatDateTime(ticket.lastMessageAt ?? ticket.createdAt)}</div>
-              </Link>
-            ))}
-          </div>
-          <div className={styles.pager}>
-            <span className={styles.mono}>{rangeStart}–{rangeEnd} / {totalCount}</span>
-            <div className={styles.pagerButtons}>
-              <button disabled={page <= 1} onClick={() => updateParams({ page: String(page - 1) })}>‹</button>
-              <span className={styles.pagerCurrent}>{page}</span>
-              <span className={styles.muted}>/ {totalPages || 1}</span>
-              <button disabled={page >= totalPages} onClick={() => updateParams({ page: String(page + 1) })}>›</button>
+              </div>
             </div>
+            <FilterPanel
+              filter={detailedFilter}
+              setFilter={setDetailedFilter}
+              users={usersQuery.data ?? []}
+              categories={flatCategories}
+              companies={companiesQuery.data ?? []}
+            />
           </div>
         </div>
       )}
