@@ -69,7 +69,7 @@ public class TicketService(
             .Take(pageSize)
             .Select(t => new
             {
-                t.Id, t.Subject, t.Status, t.Priority, t.Source,
+                t.Id, t.Subject, t.Status, t.Priority, t.Source, t.Type,
                 t.CategoryId, CategoryName = t.Category != null ? t.Category.Name : null,
                 t.AssignedToId, AssignedToName = t.AssignedTo != null ? t.AssignedTo.FullName : null,
                 t.RequesterEmail, t.RequesterName,
@@ -92,7 +92,7 @@ public class TicketService(
                 r.IsCsmFlagged, r.IsMerged,
                 r.SlaDueAt, r.SlaBreach,
                 r.LastMessageBody, r.LastMessageAt,
-                r.CreatedAt, r.UpdatedAt, r.Source))
+                r.CreatedAt, r.UpdatedAt, r.Source, r.Type))
             .ToList();
 
         return new PagedResult<TicketListItemDto>(items, page, pageSize, totalCount);
@@ -240,6 +240,21 @@ public class TicketService(
 
         if (oldPriority != priority)
             await auditLogService.LogAsync(currentUserId, "ticket", id, "priority_changed", oldPriority.ToString(), priority.ToString());
+
+        return true;
+    }
+
+    public async Task<bool> UpdateTypeAsync(int id, TicketType? type, int currentUserId)
+    {
+        var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
+        if (ticket is null) return false;
+
+        var oldType = ticket.Type?.ToString() ?? "null";
+        ticket.Type = type;
+        ticket.UpdatedAt = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+        await auditLogService.LogAsync(currentUserId, "ticket", id, "type_changed", oldType, type?.ToString() ?? "null");
 
         return true;
     }

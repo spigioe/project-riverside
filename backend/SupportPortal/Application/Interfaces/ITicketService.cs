@@ -19,6 +19,7 @@ public interface ITicketService
     Task<bool> UpdateTicketAsync(int id, UpdateTicketRequest request, int currentUserId);
     Task<bool> UpdateStatusAsync(int id, TicketStatus status, int currentUserId);
     Task<bool> UpdatePriorityAsync(int id, TicketPriority priority, int currentUserId);
+    Task<bool> UpdateTypeAsync(int id, TicketType? type, int currentUserId);
     Task<TicketAssignResult> AssignAsync(int id, int? assignedToId, int currentUserId);
     Task<bool?> ToggleCsmAsync(int id, int currentUserId);
     Task<TicketCsmAssignResult> AssignCsmAsync(int id, int? csmId, int currentUserId);

@@ -17,6 +17,7 @@ public class Ticket
     public string RequesterEmail { get; set; } = null!;
     public string RequesterName { get; set; } = null!;
     public TicketSource Source { get; set; } = TicketSource.Portal;
+    public TicketType? Type { get; set; }
     public bool IsCsmFlagged { get; set; } = false;
     public int? CsmId { get; set; }
     public CsmManager? Csm { get; set; }

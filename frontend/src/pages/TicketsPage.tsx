@@ -1,6 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+import {
+  faChevronDown,
+  faCircleQuestion,
+  faFire,
+  faTriangleExclamation,
+  faLightbulb,
+  faTag,
+  faCircleDot,
+  faClock,
+  faCircleCheck,
+  faLock,
+  faInbox,
+} from '@fortawesome/free-solid-svg-icons'
 import {
   categoriesClient,
   meClient,
@@ -12,8 +27,10 @@ import {
   TicketPriority,
   TicketSource,
   TicketStatus,
+  TicketType,
   UpdateTicketPriorityRequest,
   UpdateTicketStatusRequest,
+  UpdateTicketTypeRequest,
 } from '../api'
 import { StatusBadge } from '../components/Badge/StatusBadge'
 import { PriorityBadge } from '../components/Badge/PriorityBadge'
@@ -88,6 +105,13 @@ const PRIORITY_LABELS: Record<TicketPriority, string> = {
   [TicketPriority.Urgent]: 'Sürgős',
 }
 
+const TYPE_LABELS: Record<TicketType, string> = {
+  [TicketType.Question]: 'Kérdés',
+  [TicketType.Incident]: 'Incidens',
+  [TicketType.Problem]: 'Probléma',
+  [TicketType.FeatureRequest]: 'Funkciókérés',
+}
+
 const STATUS_LABELS: Record<TicketStatus, string> = {
   [TicketStatus.New]: 'Új',
   [TicketStatus.Open]: 'Nyitott',
@@ -96,13 +120,106 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
   [TicketStatus.Closed]: 'Lezárva',
 }
 
+// ── Inline dropdown ───────────────────────────────────────
+
+const PRIORITY_DOT: Record<TicketPriority, string> = {
+  [TicketPriority.Low]: dc.dotLow,
+  [TicketPriority.Medium]: dc.dotMedium,
+  [TicketPriority.High]: dc.dotHigh,
+  [TicketPriority.Urgent]: dc.dotUrgent,
+}
+
+const TYPE_ICON: Record<string, { icon: IconDefinition; color: string }> = {
+  [TicketType.Question]:      { icon: faCircleQuestion,     color: 'var(--primary)' },
+  [TicketType.Incident]:      { icon: faFire,               color: 'var(--red-text)' },
+  [TicketType.Problem]:       { icon: faTriangleExclamation, color: 'var(--amber-text)' },
+  [TicketType.FeatureRequest]:{ icon: faLightbulb,          color: 'var(--purple)' },
+  '':                         { icon: faTag,                color: 'var(--text-muted)' },
+}
+
+const STATUS_ICON: Record<TicketStatus, { icon: IconDefinition; color: string }> = {
+  [TicketStatus.New]:      { icon: faInbox,       color: 'var(--primary)' },
+  [TicketStatus.Open]:     { icon: faCircleDot,   color: 'var(--green-text)' },
+  [TicketStatus.Pending]:  { icon: faClock,       color: 'var(--amber-text)' },
+  [TicketStatus.Resolved]: { icon: faCircleCheck, color: 'var(--green-text)' },
+  [TicketStatus.Closed]:   { icon: faLock,        color: 'var(--text-muted)' },
+}
+
+interface DropdownOption {
+  value: string
+  label: string
+  dotClass?: string
+  icon?: IconDefinition
+  iconColor?: string
+}
+
+interface InlineDropdownProps {
+  value: string
+  options: DropdownOption[]
+  onChange: (v: string) => void
+}
+
+function InlineDropdown({ value, options, onChange }: InlineDropdownProps) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  const current = options.find((o) => o.value === value)
+
+  return (
+    <div className={dc.dropdownWrapper} ref={ref}>
+      <button
+        type="button"
+        className={dc.dropdownTrigger}
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o) }}
+      >
+        <span className={dc.dropdownLabel}>
+          {current?.dotClass && <span className={`${dc.dot} ${current.dotClass}`} />}
+          {current?.icon && (
+            <FontAwesomeIcon icon={current.icon} style={{ color: current.iconColor, fontSize: 11 }} />
+          )}
+          {current?.label ?? value}
+        </span>
+        <FontAwesomeIcon icon={faChevronDown} className={dc.dropdownCaret} />
+      </button>
+      {open && (
+        <div className={dc.dropdownMenu}>
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              className={`${dc.dropdownItem} ${opt.value === value ? dc.dropdownItemActive : ''}`}
+              onClick={(e) => { e.stopPropagation(); onChange(opt.value); setOpen(false) }}
+            >
+              {opt.dotClass && <span className={`${dc.dot} ${opt.dotClass}`} />}
+              {opt.icon && (
+                <FontAwesomeIcon icon={opt.icon} style={{ color: opt.iconColor, fontSize: 11, width: 12 }} />
+              )}
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface DetailedCardProps {
   ticket: TicketListItemDto
   onStatusChange: (id: number, status: TicketStatus) => void
   onPriorityChange: (id: number, priority: TicketPriority) => void
+  onTypeChange: (id: number, type: TicketType | null) => void
 }
 
-function DetailedCard({ ticket, onStatusChange, onPriorityChange }: DetailedCardProps) {
+function DetailedCard({ ticket, onStatusChange, onPriorityChange, onTypeChange }: DetailedCardProps) {
   const name = ticket.requesterName ?? ticket.requesterEmail ?? ''
   const initial = name.charAt(0).toUpperCase()
   const bgColor = hashAvatarColor(ticket.requesterEmail ?? name)
@@ -157,38 +274,26 @@ function DetailedCard({ ticket, onStatusChange, onPriorityChange }: DetailedCard
 
       {/* Right */}
       <div className={dc.right}>
-        {/* Priority dropdown */}
-        <select
-          className={dc.inlineSelect}
-          value={ticket.priority}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => onPriorityChange(ticket.id!, e.target.value as TicketPriority)}
-        >
-          {Object.values(TicketPriority).map((p) => (
-            <option key={p} value={p}>
-              {PRIORITY_LABELS[p]}
-            </option>
-          ))}
-        </select>
+        <InlineDropdown
+          value={ticket.priority!}
+          options={Object.values(TicketPriority).map((p) => ({ value: p, label: PRIORITY_LABELS[p], dotClass: PRIORITY_DOT[p] }))}
+          onChange={(v) => onPriorityChange(ticket.id!, v as TicketPriority)}
+        />
 
-        {/* Agent */}
-        <div className={dc.agentName}>
-          {ticket.assignedToName ?? 'Nincs hozzárendelve'}
-        </div>
+        <InlineDropdown
+          value={ticket.type ?? ''}
+          options={[
+            { value: '', label: 'Nincs típus', ...TYPE_ICON[''] },
+            ...Object.values(TicketType).map((t) => ({ value: t, label: TYPE_LABELS[t], ...TYPE_ICON[t] })),
+          ]}
+          onChange={(v) => onTypeChange(ticket.id!, v === '' ? null : v as TicketType)}
+        />
 
-        {/* Status dropdown */}
-        <select
-          className={dc.inlineSelect}
-          value={ticket.status}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => onStatusChange(ticket.id!, e.target.value as TicketStatus)}
-        >
-          {Object.values(TicketStatus).map((s) => (
-            <option key={s} value={s}>
-              {STATUS_LABELS[s]}
-            </option>
-          ))}
-        </select>
+        <InlineDropdown
+          value={ticket.status!}
+          options={Object.values(TicketStatus).map((s) => ({ value: s, label: STATUS_LABELS[s], ...STATUS_ICON[s] }))}
+          onChange={(v) => onStatusChange(ticket.id!, v as TicketStatus)}
+        />
       </div>
     </div>
   )
@@ -535,6 +640,12 @@ export function TicketsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tickets'] }),
   })
 
+  const typeMutation = useMutation({
+    mutationFn: ({ id, t }: { id: number; t: TicketType | null }) =>
+      ticketClient.updateType(id, new UpdateTicketTypeRequest({ type: t ?? undefined })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tickets'] }),
+  })
+
   function toggleAll() {
     if (selected.size === tickets.length) setSelected(new Set())
     else setSelected(new Set(tickets.map((t) => t.id!)))
@@ -643,6 +754,7 @@ export function TicketsPage() {
                   ticket={ticket}
                   onStatusChange={(id, s) => statusMutation.mutate({ id, s })}
                   onPriorityChange={(id, p) => priorityMutation.mutate({ id, p })}
+                  onTypeChange={(id, t) => typeMutation.mutate({ id, t })}
                 />
               ))}
 

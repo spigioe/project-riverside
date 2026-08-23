@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { AttachmentDto, MessageDirection, TicketDetailDto, TicketMessageDto, ticketAttachmentsClient } from '../../api'
 import { SafeHtml } from '../../components/SafeHtml/SafeHtml'
 import { formatDateTime, formatFileSize } from '../../lib/format'
@@ -40,7 +40,7 @@ interface MessageThreadProps {
   detailed?: boolean
 }
 
-export function MessageThread({ ticket, messages, attachments, detailed = false }: MessageThreadProps) {
+export function MessageThread({ ticket, messages, attachments, detailed = true }: MessageThreadProps) {
   return (
     <div className={styles.card}>
       <div className={styles.cardHeader}>
@@ -52,7 +52,7 @@ export function MessageThread({ ticket, messages, attachments, detailed = false 
           <div className={styles.emptyThread}>Még nincs üzenet ebben a jegyben.</div>
         )}
         {messages.map((msg, idx) => (
-          <div key={msg.id}>
+          <Fragment key={msg.id}>
             {msg.sourceTicketId != null && messages[idx - 1]?.sourceTicketId !== msg.sourceTicketId && (
               <div className={styles.mergeSeparator}>Beolvasztva a(z) #{msg.sourceTicketId} jegyből</div>
             )}
@@ -62,7 +62,7 @@ export function MessageThread({ ticket, messages, attachments, detailed = false 
               attachments={attachments.filter((a) => a.messageId === msg.id)}
               detailed={detailed}
             />
-          </div>
+          </Fragment>
         ))}
       </div>
     </div>

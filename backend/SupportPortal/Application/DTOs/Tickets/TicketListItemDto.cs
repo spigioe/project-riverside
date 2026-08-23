@@ -22,5 +22,6 @@ public record TicketListItemDto(
     DateTime? LastMessageAt,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    TicketSource Source
+    TicketSource Source,
+    TicketType? Type
 );

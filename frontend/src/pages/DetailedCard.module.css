@@ -168,28 +168,6 @@
   max-width: 100%;
 }
 
-/* Priority dot badge */
-.priorityBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 600;
-  width: 100%;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.dotLow    { background: var(--green-text); }
-.dotMedium { background: var(--primary); }
-.dotHigh   { background: var(--amber-text); }
-.dotUrgent { background: var(--red-text); }
-
 /* ── Filter panel ───────────────────────────────────────── */
 
 .filterPanel {
@@ -326,6 +304,101 @@
 .activePillRemove:hover {
   opacity: 1;
 }
+
+/* ── Inline custom dropdown ─────────────────────────────── */
+
+.dropdownWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.dropdownTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 3px 6px;
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  gap: 6px;
+  transition: background 0.1s;
+}
+
+.dropdownTrigger:hover {
+  background: var(--bg-alt);
+}
+
+.dropdownLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdownCaret {
+  font-size: 8px;
+  opacity: 0.4;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.dropdownMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 3px);
+  min-width: 130px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 14px rgba(16, 22, 47, 0.14);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  background: none;
+  border: none;
+  font-size: 12.5px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.dropdownItem:hover {
+  background: var(--bg-alt);
+}
+
+.dropdownItemActive {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotLow    { background: var(--green-text); }
+.dotMedium { background: var(--primary); }
+.dotHigh   { background: var(--amber-text); }
+.dotUrgent { background: var(--red-text); }
 
 /* ── Empty / loading ────────────────────────────────────── */
 
