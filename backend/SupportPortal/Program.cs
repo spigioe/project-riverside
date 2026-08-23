@@ -141,6 +141,7 @@ builder.Services.AddHttpClient<IIntegrationService, IntegrationService>(client =
 builder.Services.AddHttpClient<IClickUpLinkService, ClickUpLinkService>(client =>
     client.BaseAddress = new Uri("https://api.clickup.com/api/v2/"));
 builder.Services.AddHostedService<ClickUpSyncBackgroundService>();
+builder.Services.AddHostedService<SlaBreachCheckerService>();
 
 // ── Validáció ──────────────────────────────────────────────────────────────────
 builder.Services.AddFluentValidationAutoValidation();

@@ -72,6 +72,7 @@ cd frontend && npm run dev               # port 5173
 26. Egyéni státuszok — TicketCustomStatus entitás (Key/Name/ColorVariant/IconKey/DisplayOrder/IsActive), migráció, CRUD API (/api/portal/settings/custom-statuses), PATCH /tickets/{id}/custom-status, 14 FA ikon + 7 szín, /settings/custom-statuses beállítások oldal, StatusBadge custom megjelenítéssel, DetailedCard status dropdown (beépített + egyéni státuszok), TicketDetailPage státusz select kibővítve, minden nézetben customStatusKey alapján badge
 27. Soft-delete, lezártak elrejtése, inline property editing — IsDeleted flag (migráció, global query filter), DELETE /tickets/{id} endpoint, alapértelmezetten lezártak elrejtve (IncludeClosed query param), "Lezártak" toggle gomb a filter barban, inline státusz/prioritás/típus dropdownok minden nézetben (Táblázat, Kártyák, Részletes), törlés gomb minden sorban/kártyán és TicketDetailPage-en
 28. SLA backend újraépítés — RestructureSla migráció (sla_policy_domains DROP, sla_policies újrastrukturálva: name+is_default+business_hours_only+updated_at), sla_policy_priorities (sla_policy_id, priority string, response/resolution_time_minutes), sla_policy_companies (sla_policy_id, company_id FK), ISlaService CRUD + FindPolicyForTicketAsync (email domain→company→policy, is_default fallback), ISlaCalculationService + SlaCalculationService (working hours logika kiszervezve), CRUD API (/api/portal/sla/policies GET/GET{id}/POST/PUT{id}/DELETE{id}), seed: "Master SLA" policy + 4 prioritás sor, NSwag újragenerálva
+29. SLA bekötés ticket folyamatba — SlaDueAt újraszámítása UpdatePriorityAsync-ban és UpdateTicketAsync-ban (prioritás változáskor), SlaBreachCheckerService (5 perces PeriodicTimer, nyitott ticketek WHERE SlaDueAt < NOW() AND SlaBreach=false → SlaBreach=true, SSE értesítés az assignee-nek SlaBreached triggerrel)
 
 ## MCP szerver
 - /mcp/server.js | cd mcp && node server.js
@@ -80,7 +81,7 @@ cd frontend && npm run dev               # port 5173
 
 ## Nyitott TODO
 - [ ] README.md hiányzik
-- [x] ~~SLA due date kalkuláció ticket létrehozáskor (SlaDueAt mindig null)~~ — MEGOLDVA: ISlaService.CalculateSlaDueAtAsync, munkaidős számítással, ticket létrehozáskor és email-feldolgozáskor is beállítva
+- [x] ~~SLA due date kalkuláció ticket létrehozáskor (SlaDueAt mindig null)~~ — MEGOLDVA: ISlaService.CalculateSlaDueAtAsync, munkaidős számítással, ticket létrehozáskor és email-feldolgozáskor is beállítva, prioritás változáskor újraszámítva, SlaBreachCheckerService 5 percenként fut
 - [ ] Bejövő email csatolmányok Mailpit part letöltése — TODO a kódban
 - [ ] Notification bell SSE több userrel nem tesztelt
 - [ ] MCP + AI valós API kulccsal nem tesztelt

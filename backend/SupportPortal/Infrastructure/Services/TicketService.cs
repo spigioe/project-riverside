@@ -206,6 +206,9 @@ public class TicketService(
         ticket.RequesterName = request.RequesterName;
         ticket.UpdatedAt = DateTime.UtcNow;
 
+        if (oldPriority != request.Priority)
+            ticket.SlaDueAt = await ComputeSlaDueAtAsync(request.RequesterEmail, request.Priority, ticket.CreatedAt);
+
         await db.SaveChangesAsync();
 
         if (oldPriority != request.Priority)
@@ -260,6 +263,9 @@ public class TicketService(
         var oldPriority = ticket.Priority;
         ticket.Priority = priority;
         ticket.UpdatedAt = DateTime.UtcNow;
+
+        if (oldPriority != priority)
+            ticket.SlaDueAt = await ComputeSlaDueAtAsync(ticket.RequesterEmail, priority, ticket.CreatedAt);
 
         await db.SaveChangesAsync();
 
