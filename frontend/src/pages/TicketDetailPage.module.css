@@ -340,6 +340,11 @@
   background: rgba(74, 108, 247, 0.08);
 }
 
+.internalBubble {
+  background: var(--amber-bg) !important;
+  border: 1px solid var(--amber-border);
+}
+
 .directionIcon {
   font-size: 12px;
   color: var(--text-muted);
@@ -584,6 +589,17 @@
 
 /* ── Split nézet ───────────────────────────────────────── */
 
+/* Bal panel fix magassággal split módban */
+.leftSplit {
+  height: calc(100vh - 54px);
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+
+/* Normál (nem-split) grid layout */
 .splitLayout {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -591,9 +607,24 @@
   align-items: start;
 }
 
+/* Split módban a layout flex sorba vált, kitölti a maradék magasságot */
+.splitLayoutActive {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  gap: 14px;
+  padding-bottom: 28px;
+  box-sizing: border-box;
+}
+
 @media (max-width: 1200px) {
   .splitLayout {
     grid-template-columns: 1fr;
+  }
+  .splitLayoutActive {
+    flex-direction: column;
   }
 }
 
@@ -603,8 +634,74 @@
   min-width: 0;
 }
 
+/* Hozzászólások max-height normál módban */
 .splitPanel .thread {
   max-height: 640px;
+  overflow-y: auto;
+}
+
+/* ── Thread panel split módban ──────────────────────────── */
+
+.splitPanelThread {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Thread max-height tiltva — a panel maga scrollol */
+.splitPanelThread .thread {
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* ── Composer panel split módban ────────────────────────── */
+
+.splitPanelComposer {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.splitPanelComposer .card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.splitPanelComposer .composerInner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Fix magasságú elemek — nem zsugorodnak */
+.splitPanelComposer .composerTabs,
+.splitPanelComposer .emailFields {
+  flex-shrink: 0;
+}
+
+/* Küldés / Előnézet sor mindig látható, alul marad */
+.splitPanelComposer .composerFooter {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+/* RichTextEditor wrapper: kitölti a maradék helyet, görgethető.
+   A :not() lánc kizár minden ismert composerInner-gyermeket,
+   így csak a CSS-Module-hashelt .wrapper div lesz a target. */
+.splitPanelComposer .composerInner > div:not(.composerTabs):not(.emailFields):not(.composerFooter):not(.attachmentChips):not(.attachmentError) {
+  flex: 1;
+  min-height: 80px;
+  max-height: 250px;
   overflow-y: auto;
 }
 
