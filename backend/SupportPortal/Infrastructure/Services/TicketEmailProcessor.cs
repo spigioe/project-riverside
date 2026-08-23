@@ -15,6 +15,7 @@ namespace SupportPortal.Infrastructure.Services;
 public partial class TicketEmailProcessor(
     AppDbContext db,
     ICsmService csmService,
+    IContactService contactService,
     IFileStorageService fileStorageService,
     IOptions<MinioSettings> minioOptions,
     ISlaService slaService,
@@ -56,6 +57,8 @@ public partial class TicketEmailProcessor(
         {
             var createdAt = DateTime.UtcNow;
             var defaultPriority = TicketPriority.Medium;
+            var requesterName = string.IsNullOrWhiteSpace(fromAddress.Name) ? fromAddress.Address : fromAddress.Name;
+            var contact = await contactService.UpsertAsync(fromAddress.Address, requesterName);
             ticket = new Ticket
             {
                 Subject = StripTicketIdTag(email.Subject),
@@ -64,8 +67,9 @@ public partial class TicketEmailProcessor(
                 Priority = defaultPriority,
                 Source = TicketSource.Email,
                 RequesterEmail = fromAddress.Address,
-                RequesterName = string.IsNullOrWhiteSpace(fromAddress.Name) ? fromAddress.Address : fromAddress.Name,
+                RequesterName = requesterName,
                 CsmId = await csmService.FindCsmIdForEmailAsync(fromAddress.Address),
+                ContactId = contact.Id,
                 CreatedAt = createdAt,
                 SlaDueAt = await slaService.CalculateSlaDueAtAsync(defaultPriority, createdAt),
             };

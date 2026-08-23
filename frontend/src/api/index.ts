@@ -4,6 +4,8 @@ import {
   AuthClient,
   CannedResponsesClient,
   CategoriesClient,
+  CompaniesClient,
+  ContactsClient,
   CsmClient,
   CustomFieldDefinitionsClient,
   DashboardClient,
@@ -43,3 +45,5 @@ export const meClient = new MeClient(baseURL, httpClient)
 export const customFieldDefinitionsClient = new CustomFieldDefinitionsClient(baseURL, httpClient)
 export const ticketCustomFieldsClient = new TicketCustomFieldsClient(baseURL, httpClient)
 export const ticketAttachmentsClient = new TicketAttachmentsClient(baseURL, httpClient)
+export const companiesClient = new CompaniesClient(baseURL, httpClient)
+export const contactsClient = new ContactsClient(baseURL, httpClient)

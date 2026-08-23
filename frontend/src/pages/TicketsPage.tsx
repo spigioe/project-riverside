@@ -18,10 +18,12 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import {
   categoriesClient,
+  companiesClient,
   meClient,
   ticketClient,
   usersClient,
   CategoryDto,
+  CompanyDto,
   TicketListItemDto,
   TicketListView,
   TicketPriority,
@@ -521,6 +523,7 @@ export function TicketsPage() {
   const priority = (searchParams.get('priority') as TicketPriority | null) ?? undefined
   const search = searchParams.get('search') ?? ''
   const page = Number(searchParams.get('page') ?? '1')
+  const companyId = searchParams.get('companyId') ? Number(searchParams.get('companyId')) : undefined
 
   const [searchInput, setSearchInput] = useState(search)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -594,7 +597,7 @@ export function TicketsPage() {
   const effectiveDateFrom = isDetailed ? dateFromFilter() : undefined
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange],
+    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange, companyId],
     queryFn: () =>
       ticketClient.getTickets(
         effectiveStatus,
@@ -607,6 +610,7 @@ export function TicketsPage() {
         PAGE_SIZE,
         effectiveAssignedTo,
         effectiveSource,
+        companyId,
       ),
   })
 
@@ -626,6 +630,7 @@ export function TicketsPage() {
 
   const usersQuery = useQuery({ queryKey: ['users'], queryFn: () => usersClient.getUsers() })
   const categoriesQuery = useQuery({ queryKey: ['categories-tree'], queryFn: () => categoriesClient.getTree() })
+  const companiesQuery = useQuery({ queryKey: ['companies-all'], queryFn: () => companiesClient.getAllCompanies() })
   const flatCategories = flattenCategories(categoriesQuery.data ?? [])
 
   const statusMutation = useMutation({
@@ -667,7 +672,7 @@ export function TicketsPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Jegyek</h1>
+          <h1 className={styles.title}>Ticketek</h1>
           <div className={styles.subtitle}>{totalCount} jegy összesen</div>
         </div>
       </div>
@@ -693,6 +698,16 @@ export function TicketsPage() {
               <option value="">Minden prioritás</option>
               {Object.values(TicketPriority).map((p) => (
                 <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
+              ))}
+            </select>
+            <select
+              className={styles.select}
+              value={companyId ?? ''}
+              onChange={(e) => updateParams({ companyId: e.target.value || null, page: null })}
+            >
+              <option value="">Összes cég</option>
+              {(companiesQuery.data ?? []).map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </>

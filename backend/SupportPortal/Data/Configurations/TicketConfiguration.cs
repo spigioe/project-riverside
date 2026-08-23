@@ -28,6 +28,11 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
             .HasForeignKey(t => t.CsmId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        builder.HasOne(t => t.Contact)
+            .WithMany(c => c.Tickets)
+            .HasForeignKey(t => t.ContactId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.Property(t => t.Status).HasConversion<string>();
         builder.Property(t => t.Priority).HasConversion<string>();
         builder.Property(t => t.Source).HasConversion<string>();

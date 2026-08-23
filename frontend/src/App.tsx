@@ -10,6 +10,8 @@ import { SettingsEmailPage } from './pages/settings/SettingsEmailPage'
 import { SettingsNotificationsPage } from './pages/settings/SettingsNotificationsPage'
 import { SettingsTicketsPage } from './pages/settings/SettingsTicketsPage'
 import { SettingsCsmPage } from './pages/settings/SettingsCsmPage'
+import { SettingsContactsPage } from './pages/settings/SettingsContactsPage'
+import { SettingsCompaniesPage } from './pages/settings/SettingsCompaniesPage'
 import { SettingsIntegrationPage } from './pages/settings/SettingsIntegrationPage'
 import { SettingsSystemPage } from './pages/settings/SettingsSystemPage'
 import { AppLayout } from './components/Layout/AppLayout'
@@ -37,6 +39,8 @@ function App() {
                 <Route path="/settings/notifications" element={<SettingsNotificationsPage />} />
                 <Route path="/settings/tickets" element={<SettingsTicketsPage />} />
                 <Route path="/settings/csm" element={<SettingsCsmPage />} />
+                <Route path="/settings/contacts" element={<SettingsContactsPage />} />
+                <Route path="/settings/companies" element={<SettingsCompaniesPage />} />
                 <Route path="/settings/integration" element={<SettingsIntegrationPage />} />
                 <Route element={<RequireRole roles={['MasterAdmin']} />}>
                   <Route path="/settings/system" element={<SettingsSystemPage />} />

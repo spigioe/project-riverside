@@ -19,6 +19,7 @@ public class TicketService(
     IOptions<MinioSettings> minioOptions,
     INotificationService notificationService,
     ICsmService csmService,
+    IContactService contactService,
     IFileStorageService fileStorageService,
     IAuditLogService auditLogService,
     ISlaService slaService,
@@ -60,6 +61,12 @@ public class TicketService(
 
         if (query.Source.HasValue)
             ticketsQuery = ticketsQuery.Where(t => t.Source == query.Source.Value);
+
+        if (query.ContactId.HasValue)
+            ticketsQuery = ticketsQuery.Where(t => t.ContactId == query.ContactId.Value);
+
+        if (query.CompanyId.HasValue)
+            ticketsQuery = ticketsQuery.Where(t => t.Contact != null && t.Contact.CompanyId == query.CompanyId.Value);
 
         var totalCount = await ticketsQuery.CountAsync();
 
@@ -112,13 +119,18 @@ public class TicketService(
                 t.IsCsmFlagged, t.CsmId, t.Csm != null ? t.Csm.Name : null,
                 t.IsMerged, t.MergedIntoTicketId,
                 t.SlaDueAt, t.SlaBreach,
-                t.CreatedAt, t.UpdatedAt))
+                t.CreatedAt, t.UpdatedAt,
+                t.ContactId,
+                t.Contact != null ? t.Contact.Name : null,
+                t.Contact != null ? t.Contact.CompanyId : null,
+                t.Contact != null && t.Contact.Company != null ? t.Contact.Company.Name : null))
             .FirstOrDefaultAsync();
     }
 
     public async Task<TicketDetailDto> CreateTicketAsync(CreateTicketRequest request, int currentUserId, TicketSource source = TicketSource.Manual)
     {
         var createdAt = DateTime.UtcNow;
+        var contact = await contactService.UpsertAsync(request.RequesterEmail, request.RequesterName);
         var ticket = new Ticket
         {
             Subject = request.Subject,
@@ -132,6 +144,7 @@ public class TicketService(
             RequesterName = request.RequesterName,
             Source = source,
             CsmId = await csmService.FindCsmIdForEmailAsync(request.RequesterEmail),
+            ContactId = contact.Id,
             CreatedAt = createdAt,
             SlaDueAt = await slaService.CalculateSlaDueAtAsync(request.Priority, createdAt),
         };
@@ -544,6 +557,24 @@ public class TicketService(
             .Select(a => new TicketActivityDto(
                 a.Id, a.UserId, a.User != null ? a.User.FullName : null, a.Action, a.OldValue, a.NewValue, a.CreatedAt))
             .ToListAsync();
+    }
+
+    public async Task<bool?> AssignContactAsync(int id, int? contactId, int currentUserId)
+    {
+        var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
+        if (ticket is null) return null;
+
+        if (contactId.HasValue && !await db.Contacts.AnyAsync(c => c.Id == contactId.Value))
+            return false;
+
+        ticket.ContactId = contactId;
+        ticket.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        await auditLogService.LogAsync(currentUserId, "ticket", id, "contact_assigned",
+            ticket.ContactId?.ToString(), contactId?.ToString());
+
+        return true;
     }
 
     private static string ExtractCompanyFromEmail(string email)

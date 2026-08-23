@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SupportPortal.Api.Extensions;
 using SupportPortal.Application.DTOs.Common;
+using SupportPortal.Application.DTOs.Contacts;
 using SupportPortal.Application.DTOs.Tickets;
 using SupportPortal.Application.Interfaces;
 using SupportPortal.Domain.Enums;
@@ -281,6 +282,21 @@ public class TicketController(
             return Problem(statusCode: StatusCodes.Status404NotFound, title: "A ClickUp link nem található.");
 
         return Ok(link);
+    }
+
+    [HttpPatch("{id:int}/contact")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AssignContact(int id, [FromBody] AssignTicketContactRequest request)
+    {
+        var result = await ticketService.AssignContactAsync(id, request.ContactId, User.GetUserId());
+        if (result is null)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
+        if (result is false)
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: "A megadott kontakt nem található.");
+
+        return NoContent();
     }
 
     private Task TriggerOnDemandClickUpSyncAsync(int ticketId)

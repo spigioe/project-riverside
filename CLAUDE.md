@@ -95,3 +95,77 @@ cd frontend && npm run dev               # port 5173
 - Képbeszúrás inline, karakterszámláló, localStorage piszkozat, fullscreen, késleltetett küldés
 - Dashboard TrendChart/RecentActivity (Developer API adatforrás kell)
 - Email auto-routing, ünnepnapok kezelése, ClickUp webhook
+
+## Következő feladat (22. lépés)
+Kontaktok és cégek — automatikus mentés, CRUD, ticket panel.
+
+### Adatmodell (migráció)
+companies: id, name, domain (nullable), created_at
+contacts: id, email UNIQUE, name, company_id FK nullable, created_at, updated_at
+
+### Backend
+
+Automatikus kontakt létrehozás:
+- TicketEmailProcessor.ProcessOneAsync: ha új ticket jön ismeretlen feladótól →
+  upsert a contacts táblába (email alapján, ha már létezik nem írja felül)
+- Ticket létrehozásnál (POST /api/portal/tickets) is: ha requester_email még nem szerepel → upsert
+- Ha a kontakt email domainje egyezik egy company.domain-nel → automatikusan hozzárendeli
+
+Contacts API (/api/portal/contacts):
+- GET /contacts (lapozás, keresés név/email/cég szerint)
+- GET /contacts/{id} (kontakt + cég + utolsó 10 ticket)
+- POST /contacts
+- PUT /contacts/{id}
+- DELETE /contacts/{id} (soft: ha van ticketje, csak deaktiválás)
+
+Companies API (/api/portal/companies):
+- GET /companies (lapozás, keresés)
+- GET /companies/{id} (cég + kontaktok listája + utolsó 10 ticket)
+- POST /companies
+- PUT /companies/{id}
+- DELETE /companies/{id}
+
+Ticket detail kiegészítés:
+- GET /tickets/{id} válaszba: contactId, contactName, companyId, companyName
+- PATCH /tickets/{id}/contact — manuális kontakt hozzárendelés ({ contactId })
+
+[ProducesResponseType] + FluentValidation + magyar hibák mindenhol.
+NSwag újragenerálás.
+
+### Frontend — Beállítások
+
+/settings/contacts oldal:
+- Kontaktok táblázat (név, email, cég, létrehozva, műveletek)
+- Szűrés: keresőmező, cég dropdown
+- Hozzáadás/Szerkesztés modal (email, név, cég dropdown)
+- Törlés gomb
+
+/settings/companies oldal:
+- Cégek táblázat (név, domain, kontaktok száma, műveletek)
+- Hozzáadás/Szerkesztés modal (név, domain)
+- Törlés gomb
+
+Beállítások submenu kiegészítés:
+- "Kontaktok" és "Cégek" menüpont (Admin+MasterAdmin)
+
+### Frontend — Ticket lista szűrés
+
+A meglévő filter bar-ba (táblázat és részletes nézet):
+- Cég dropdown szűrő (GET /companies alapján)
+- Kontakt keresés (email/név, GET /contacts?search=)
+
+### Frontend — Ticket detail kontakt panel
+
+Jobb oldalsávban új szekció "KONTAKT ADATOK" (a TICKET ADATOK alatt, összecsukható):
+- Kontakt neve (kattintható → /settings/contacts/{id})
+- Email cím
+- Cég neve (ha van)
+- "Korábbi jegyek" lista — az adott kontakt összes ticketje (GET /contacts/{id} alapján)
+  Max 5 megjelenítve, "Összes megtekintése" link
+- Ha nincs kontakt rendelve: "Ismeretlen kontakt" szöveg + "Hozzárendelés" gomb (PATCH /tickets/{id}/contact)
+
+### Konvenciók
+- NE futtass docker compose build
+- NSwag újragenerálás szükséges
+- Commit: "feat: contacts and companies - auto-save, CRUD, ticket panel"
+- CLAUDE.md frissítése

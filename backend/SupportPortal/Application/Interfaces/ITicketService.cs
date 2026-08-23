@@ -29,4 +29,5 @@ public interface ITicketService
     Task<IReadOnlyList<TicketActivityDto>?> GetActivityAsync(int ticketId);
     Task<IReadOnlyList<TicketSearchResultDto>> SearchAsync(string? q, int limit);
     Task<IReadOnlyList<TicketRelatedDto>?> GetRelatedAsync(int id);
+    Task<bool?> AssignContactAsync(int id, int? contactId, int currentUserId);
 }

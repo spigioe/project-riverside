@@ -25,5 +25,9 @@ public record TicketDetailDto(
     DateTime? SlaDueAt,
     bool SlaBreach,
     DateTime CreatedAt,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    int? ContactId,
+    string? ContactName,
+    int? CompanyId,
+    string? CompanyName
 );

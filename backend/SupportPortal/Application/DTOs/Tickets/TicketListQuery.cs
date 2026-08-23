@@ -12,5 +12,7 @@ public record TicketListQuery(
     int Page = 1,
     int PageSize = 20,
     int? AssignedToId = null,
-    TicketSource? Source = null
+    TicketSource? Source = null,
+    int? CompanyId = null,
+    int? ContactId = null
 );

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  contactsClient,
   csmClient,
   meClient,
   ticketAiClient,
@@ -10,6 +11,7 @@ import {
   ticketCustomFieldsClient,
   usersClient,
   AiClassifyResponse,
+  AssignTicketContactRequest,
   AssignTicketRequest,
   ClickUpLinkDto,
   CreateClickUpLinkRequest,
@@ -627,6 +629,8 @@ export function TicketDetailPage() {
         <ClickUpSection ticketId={ticketId} />
 
         <RelatedTicketsSection ticketId={ticketId} />
+
+        <ContactPanel ticket={ticket} ticketId={ticketId} />
       </div>
 
       {mergeModalOpen && <MergeModal ticketId={ticketId} onClose={() => setMergeModalOpen(false)} />}
@@ -941,5 +945,166 @@ function AddClickUpLinkModal({ ticketId, onClose }: { ticketId: number; onClose:
         </div>
       </form>
     </Modal>
+  )
+}
+
+function ContactPanel({ ticket, ticketId }: { ticket: TicketDetailDto; ticketId: number }) {
+  const queryClient = useQueryClient()
+  const [collapsed, setCollapsed] = useState(false)
+  const [assignMode, setAssignMode] = useState(false)
+  const [searchEmail, setSearchEmail] = useState('')
+
+  const contactDetailQuery = useQuery({
+    queryKey: ['contact-detail', ticket.contactId],
+    queryFn: () => contactsClient.getContact(ticket.contactId!),
+    enabled: !!ticket.contactId,
+  })
+
+  const contactSearchQuery = useQuery({
+    queryKey: ['contact-search', searchEmail],
+    queryFn: () => contactsClient.getContacts(searchEmail, undefined, undefined, undefined),
+    enabled: assignMode && searchEmail.length >= 2,
+  })
+
+  const assignMutation = useMutation({
+    mutationFn: (contactId: number | null) =>
+      ticketClient.assignContact(ticketId, new AssignTicketContactRequest({ contactId: contactId ?? undefined })),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+      setAssignMode(false)
+      setSearchEmail('')
+    },
+  })
+
+  const contact = contactDetailQuery.data
+
+  return (
+    <div className={styles.card}>
+      <div
+        className={styles.panelHeader}
+        style={{ cursor: 'pointer', userSelect: 'none' }}
+        onClick={() => setCollapsed((c) => !c)}
+      >
+        <span>Kontakt adatok</span>
+        <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-muted)' }}>{collapsed ? '▸' : '▾'}</span>
+      </div>
+      {!collapsed && (
+        <div className={styles.panelBody}>
+          {ticket.contactId ? (
+            <>
+              {contactDetailQuery.isLoading && <div className={styles.emptyState}>Betöltés…</div>}
+              {contact && (
+                <>
+                  <div className={styles.field}>
+                    <label>Név</label>
+                    <div>
+                      <Link to={`/settings/contacts`} style={{ color: 'var(--primary)', fontWeight: 600 }}>
+                        {contact.name}
+                      </Link>
+                      {!contact.isActive && (
+                        <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-muted)' }}>(inaktív)</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className={styles.field}>
+                    <label>Email</label>
+                    <div style={{ fontSize: 12.5, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{contact.email}</div>
+                  </div>
+                  {contact.companyName && (
+                    <div className={styles.field}>
+                      <label>Cég</label>
+                      <div style={{ fontSize: 12.5 }}>{contact.companyName}</div>
+                    </div>
+                  )}
+                  {(contact.recentTickets ?? []).length > 0 && (
+                    <div className={styles.field}>
+                      <label>Korábbi ticketek</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>
+                        {contact.recentTickets!.map((t) => (
+                          <Link
+                            key={t.id}
+                            to={`/tickets/${t.id}`}
+                            style={{ fontSize: 12, color: 'var(--primary)' }}
+                          >
+                            #{t.id} – {t.subject}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className={shared.secondaryButton}
+                    style={{ marginTop: 8, fontSize: 12 }}
+                    onClick={() => assignMutation.mutate(null)}
+                    disabled={assignMutation.isPending}
+                  >
+                    Kontakt eltávolítása
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {!assignMode ? (
+                <>
+                  <div className={styles.emptyState} style={{ padding: '8px 0' }}>Ismeretlen kontakt</div>
+                  <button
+                    type="button"
+                    className={shared.primaryButton}
+                    style={{ marginTop: 6, fontSize: 12 }}
+                    onClick={() => setAssignMode(true)}
+                  >
+                    Hozzárendelés
+                  </button>
+                </>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Email keresés…"
+                    value={searchEmail}
+                    onChange={(e) => setSearchEmail(e.target.value)}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', padding: '6px 10px',
+                      border: '1px solid var(--border-light)', borderRadius: 'var(--radius)',
+                      fontSize: 12.5, background: 'var(--bg-alt)', color: 'var(--text)', marginBottom: 6,
+                    }}
+                    autoFocus
+                  />
+                  {contactSearchQuery.data?.items?.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      style={{
+                        display: 'block', width: '100%', textAlign: 'left',
+                        padding: '5px 8px', fontSize: 12.5, cursor: 'pointer',
+                        background: 'none', border: 'none', color: 'var(--text)',
+                        borderBottom: '1px solid var(--border-light)',
+                      }}
+                      onClick={() => assignMutation.mutate(c.id!)}
+                    >
+                      <strong>{c.name}</strong>
+                      <span style={{ marginLeft: 6, color: 'var(--text-muted)', fontSize: 11.5 }}>{c.email}</span>
+                    </button>
+                  ))}
+                  {searchEmail.length >= 2 && (contactSearchQuery.data?.items ?? []).length === 0 && !contactSearchQuery.isLoading && (
+                    <div className={styles.emptyState} style={{ padding: '6px 0', fontSize: 12 }}>Nincs találat.</div>
+                  )}
+                  <button
+                    type="button"
+                    className={shared.secondaryButton}
+                    style={{ marginTop: 8, fontSize: 12 }}
+                    onClick={() => { setAssignMode(false); setSearchEmail('') }}
+                  >
+                    Mégse
+                  </button>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
