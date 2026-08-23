@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   customStatusesClient,
@@ -52,6 +52,52 @@ export function SettingsCustomStatusesPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['custom-statuses'] }),
   })
 
+  const [orderedStatuses, setOrderedStatuses] = useState<CustomStatusDto[]>([])
+  const dragIndex = useRef<number | null>(null)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (statusesQuery.data) {
+      setOrderedStatuses([...statusesQuery.data].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)))
+    }
+  }, [statusesQuery.data])
+
+  const reorderMutation = useMutation({
+    mutationFn: async (items: CustomStatusDto[]) => {
+      await Promise.all(items.map((s) =>
+        customStatusesClient.update(s.id!, new UpdateCustomStatusRequest({
+          key: s.key!, name: s.name!, colorVariant: s.colorVariant!,
+          iconKey: s.iconKey!, displayOrder: s.displayOrder!, isActive: s.isActive!,
+        }))
+      ))
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['custom-statuses'] }),
+  })
+
+  function handleDragStart(idx: number) {
+    dragIndex.current = idx
+  }
+
+  function handleDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault()
+    setDragOverIdx(idx)
+  }
+
+  function handleDrop(dropIdx: number) {
+    setDragOverIdx(null)
+    const from = dragIndex.current
+    dragIndex.current = null
+    if (from === null || from === dropIdx) return
+    const next = [...orderedStatuses]
+    const [moved] = next.splice(from, 1)
+    next.splice(dropIdx, 0, moved)
+    const updated = next.map((s, i) => CustomStatusDto.fromJS({ ...s, displayOrder: i }))
+    setOrderedStatuses(updated)
+    const origMap = new Map((statusesQuery.data ?? []).map((s) => [s.id, s.displayOrder]))
+    const changed = updated.filter((s) => origMap.get(s.id) !== s.displayOrder)
+    if (changed.length) reorderMutation.mutate(changed)
+  }
+
   const statuses = statusesQuery.data ?? []
 
   return (
@@ -77,11 +123,11 @@ export function SettingsCustomStatusesPage() {
           <table className={shared.table}>
             <thead>
               <tr>
+                <th style={{ width: 32 }}></th>
                 <th>Ikon</th>
                 <th>Megnevezés</th>
                 <th>Kulcs</th>
                 <th>Szín</th>
-                <th>Sorrend</th>
                 <th>Státusz</th>
                 <th></th>
               </tr>
@@ -90,19 +136,28 @@ export function SettingsCustomStatusesPage() {
               {statusesQuery.isLoading && (
                 <tr><td colSpan={7} className={shared.emptyState}>Betöltés…</td></tr>
               )}
-              {!statusesQuery.isLoading && statuses.length === 0 && (
+              {!statusesQuery.isLoading && orderedStatuses.length === 0 && (
                 <tr><td colSpan={7} className={shared.emptyState}>Még nincs egyéni státusz.</td></tr>
               )}
-              {statuses.map((s) => {
+              {orderedStatuses.map((s, idx) => {
                 const iconOpt = CUSTOM_STATUS_ICON_OPTIONS.find((o) => o.value === s.iconKey)
                 const colorOpt = CUSTOM_STATUS_COLOR_OPTIONS.find((o) => o.value === s.colorVariant)
                 return (
-                  <tr key={s.id}>
+                  <tr
+                    key={s.id}
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDragLeave={() => setDragOverIdx(null)}
+                    onDrop={() => handleDrop(idx)}
+                    onDragEnd={() => { setDragOverIdx(null); dragIndex.current = null }}
+                    style={{ borderTop: dragOverIdx === idx && dragIndex.current !== idx ? '2px solid var(--primary)' : undefined }}
+                  >
+                    <td style={{ textAlign: 'center', cursor: 'grab', color: 'var(--text-muted)', userSelect: 'none', fontSize: 14 }}>⠿</td>
                     <td style={{ fontSize: 18, textAlign: 'center' }}>{iconOpt?.label.split(' ')[0]}</td>
                     <td style={{ fontWeight: 600 }}>{s.name}</td>
                     <td className={shared.mono}>{s.key}</td>
                     <td className={shared.muted}>{colorOpt?.label ?? s.colorVariant}</td>
-                    <td className={shared.muted}>{s.displayOrder}</td>
                     <td>
                       {s.isActive
                         ? <span style={{ color: 'var(--green-text)', fontWeight: 600 }}>Aktív</span>
@@ -140,7 +195,7 @@ export function SettingsCustomStatusesPage() {
             setCreateOpen(false)
             queryClient.invalidateQueries({ queryKey: ['custom-statuses'] })
           }}
-          nextOrder={statuses.length > 0 ? Math.max(...statuses.map((s) => s.displayOrder ?? 0)) + 1 : 0}
+          nextOrder={orderedStatuses.length}
         />
       )}
       {editStatus && (
@@ -169,7 +224,7 @@ function CustomStatusModal({
   const [name, setName] = useState(status?.name ?? '')
   const [colorVariant, setColorVariant] = useState(status?.colorVariant ?? 'gray')
   const [iconKey, setIconKey] = useState(status?.iconKey ?? 'circle-dot')
-  const [displayOrder, setDisplayOrder] = useState(status?.displayOrder ?? nextOrder)
+  const displayOrder = status?.displayOrder ?? nextOrder
   const [isActive, setIsActive] = useState(status?.isActive ?? true)
   const [error, setError] = useState<string | null>(null)
 
@@ -254,31 +309,19 @@ function CustomStatusModal({
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {status && (
           <div className={shared.formGroup}>
-            <label className={shared.formLabel}>Sorrend</label>
-            <input
+            <label className={shared.formLabel}>Aktív</label>
+            <select
               className={shared.formInput}
-              type="number"
-              value={displayOrder}
-              onChange={(e) => setDisplayOrder(Number(e.target.value))}
-              min={0}
-            />
+              value={isActive ? 'true' : 'false'}
+              onChange={(e) => setIsActive(e.target.value === 'true')}
+            >
+              <option value="true">Igen</option>
+              <option value="false">Nem</option>
+            </select>
           </div>
-          {status && (
-            <div className={shared.formGroup}>
-              <label className={shared.formLabel}>Aktív</label>
-              <select
-                className={shared.formInput}
-                value={isActive ? 'true' : 'false'}
-                onChange={(e) => setIsActive(e.target.value === 'true')}
-              >
-                <option value="true">Igen</option>
-                <option value="false">Nem</option>
-              </select>
-            </div>
-          )}
-        </div>
+        )}
 
         <div className={shared.formActions}>
           <button type="button" className={shared.cancelButton} onClick={onClose}>Mégse</button>

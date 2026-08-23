@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cannedResponsesClient,
@@ -393,7 +393,52 @@ function CustomFieldsSection() {
   const [modalState, setModalState] = useState<{ mode: 'create' | 'edit'; field?: CustomFieldDefinitionDto } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const definitions = definitionsQuery.data ?? []
+  const [orderedDefs, setOrderedDefs] = useState<CustomFieldDefinitionDto[]>([])
+  const dragIndex = useRef<number | null>(null)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (definitionsQuery.data) {
+      setOrderedDefs([...definitionsQuery.data].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)))
+    }
+  }, [definitionsQuery.data])
+
+  const reorderMutation = useMutation({
+    mutationFn: async (items: CustomFieldDefinitionDto[]) => {
+      await Promise.all(items.map((f) =>
+        customFieldDefinitionsClient.updateDefinition(f.id!, new UpdateCustomFieldDefinitionRequest({
+          name: f.name!,
+          fieldType: f.fieldType!,
+          isRequired: f.isRequired ?? false,
+          options: f.fieldType === CustomFieldType.Select ? (f.options ?? undefined) : undefined,
+          displayOrder: f.displayOrder!,
+        }))
+      ))
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['custom-field-definitions'] }),
+  })
+
+  function handleDragStart(idx: number) { dragIndex.current = idx }
+
+  function handleDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault()
+    setDragOverIdx(idx)
+  }
+
+  function handleDrop(dropIdx: number) {
+    setDragOverIdx(null)
+    const from = dragIndex.current
+    dragIndex.current = null
+    if (from === null || from === dropIdx) return
+    const next = [...orderedDefs]
+    const [moved] = next.splice(from, 1)
+    next.splice(dropIdx, 0, moved)
+    const updated = next.map((f, i) => CustomFieldDefinitionDto.fromJS({ ...f, displayOrder: i }))
+    setOrderedDefs(updated)
+    const origMap = new Map((definitionsQuery.data ?? []).map((f) => [f.id, f.displayOrder]))
+    const changed = updated.filter((f) => origMap.get(f.id) !== f.displayOrder)
+    if (changed.length) reorderMutation.mutate(changed)
+  }
 
   const deactivateMutation = useMutation({
     mutationFn: (id: number) => customFieldDefinitionsClient.deactivateDefinition(id),
@@ -414,10 +459,10 @@ function CustomFieldsSection() {
         <table className={shared.table}>
           <thead>
             <tr>
+              <th style={{ width: 32 }}></th>
               <th>Név</th>
               <th>Típus</th>
               <th>Kötelező</th>
-              <th>Sorrend</th>
               <th></th>
             </tr>
           </thead>
@@ -425,17 +470,26 @@ function CustomFieldsSection() {
             {definitionsQuery.isLoading && (
               <tr><td colSpan={5} className={shared.emptyState}>Betöltés…</td></tr>
             )}
-            {!definitionsQuery.isLoading && definitions.length === 0 && (
+            {!definitionsQuery.isLoading && orderedDefs.length === 0 && (
               <tr><td colSpan={5} className={shared.emptyState}>Nincs egyéni mező definiálva.</td></tr>
             )}
-            {definitions.map((f) => (
-              <tr key={f.id}>
+            {orderedDefs.map((f, idx) => (
+              <tr
+                key={f.id}
+                draggable
+                onDragStart={() => handleDragStart(idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDragLeave={() => setDragOverIdx(null)}
+                onDrop={() => handleDrop(idx)}
+                onDragEnd={() => { setDragOverIdx(null); dragIndex.current = null }}
+                style={{ borderTop: dragOverIdx === idx && dragIndex.current !== idx ? '2px solid var(--primary)' : undefined }}
+              >
+                <td style={{ textAlign: 'center', cursor: 'grab', color: 'var(--text-muted)', userSelect: 'none', fontSize: 14 }}>⠿</td>
                 <td>{f.name}</td>
                 <td>
                   <span className={`${badgeStyles.badge} ${badgeStyles.gray}`}>{CUSTOM_FIELD_TYPE_LABELS[f.fieldType!]}</span>
                 </td>
                 <td className={shared.muted}>{f.isRequired ? 'Igen' : 'Nem'}</td>
-                <td className={shared.mono}>{f.displayOrder}</td>
                 <td>
                   <div className={shared.actionsCell}>
                     <button type="button" className={shared.linkButton} onClick={() => setModalState({ mode: 'edit', field: f })}>
@@ -464,6 +518,7 @@ function CustomFieldsSection() {
         <CustomFieldModal
           mode={modalState.mode}
           field={modalState.field}
+          nextOrder={orderedDefs.length}
           onClose={() => setModalState(null)}
         />
       )}
@@ -472,14 +527,14 @@ function CustomFieldsSection() {
 }
 
 function CustomFieldModal({
-  mode, field, onClose,
-}: { mode: 'create' | 'edit'; field?: CustomFieldDefinitionDto; onClose: () => void }) {
+  mode, field, nextOrder = 0, onClose,
+}: { mode: 'create' | 'edit'; field?: CustomFieldDefinitionDto; nextOrder?: number; onClose: () => void }) {
   const queryClient = useQueryClient()
   const [name, setName] = useState(field?.name ?? '')
   const [fieldType, setFieldType] = useState<CustomFieldType>(field?.fieldType ?? CustomFieldType.Text)
   const [optionsInput, setOptionsInput] = useState((field?.options ?? []).join(', '))
   const [isRequired, setIsRequired] = useState(field?.isRequired ?? false)
-  const [displayOrder, setDisplayOrder] = useState(field?.displayOrder ?? 0)
+  const displayOrder = field?.displayOrder ?? nextOrder
 
   const options = optionsInput.split(',').map((o) => o.trim()).filter(Boolean)
 
@@ -544,16 +599,6 @@ function CustomFieldModal({
             />
           </div>
         )}
-        <div className={shared.field}>
-          <label htmlFor="cf-order">Sorrend</label>
-          <input
-            id="cf-order"
-            type="number"
-            min={0}
-            value={displayOrder}
-            onChange={(e) => setDisplayOrder(Number(e.target.value))}
-          />
-        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <input
             id="cf-required"
