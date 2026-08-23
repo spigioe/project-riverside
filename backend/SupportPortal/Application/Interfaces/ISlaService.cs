@@ -1,4 +1,5 @@
 using SupportPortal.Application.DTOs.Sla;
+using SupportPortal.Domain.Enums;
 
 namespace SupportPortal.Application.Interfaces;
 
@@ -15,4 +16,5 @@ public interface ISlaService
     Task<bool> DeleteDomainAsync(int id);
     Task<IReadOnlyList<BusinessHoursDayDto>> GetBusinessHoursAsync();
     Task<IReadOnlyList<BusinessHoursDayDto>> UpdateBusinessHoursAsync(UpdateBusinessHoursRequest request);
+    Task<DateTime?> CalculateSlaDueAtAsync(TicketPriority priority, DateTime createdAt);
 }

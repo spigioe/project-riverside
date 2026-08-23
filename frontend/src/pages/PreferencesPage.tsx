@@ -81,6 +81,7 @@ export function PreferencesPage() {
                 >
                   <option value={TicketListView.Table}>Táblázat</option>
                   <option value={TicketListView.Card}>Kártyák</option>
+                  <option value={TicketListView.Detailed}>Részletes</option>
                 </select>
               </div>
 

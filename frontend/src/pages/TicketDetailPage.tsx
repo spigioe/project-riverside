@@ -43,6 +43,34 @@ import { MergeModal } from './TicketDetail/MergeModal'
 import { RelatedTicketsSection } from './TicketDetail/RelatedTicketsSection'
 import styles from './TicketDetailPage.module.css'
 
+function formatSlaDuration(totalMinutes: number): string {
+  const abs = Math.abs(totalMinutes)
+  const days = Math.floor(abs / 1440)
+  const hours = Math.floor((abs % 1440) / 60)
+  const mins = abs % 60
+  if (days > 0) return hours > 0 ? `${days} nap ${hours} óra` : `${days} nap`
+  if (hours > 0) return mins > 0 ? `${hours} óra és ${mins} perc` : `${hours} óra`
+  return `${mins}p`
+}
+
+function useSlaCountdown(slaDueAt: Date | undefined): { text: string; variant: 'ok' | 'warning' | 'breach' } | null {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+  if (!slaDueAt) return null
+  const diffMs = slaDueAt.getTime() - now
+  const diffMins = Math.floor(diffMs / 60_000)
+  if (diffMins < 0) {
+    return { text: `SLA lejárt ennyi ideje: ${formatSlaDuration(diffMins)}`, variant: 'breach' }
+  }
+  if (diffMins < 60) {
+    return { text: `SLA: ${formatSlaDuration(diffMins)} van hátra`, variant: 'warning' }
+  }
+  return { text: `SLA: ${formatSlaDuration(diffMins)} van hátra`, variant: 'ok' }
+}
+
 function extractClickUpTaskId(url: string): string {
   const match = url.match(/\/t\/([a-zA-Z0-9]+)/)
   if (match) return match[1]
@@ -278,6 +306,8 @@ export function TicketDetailPage() {
     },
   })
 
+  const slaCountdown = useSlaCountdown(ticketQuery.data?.slaDueAt)
+
   if (ticketQuery.isLoading) {
     return <div className={styles.page}><div className={styles.left}>Betöltés…</div></div>
   }
@@ -428,6 +458,15 @@ export function TicketDetailPage() {
           <span className={styles.metaMono}>
             {formatTicketId(ticket.id!)} · {formatDateTime(ticket.createdAt)} · {ticket.requesterEmail}
           </span>
+          {slaCountdown && (
+            <span
+              className={`${styles.slaCountdown} ${styles[`slaCountdown_${slaCountdown.variant}`]}`}
+              style={{ marginLeft: 'auto' }}
+              title={ticket.slaDueAt ? `SLA határidő: ${ticket.slaDueAt.toLocaleString('hu-HU')}` : undefined}
+            >
+              {slaCountdown.text}
+            </span>
+          )}
         </div>
 
         {detailView === TicketDetailView.Classic ? (
@@ -554,11 +593,11 @@ export function TicketDetailPage() {
         </div>
 
         <div className={styles.card}>
-          <div className={styles.panelHeader}>Egyéni mezők</div>
+          <div className={styles.panelHeader}>Tulajdonságok</div>
           <div className={styles.panelBody}>
             {customFieldsQuery.isLoading && <div className={styles.emptyState}>Betöltés…</div>}
             {!customFieldsQuery.isLoading && (customFieldsQuery.data ?? []).length === 0 && (
-              <div className={styles.emptyState}>Nincsenek egyéni mezők definiálva.</div>
+              <div className={styles.emptyState}>Nincsenek tulajdonságok definiálva.</div>
             )}
             {(customFieldsQuery.data ?? []).map((field) => (
               <CustomFieldField

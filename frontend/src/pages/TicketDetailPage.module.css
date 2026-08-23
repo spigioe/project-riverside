@@ -141,6 +141,35 @@
   color: var(--text-muted);
 }
 
+.slaCountdown {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius);
+  border: 1.5px solid currentColor;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.slaCountdown_ok {
+  color: var(--green-text);
+  border-color: var(--green-border);
+  background: var(--green-bg);
+}
+
+.slaCountdown_warning {
+  color: var(--amber-text);
+  border-color: var(--amber-border);
+  background: var(--amber-bg);
+}
+
+.slaCountdown_breach {
+  color: var(--red-text);
+  border-color: var(--red-border);
+  background: var(--red-bg);
+}
+
 /* ── Conversation ─────────────────────────────────────── */
 
 .card {
@@ -206,6 +235,7 @@
   display: flex;
   flex-direction: column;
   max-width: 74%;
+  min-width: 0;
   margin-bottom: 16px;
 }
 
@@ -281,6 +311,11 @@
   line-height: 1.55;
   color: var(--text);
   white-space: pre-wrap;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .bubble :global(p) {
@@ -289,6 +324,11 @@
 
 .bubble :global(p:last-child) {
   margin-bottom: 0;
+}
+
+.bubble :global(img) {
+  max-width: 100%;
+  height: auto;
 }
 
 .outbound .bubble {

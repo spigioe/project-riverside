@@ -10,5 +10,7 @@ public record TicketListQuery(
     DateTime? DateFrom = null,
     DateTime? DateTo = null,
     int Page = 1,
-    int PageSize = 20
+    int PageSize = 20,
+    int? AssignedToId = null,
+    TicketSource? Source = null
 );

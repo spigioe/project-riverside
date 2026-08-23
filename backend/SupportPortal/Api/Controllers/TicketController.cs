@@ -81,6 +81,18 @@ public class TicketController(
         return NoContent();
     }
 
+    [HttpPatch("{id:int}/priority")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdatePriority(int id, [FromBody] UpdateTicketPriorityRequest request)
+    {
+        var success = await ticketService.UpdatePriorityAsync(id, request.Priority, User.GetUserId());
+        if (!success)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
+
+        return NoContent();
+    }
+
     [HttpPatch("{id:int}/assign")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

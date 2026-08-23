@@ -21,5 +21,6 @@ public record TicketListItemDto(
     string? LastMessageBody,
     DateTime? LastMessageAt,
     DateTime CreatedAt,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    TicketSource Source
 );

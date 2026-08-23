@@ -1,16 +1,416 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { meClient, ticketClient, TicketListView, TicketStatus, TicketPriority } from '../api'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  categoriesClient,
+  meClient,
+  ticketClient,
+  usersClient,
+  CategoryDto,
+  TicketListItemDto,
+  TicketListView,
+  TicketPriority,
+  TicketSource,
+  TicketStatus,
+  UpdateTicketPriorityRequest,
+  UpdateTicketStatusRequest,
+} from '../api'
 import { StatusBadge } from '../components/Badge/StatusBadge'
 import { PriorityBadge } from '../components/Badge/PriorityBadge'
 import { formatDateTime, formatTicketId } from '../lib/format'
 import styles from './TicketsPage.module.css'
+import dc from './DetailedCard.module.css'
 
 const PAGE_SIZE = 20
 
+// ── Helpers ──────────────────────────────────────────────
+
+function hashAvatarColor(str: string): string {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  const palette = ['#4A6CF7', '#6D3FC7', '#0891b2', '#059669', '#d97706', '#b91c1c', '#7c3aed', '#be185d']
+  return palette[Math.abs(hash) % palette.length]
+}
+
+function formatRelativeTime(date: Date | undefined): string {
+  if (!date) return ''
+  const diffMs = Date.now() - date.getTime()
+  const mins = Math.floor(diffMs / 60_000)
+  if (mins < 1) return 'most'
+  if (mins < 60) return `${mins} perce`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours} órája`
+  const days = Math.floor(hours / 24)
+  return `${days} napja`
+}
+
+function flattenCategories(cats: CategoryDto[], out: CategoryDto[] = []): CategoryDto[] {
+  for (const c of cats) {
+    out.push(c)
+    if (c.children?.length) flattenCategories(c.children, out)
+  }
+  return out
+}
+
+function slaClass(slaDueAt: Date | undefined, slaBreach: boolean | undefined): string | null {
+  if (!slaDueAt) return null
+  if (slaBreach || slaDueAt.getTime() < Date.now()) return dc.slaBreach
+  const minsLeft = (slaDueAt.getTime() - Date.now()) / 60_000
+  return minsLeft < 60 ? dc.slaWarning : dc.slaOk
+}
+
+function slaText(slaDueAt: Date | undefined, slaBreach: boolean | undefined): string | null {
+  if (!slaDueAt) return null
+  const diffMs = slaDueAt.getTime() - Date.now()
+  const diffMins = Math.floor(diffMs / 60_000)
+  if (slaBreach || diffMins < 0) {
+    const abs = Math.abs(diffMins)
+    const h = Math.floor(abs / 60), m = abs % 60
+    return h > 0 ? `SLA: ${h}ó ${m}p lejárt` : `SLA: ${m}p lejárt`
+  }
+  const h = Math.floor(diffMins / 60), m = diffMins % 60
+  return h > 0 ? `SLA: ${h}ó ${m}p` : `SLA: ${m}p`
+}
+
+// ── Sub-components ────────────────────────────────────────
+
+const SOURCE_LABELS: Record<TicketSource, string> = {
+  [TicketSource.Email]: '✉ Email',
+  [TicketSource.Portal]: '🖥 Portál',
+  [TicketSource.Manual]: '✏ Kézi',
+  [TicketSource.Api]: '⚙ API',
+}
+
+const PRIORITY_LABELS: Record<TicketPriority, string> = {
+  [TicketPriority.Low]: 'Alacsony',
+  [TicketPriority.Medium]: 'Közepes',
+  [TicketPriority.High]: 'Magas',
+  [TicketPriority.Urgent]: 'Sürgős',
+}
+
+const STATUS_LABELS: Record<TicketStatus, string> = {
+  [TicketStatus.New]: 'Új',
+  [TicketStatus.Open]: 'Nyitott',
+  [TicketStatus.Pending]: 'Függőben',
+  [TicketStatus.Resolved]: 'Megoldva',
+  [TicketStatus.Closed]: 'Lezárva',
+}
+
+interface DetailedCardProps {
+  ticket: TicketListItemDto
+  onStatusChange: (id: number, status: TicketStatus) => void
+  onPriorityChange: (id: number, priority: TicketPriority) => void
+}
+
+function DetailedCard({ ticket, onStatusChange, onPriorityChange }: DetailedCardProps) {
+  const name = ticket.requesterName ?? ticket.requesterEmail ?? ''
+  const initial = name.charAt(0).toUpperCase()
+  const bgColor = hashAvatarColor(ticket.requesterEmail ?? name)
+
+  const cls = slaClass(ticket.slaDueAt, ticket.slaBreach)
+  const txt = slaText(ticket.slaDueAt, ticket.slaBreach)
+
+  return (
+    <div className={dc.card}>
+      {/* Avatar */}
+      <div className={dc.avatar} style={{ background: bgColor }} title={ticket.requesterEmail}>
+        {ticket.source === TicketSource.Email
+          ? <span className={dc.avatarIcon}>✉</span>
+          : ticket.source === TicketSource.Portal
+          ? <span className={dc.avatarIcon}>🖥</span>
+          : <span>{initial}</span>
+        }
+      </div>
+
+      {/* Middle */}
+      <div className={dc.middle}>
+        <div className={dc.topRow}>
+          <Link to={`/tickets/${ticket.id}`} className={dc.subject}>
+            {ticket.subject}
+          </Link>
+          <span className={dc.ticketId}>{formatTicketId(ticket.id!)}</span>
+        </div>
+        <div className={dc.metaRow}>
+          <span>{ticket.requesterName}</span>
+          {ticket.requesterCompany && (
+            <>
+              <span className={dc.metaSep}>·</span>
+              <span>{ticket.requesterCompany}</span>
+            </>
+          )}
+          <span className={dc.metaSep}>·</span>
+          <span>{SOURCE_LABELS[ticket.source!]}</span>
+          {ticket.lastMessageAt && (
+            <>
+              <span className={dc.metaSep}>·</span>
+              <span>Utoljára: {formatRelativeTime(ticket.lastMessageAt)}</span>
+            </>
+          )}
+          {cls && txt && (
+            <>
+              <span className={dc.metaSep}>·</span>
+              <span className={`${dc.slaIndicator} ${cls}`}>{txt}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Right */}
+      <div className={dc.right}>
+        {/* Priority dropdown */}
+        <select
+          className={dc.inlineSelect}
+          value={ticket.priority}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => onPriorityChange(ticket.id!, e.target.value as TicketPriority)}
+        >
+          {Object.values(TicketPriority).map((p) => (
+            <option key={p} value={p}>
+              {PRIORITY_LABELS[p]}
+            </option>
+          ))}
+        </select>
+
+        {/* Agent */}
+        <div className={dc.agentName}>
+          {ticket.assignedToName ?? 'Nincs hozzárendelve'}
+        </div>
+
+        {/* Status dropdown */}
+        <select
+          className={dc.inlineSelect}
+          value={ticket.status}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => onStatusChange(ticket.id!, e.target.value as TicketStatus)}
+        >
+          {Object.values(TicketStatus).map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABELS[s]}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
+}
+
+interface FilterState {
+  assignedToId: string
+  statuses: TicketStatus[]
+  priorities: TicketPriority[]
+  source: TicketSource | ''
+  categoryId: string
+  dateRange: 'any' | 'today' | 'week' | 'month'
+}
+
+const EMPTY_FILTER: FilterState = {
+  assignedToId: '',
+  statuses: [],
+  priorities: [],
+  source: '',
+  categoryId: '',
+  dateRange: 'any',
+}
+
+function hasActiveFilters(f: FilterState): boolean {
+  return !!(f.assignedToId || f.statuses.length || f.priorities.length || f.source || f.categoryId || f.dateRange !== 'any')
+}
+
+interface FilterPanelProps {
+  filter: FilterState
+  setFilter: (f: FilterState) => void
+  users: { id?: number; fullName?: string }[]
+  categories: CategoryDto[]
+}
+
+function FilterPanel({ filter, setFilter, users, categories }: FilterPanelProps) {
+  function toggleStatus(s: TicketStatus) {
+    const next = filter.statuses.includes(s)
+      ? filter.statuses.filter((x) => x !== s)
+      : [...filter.statuses, s]
+    setFilter({ ...filter, statuses: next })
+  }
+
+  function togglePriority(p: TicketPriority) {
+    const next = filter.priorities.includes(p)
+      ? filter.priorities.filter((x) => x !== p)
+      : [...filter.priorities, p]
+    setFilter({ ...filter, priorities: next })
+  }
+
+  return (
+    <div className={dc.filterPanel}>
+      <div className={dc.filterTitle}>Szűrők</div>
+
+      {/* Agent */}
+      <div className={dc.filterSection}>
+        <label className={dc.filterLabel}>Felelős</label>
+        <select
+          className={dc.filterSelect}
+          value={filter.assignedToId}
+          onChange={(e) => setFilter({ ...filter, assignedToId: e.target.value })}
+        >
+          <option value="">Mindenki</option>
+          {users.map((u) => (
+            <option key={u.id} value={String(u.id)}>{u.fullName}</option>
+          ))}
+        </select>
+      </div>
+
+      <hr className={dc.filterDivider} />
+
+      {/* Status multi-select */}
+      <div className={dc.filterSection}>
+        <label className={dc.filterLabel}>Státusz</label>
+        <div className={dc.multiPills}>
+          {Object.values(TicketStatus).map((s) => (
+            <button
+              key={s}
+              type="button"
+              className={`${dc.pill} ${filter.statuses.includes(s) ? dc.pillActive : ''}`}
+              onClick={() => toggleStatus(s)}
+            >
+              {STATUS_LABELS[s]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <hr className={dc.filterDivider} />
+
+      {/* Priority multi-select */}
+      <div className={dc.filterSection}>
+        <label className={dc.filterLabel}>Prioritás</label>
+        <div className={dc.multiPills}>
+          {Object.values(TicketPriority).map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={`${dc.pill} ${filter.priorities.includes(p) ? dc.pillActive : ''}`}
+              onClick={() => togglePriority(p)}
+            >
+              {PRIORITY_LABELS[p]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <hr className={dc.filterDivider} />
+
+      {/* Source */}
+      <div className={dc.filterSection}>
+        <label className={dc.filterLabel}>Forrás</label>
+        <select
+          className={dc.filterSelect}
+          value={filter.source}
+          onChange={(e) => setFilter({ ...filter, source: e.target.value as TicketSource | '' })}
+        >
+          <option value="">Minden forrás</option>
+          <option value={TicketSource.Email}>Email</option>
+          <option value={TicketSource.Portal}>Portál</option>
+          <option value={TicketSource.Manual}>Kézi</option>
+          <option value={TicketSource.Api}>API</option>
+        </select>
+      </div>
+
+      <hr className={dc.filterDivider} />
+
+      {/* Category */}
+      <div className={dc.filterSection}>
+        <label className={dc.filterLabel}>Kategória</label>
+        <select
+          className={dc.filterSelect}
+          value={filter.categoryId}
+          onChange={(e) => setFilter({ ...filter, categoryId: e.target.value })}
+        >
+          <option value="">Minden kategória</option>
+          {categories.map((c) => (
+            <option key={c.id} value={String(c.id)}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <hr className={dc.filterDivider} />
+
+      {/* Date range */}
+      <div className={dc.filterSection}>
+        <label className={dc.filterLabel}>Létrehozva</label>
+        <div className={dc.multiPills}>
+          {(['any', 'today', 'week', 'month'] as const).map((r) => (
+            <button
+              key={r}
+              type="button"
+              className={`${dc.pill} ${filter.dateRange === r ? dc.pillActive : ''}`}
+              onClick={() => setFilter({ ...filter, dateRange: r })}
+            >
+              {r === 'any' ? 'Bármikor' : r === 'today' ? 'Ma' : r === 'week' ? 'E héten' : 'E hónapban'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {hasActiveFilters(filter) && (
+        <button type="button" className={dc.clearFiltersBtn} onClick={() => setFilter(EMPTY_FILTER)}>
+          Szűrők törlése
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── Active filter pills above list ─────────────────────────
+
+interface ActivePillsProps {
+  filter: FilterState
+  setFilter: (f: FilterState) => void
+  users: { id?: number; fullName?: string }[]
+  categories: CategoryDto[]
+}
+
+function ActiveFilterPills({ filter, setFilter, users, categories }: ActivePillsProps) {
+  const pills: { label: string; remove: () => void }[] = []
+
+  if (filter.assignedToId) {
+    const u = users.find((x) => String(x.id) === filter.assignedToId)
+    pills.push({ label: `Felelős: ${u?.fullName ?? filter.assignedToId}`, remove: () => setFilter({ ...filter, assignedToId: '' }) })
+  }
+  for (const s of filter.statuses) {
+    pills.push({ label: `Státusz: ${STATUS_LABELS[s]}`, remove: () => setFilter({ ...filter, statuses: filter.statuses.filter((x) => x !== s) }) })
+  }
+  for (const p of filter.priorities) {
+    pills.push({ label: `Prioritás: ${PRIORITY_LABELS[p]}`, remove: () => setFilter({ ...filter, priorities: filter.priorities.filter((x) => x !== p) }) })
+  }
+  if (filter.source) {
+    pills.push({ label: `Forrás: ${SOURCE_LABELS[filter.source]}`, remove: () => setFilter({ ...filter, source: '' }) })
+  }
+  if (filter.categoryId) {
+    const cat = categories.find((c) => String(c.id) === filter.categoryId)
+    pills.push({ label: `Kategória: ${cat?.name ?? filter.categoryId}`, remove: () => setFilter({ ...filter, categoryId: '' }) })
+  }
+  if (filter.dateRange !== 'any') {
+    const label = filter.dateRange === 'today' ? 'Ma' : filter.dateRange === 'week' ? 'E héten' : 'E hónapban'
+    pills.push({ label: `Dátum: ${label}`, remove: () => setFilter({ ...filter, dateRange: 'any' }) })
+  }
+
+  if (pills.length === 0) return null
+
+  return (
+    <div className={dc.activePills}>
+      {pills.map((p, i) => (
+        <span key={i} className={dc.activePill}>
+          {p.label}
+          <button type="button" className={dc.activePillRemove} onClick={p.remove}>×</button>
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// ── Main page ──────────────────────────────────────────────
+
 export function TicketsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const queryClient = useQueryClient()
 
   const status = (searchParams.get('status') as TicketStatus | null) ?? undefined
   const priority = (searchParams.get('priority') as TicketPriority | null) ?? undefined
@@ -21,6 +421,7 @@ export function TicketsPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [view, setView] = useState<TicketListView>(TicketListView.Table)
   const [viewInitialized, setViewInitialized] = useState(false)
+  const [detailedFilter, setDetailedFilter] = useState<FilterState>(EMPTY_FILTER)
 
   const preferencesQuery = useQuery({
     queryKey: ['user-preferences'],
@@ -34,15 +435,11 @@ export function TicketsPage() {
     }
   }, [preferencesQuery.data, viewInitialized])
 
-  useEffect(() => {
-    setSearchInput(search)
-  }, [search])
+  useEffect(() => { setSearchInput(search) }, [search])
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      if (searchInput !== search) {
-        updateParams({ search: searchInput || null, page: null })
-      }
+      if (searchInput !== search) updateParams({ search: searchInput || null, page: null })
     }, 300)
     return () => clearTimeout(timeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -57,15 +454,86 @@ export function TicketsPage() {
     setSearchParams(next)
   }
 
+  // Compute dateFrom from detailedFilter.dateRange
+  function dateFromFilter(): Date | undefined {
+    const now = new Date()
+    if (detailedFilter.dateRange === 'today') {
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    }
+    if (detailedFilter.dateRange === 'week') {
+      const d = new Date(now)
+      d.setDate(d.getDate() - d.getDay() + (d.getDay() === 0 ? -6 : 1))
+      d.setHours(0, 0, 0, 0)
+      return d
+    }
+    if (detailedFilter.dateRange === 'month') {
+      return new Date(now.getFullYear(), now.getMonth(), 1)
+    }
+    return undefined
+  }
+
+  // For the simple view, use URL params. For Detailed, also use detailedFilter.
+  const isDetailed = view === TicketListView.Detailed
+
+  // Multi-status for detailed view: if statuses array non-empty, pick first for now (backend limitation)
+  // Workaround: detailed view uses first selected status only (UI allows multi-select for UX)
+  const effectiveStatus = isDetailed
+    ? (detailedFilter.statuses.length === 1 ? detailedFilter.statuses[0] : detailedFilter.statuses.length > 1 ? undefined : undefined)
+    : status
+  const effectivePriority = isDetailed
+    ? (detailedFilter.priorities.length === 1 ? detailedFilter.priorities[0] : undefined)
+    : priority
+  const effectiveCategory = isDetailed ? (detailedFilter.categoryId ? Number(detailedFilter.categoryId) : undefined) : undefined
+  const effectiveAssignedTo = isDetailed ? (detailedFilter.assignedToId ? Number(detailedFilter.assignedToId) : undefined) : undefined
+  const effectiveSource = isDetailed ? (detailedFilter.source || undefined) : undefined
+  const effectiveDateFrom = isDetailed ? dateFromFilter() : undefined
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['tickets', status, priority, search, page],
+    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange],
     queryFn: () =>
-      ticketClient.getTickets(status, priority, undefined, search || undefined, undefined, undefined, page, PAGE_SIZE),
+      ticketClient.getTickets(
+        effectiveStatus,
+        effectivePriority,
+        effectiveCategory,
+        search || undefined,
+        effectiveDateFrom,
+        undefined,
+        page,
+        PAGE_SIZE,
+        effectiveAssignedTo,
+        effectiveSource,
+      ),
   })
 
-  const tickets = data?.items ?? []
+  // For detailed view with multi-select filter, filter client-side for statuses/priorities not covered by backend
+  let tickets = data?.items ?? []
+  if (isDetailed) {
+    if (detailedFilter.statuses.length > 1) {
+      tickets = tickets.filter((t) => detailedFilter.statuses.includes(t.status!))
+    }
+    if (detailedFilter.priorities.length > 1) {
+      tickets = tickets.filter((t) => detailedFilter.priorities.includes(t.priority!))
+    }
+  }
+
   const totalCount = data?.totalCount ?? 0
   const totalPages = data?.totalPages ?? 1
+
+  const usersQuery = useQuery({ queryKey: ['users'], queryFn: () => usersClient.getUsers() })
+  const categoriesQuery = useQuery({ queryKey: ['categories-tree'], queryFn: () => categoriesClient.getTree() })
+  const flatCategories = flattenCategories(categoriesQuery.data ?? [])
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, s }: { id: number; s: TicketStatus }) =>
+      ticketClient.updateStatus(id, new UpdateTicketStatusRequest({ status: s })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tickets'] }),
+  })
+
+  const priorityMutation = useMutation({
+    mutationFn: ({ id, p }: { id: number; p: TicketPriority }) =>
+      ticketClient.updatePriority(id, new UpdateTicketPriorityRequest({ priority: p })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tickets'] }),
+  })
 
   function toggleAll() {
     if (selected.size === tickets.length) setSelected(new Set())
@@ -94,29 +562,30 @@ export function TicketsPage() {
       </div>
 
       <div className={styles.filterBar}>
-        <select
-          className={styles.select}
-          value={status ?? ''}
-          onChange={(e) => updateParams({ status: e.target.value || null, page: null })}
-        >
-          <option value="">Minden státusz</option>
-          <option value={TicketStatus.New}>Új</option>
-          <option value={TicketStatus.Open}>Nyitott</option>
-          <option value={TicketStatus.Pending}>Függőben</option>
-          <option value={TicketStatus.Resolved}>Megoldva</option>
-          <option value={TicketStatus.Closed}>Lezárva</option>
-        </select>
-        <select
-          className={styles.select}
-          value={priority ?? ''}
-          onChange={(e) => updateParams({ priority: e.target.value || null, page: null })}
-        >
-          <option value="">Minden prioritás</option>
-          <option value={TicketPriority.Low}>Alacsony</option>
-          <option value={TicketPriority.Medium}>Közepes</option>
-          <option value={TicketPriority.High}>Magas</option>
-          <option value={TicketPriority.Urgent}>Sürgős</option>
-        </select>
+        {!isDetailed && (
+          <>
+            <select
+              className={styles.select}
+              value={status ?? ''}
+              onChange={(e) => updateParams({ status: e.target.value || null, page: null })}
+            >
+              <option value="">Minden státusz</option>
+              {Object.values(TicketStatus).map((s) => (
+                <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+              ))}
+            </select>
+            <select
+              className={styles.select}
+              value={priority ?? ''}
+              onChange={(e) => updateParams({ priority: e.target.value || null, page: null })}
+            >
+              <option value="">Minden prioritás</option>
+              {Object.values(TicketPriority).map((p) => (
+                <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
+              ))}
+            </select>
+          </>
+        )}
         <div className={styles.searchWrap}>
           <input
             type="text"
@@ -141,11 +610,64 @@ export function TicketsPage() {
           >
             Kártyák
           </button>
+          <button
+            type="button"
+            className={`${styles.viewToggleButton} ${view === TicketListView.Detailed ? styles.viewToggleButtonActive : ''}`}
+            onClick={() => setView(TicketListView.Detailed)}
+          >
+            Részletes
+          </button>
         </div>
       </div>
 
-      <div className={styles.tableCard}>
-        {view === TicketListView.Table ? (
+      {view === TicketListView.Detailed ? (
+        /* ── Detailed view ── */
+        <div className={styles.tableCard}>
+          <div className={dc.detailedLayout}>
+            <div className={dc.detailedList}>
+              <ActiveFilterPills
+                filter={detailedFilter}
+                setFilter={setDetailedFilter}
+                users={usersQuery.data ?? []}
+                categories={flatCategories}
+              />
+
+              {isLoading && <div className={dc.empty}>Betöltés…</div>}
+              {isError && <div className={dc.empty}>Hiba történt a jegyek betöltésekor.</div>}
+              {!isLoading && !isError && tickets.length === 0 && (
+                <div className={dc.empty}>Nincs a szűrésnek megfelelő jegy.</div>
+              )}
+              {tickets.map((ticket) => (
+                <DetailedCard
+                  key={ticket.id}
+                  ticket={ticket}
+                  onStatusChange={(id, s) => statusMutation.mutate({ id, s })}
+                  onPriorityChange={(id, p) => priorityMutation.mutate({ id, p })}
+                />
+              ))}
+
+              <div className={styles.pager}>
+                <span className={styles.mono}>{rangeStart}–{rangeEnd} / {totalCount}</span>
+                <div className={styles.pagerButtons}>
+                  <button disabled={page <= 1} onClick={() => updateParams({ page: String(page - 1) })}>‹</button>
+                  <span className={styles.pagerCurrent}>{page}</span>
+                  <span className={styles.muted}>/ {totalPages || 1}</span>
+                  <button disabled={page >= totalPages} onClick={() => updateParams({ page: String(page + 1) })}>›</button>
+                </div>
+              </div>
+            </div>
+
+            <FilterPanel
+              filter={detailedFilter}
+              setFilter={setDetailedFilter}
+              users={usersQuery.data ?? []}
+              categories={flatCategories}
+            />
+          </div>
+        </div>
+      ) : view === TicketListView.Table ? (
+        /* ── Table view ── */
+        <div className={styles.tableCard}>
           <div className={styles.tableScroll}>
             <table className={styles.table}>
               <thead>
@@ -201,7 +723,19 @@ export function TicketsPage() {
               </tbody>
             </table>
           </div>
-        ) : (
+          <div className={styles.pager}>
+            <span className={styles.mono}>{rangeStart}–{rangeEnd} / {totalCount}</span>
+            <div className={styles.pagerButtons}>
+              <button disabled={page <= 1} onClick={() => updateParams({ page: String(page - 1) })}>‹</button>
+              <span className={styles.pagerCurrent}>{page}</span>
+              <span className={styles.muted}>/ {totalPages || 1}</span>
+              <button disabled={page >= totalPages} onClick={() => updateParams({ page: String(page + 1) })}>›</button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* ── Card view ── */
+        <div className={styles.tableCard}>
           <div className={styles.cardGrid}>
             {isLoading && <div className={styles.emptyCell}>Betöltés…</div>}
             {isError && <div className={styles.emptyCell}>Hiba történt a jegyek betöltésekor.</div>}
@@ -232,17 +766,17 @@ export function TicketsPage() {
               </Link>
             ))}
           </div>
-        )}
-        <div className={styles.pager}>
-          <span className={styles.mono}>{rangeStart}–{rangeEnd} / {totalCount}</span>
-          <div className={styles.pagerButtons}>
-            <button disabled={page <= 1} onClick={() => updateParams({ page: String(page - 1) })}>‹</button>
-            <span className={styles.pagerCurrent}>{page}</span>
-            <span className={styles.muted}>/ {totalPages || 1}</span>
-            <button disabled={page >= totalPages} onClick={() => updateParams({ page: String(page + 1) })}>›</button>
+          <div className={styles.pager}>
+            <span className={styles.mono}>{rangeStart}–{rangeEnd} / {totalCount}</span>
+            <div className={styles.pagerButtons}>
+              <button disabled={page <= 1} onClick={() => updateParams({ page: String(page - 1) })}>‹</button>
+              <span className={styles.pagerCurrent}>{page}</span>
+              <span className={styles.muted}>/ {totalPages || 1}</span>
+              <button disabled={page >= totalPages} onClick={() => updateParams({ page: String(page + 1) })}>›</button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

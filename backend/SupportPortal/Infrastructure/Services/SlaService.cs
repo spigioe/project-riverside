@@ -3,6 +3,7 @@ using SupportPortal.Application.DTOs.Sla;
 using SupportPortal.Application.Interfaces;
 using SupportPortal.Data;
 using SupportPortal.Domain.Entities;
+using SupportPortal.Domain.Enums;
 
 namespace SupportPortal.Infrastructure.Services;
 
@@ -112,5 +113,94 @@ public class SlaService(AppDbContext db) : ISlaService
 
         await db.SaveChangesAsync();
         return await GetBusinessHoursAsync();
+    }
+
+    public async Task<DateTime?> CalculateSlaDueAtAsync(TicketPriority priority, DateTime createdAt)
+    {
+        var policy = await db.SlaPolicies
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Priority == priority);
+
+        if (policy is null) return null;
+
+        if (!policy.BusinessHoursOnly)
+            return createdAt.AddMinutes(policy.ResponseTimeMinutes);
+
+        var schedule = await db.BusinessHours.AsNoTracking().ToListAsync();
+        if (schedule.Count == 0)
+            return createdAt.AddMinutes(policy.ResponseTimeMinutes);
+
+        return AddWorkingMinutes(createdAt, policy.ResponseTimeMinutes, schedule);
+    }
+
+    private static DateTime AddWorkingMinutes(DateTime start, int minutes, List<BusinessHours> schedule)
+    {
+        var byDay = schedule.ToDictionary(b => b.DayOfWeek);
+        var current = AdvanceToWorkingTime(start, byDay);
+        var remaining = minutes;
+
+        while (remaining > 0)
+        {
+            if (!byDay.TryGetValue(current.DayOfWeek, out var bh))
+            {
+                current = NextWorkingDayStart(current, byDay);
+                continue;
+            }
+
+            var dayEnd = current.Date.Add(bh.EndTime.ToTimeSpan());
+            var minutesUntilEnd = (int)(dayEnd - current).TotalMinutes;
+
+            if (minutesUntilEnd <= 0)
+            {
+                current = NextWorkingDayStart(current, byDay);
+                continue;
+            }
+
+            if (remaining <= minutesUntilEnd)
+            {
+                current = current.AddMinutes(remaining);
+                remaining = 0;
+            }
+            else
+            {
+                remaining -= minutesUntilEnd;
+                current = NextWorkingDayStart(current, byDay);
+            }
+        }
+
+        return current;
+    }
+
+    private static DateTime AdvanceToWorkingTime(DateTime dt, Dictionary<DayOfWeek, BusinessHours> byDay)
+    {
+        for (int i = 0; i < 14; i++)
+        {
+            if (!byDay.TryGetValue(dt.DayOfWeek, out var bh))
+            {
+                dt = dt.Date.AddDays(1);
+                continue;
+            }
+
+            var dayStart = dt.Date.Add(bh.StartTime.ToTimeSpan());
+            var dayEnd = dt.Date.Add(bh.EndTime.ToTimeSpan());
+
+            if (dt < dayStart) return dayStart;
+            if (dt < dayEnd) return dt;
+
+            dt = dt.Date.AddDays(1);
+        }
+        return dt;
+    }
+
+    private static DateTime NextWorkingDayStart(DateTime dt, Dictionary<DayOfWeek, BusinessHours> byDay)
+    {
+        dt = dt.Date.AddDays(1);
+        for (int i = 0; i < 14; i++)
+        {
+            if (byDay.TryGetValue(dt.DayOfWeek, out var bh))
+                return dt.Add(bh.StartTime.ToTimeSpan());
+            dt = dt.AddDays(1);
+        }
+        return dt;
     }
 }

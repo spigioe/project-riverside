@@ -21,6 +21,7 @@ public class TicketService(
     ICsmService csmService,
     IFileStorageService fileStorageService,
     IAuditLogService auditLogService,
+    ISlaService slaService,
     ILogger<TicketService> logger) : ITicketService
 {
     public async Task<PagedResult<TicketListItemDto>> GetTicketsAsync(TicketListQuery query)
@@ -54,6 +55,12 @@ public class TicketService(
                 t.RequesterName.Contains(search));
         }
 
+        if (query.AssignedToId.HasValue)
+            ticketsQuery = ticketsQuery.Where(t => t.AssignedToId == query.AssignedToId.Value);
+
+        if (query.Source.HasValue)
+            ticketsQuery = ticketsQuery.Where(t => t.Source == query.Source.Value);
+
         var totalCount = await ticketsQuery.CountAsync();
 
         var rows = await ticketsQuery
@@ -62,7 +69,7 @@ public class TicketService(
             .Take(pageSize)
             .Select(t => new
             {
-                t.Id, t.Subject, t.Status, t.Priority,
+                t.Id, t.Subject, t.Status, t.Priority, t.Source,
                 t.CategoryId, CategoryName = t.Category != null ? t.Category.Name : null,
                 t.AssignedToId, AssignedToName = t.AssignedTo != null ? t.AssignedTo.FullName : null,
                 t.RequesterEmail, t.RequesterName,
@@ -85,7 +92,7 @@ public class TicketService(
                 r.IsCsmFlagged, r.IsMerged,
                 r.SlaDueAt, r.SlaBreach,
                 r.LastMessageBody, r.LastMessageAt,
-                r.CreatedAt, r.UpdatedAt))
+                r.CreatedAt, r.UpdatedAt, r.Source))
             .ToList();
 
         return new PagedResult<TicketListItemDto>(items, page, pageSize, totalCount);
@@ -111,6 +118,7 @@ public class TicketService(
 
     public async Task<TicketDetailDto> CreateTicketAsync(CreateTicketRequest request, int currentUserId, TicketSource source = TicketSource.Manual)
     {
+        var createdAt = DateTime.UtcNow;
         var ticket = new Ticket
         {
             Subject = request.Subject,
@@ -124,9 +132,24 @@ public class TicketService(
             RequesterName = request.RequesterName,
             Source = source,
             CsmId = await csmService.FindCsmIdForEmailAsync(request.RequesterEmail),
+            CreatedAt = createdAt,
+            SlaDueAt = await slaService.CalculateSlaDueAtAsync(request.Priority, createdAt),
         };
 
         db.Tickets.Add(ticket);
+        await db.SaveChangesAsync();
+
+        // A ticket törzse (Body) a kérelmező eredeti üzenete — ennek is meg kell jelennie a
+        // beszélgetés-szálban (MessageThread), nem csak a ticket metaadataiban, ezért egy kezdő
+        // bejövő TicketMessage is létrejön ugyanazzal a tartalommal (lásd TicketEmailProcessor
+        // ugyanezt teszi email eredetű ticketeknél).
+        db.TicketMessages.Add(new TicketMessage
+        {
+            TicketId = ticket.Id,
+            SenderEmail = ticket.RequesterEmail,
+            Body = ticket.Body,
+            Direction = MessageDirection.Inbound,
+        });
         await db.SaveChangesAsync();
 
         await auditLogService.LogAsync(currentUserId, "ticket", ticket.Id, "created", null, null);
@@ -200,6 +223,23 @@ public class TicketService(
                 ticket.AssignedToId.Value, NotificationTrigger.StatusChanged, ticket.Id,
                 $"Státusz változott (#{ticket.Id}): {ticket.Subject} → {status}");
         }
+
+        return true;
+    }
+
+    public async Task<bool> UpdatePriorityAsync(int id, TicketPriority priority, int currentUserId)
+    {
+        var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
+        if (ticket is null) return false;
+
+        var oldPriority = ticket.Priority;
+        ticket.Priority = priority;
+        ticket.UpdatedAt = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+
+        if (oldPriority != priority)
+            await auditLogService.LogAsync(currentUserId, "ticket", id, "priority_changed", oldPriority.ToString(), priority.ToString());
 
         return true;
     }

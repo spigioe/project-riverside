@@ -16,6 +16,7 @@ public partial class TicketEmailProcessor(
     ICsmService csmService,
     IFileStorageService fileStorageService,
     IOptions<MinioSettings> minioOptions,
+    ISlaService slaService,
     ILogger<TicketEmailProcessor> logger) : ITicketEmailProcessor
 {
     [GeneratedRegex(@"\[#(\d+)\]")]
@@ -52,37 +53,40 @@ public partial class TicketEmailProcessor(
 
         if (ticket is null)
         {
+            var createdAt = DateTime.UtcNow;
+            var defaultPriority = TicketPriority.Medium;
             ticket = new Ticket
             {
                 Subject = StripTicketIdTag(email.Subject),
                 Body = email.Body,
                 Status = TicketStatus.New,
+                Priority = defaultPriority,
                 Source = TicketSource.Email,
                 RequesterEmail = fromAddress.Address,
                 RequesterName = string.IsNullOrWhiteSpace(fromAddress.Name) ? fromAddress.Address : fromAddress.Name,
                 CsmId = await csmService.FindCsmIdForEmailAsync(fromAddress.Address),
+                CreatedAt = createdAt,
+                SlaDueAt = await slaService.CalculateSlaDueAtAsync(defaultPriority, createdAt),
             };
             db.Tickets.Add(ticket);
             await db.SaveChangesAsync();
 
-            // Az induló email tartalma a ticket.Body-ban van, nem egy TicketMessage sorban (meglévő
-            // minta) — de a csatolmányoknak kell egy TicketMessage.Id, amihez a FileStorage sorok
-            // kapcsolódnak, ezért csak akkor hozunk létre egy kezdő bejövő üzenetet, ha ténylegesen
-            // van csatolmány.
-            if (email.Attachments.Count > 0)
+            // Az induló email tartalma a ticket.Body-ban is landol, de emellett (a beszélgetés-szál
+            // teljessége miatt, lásd TicketService.CreateTicketAsync ugyanezt teszi portál/API eredetű
+            // ticketeknél) mindig létrejön egy kezdő bejövő TicketMessage is ugyanazzal a tartalommal —
+            // ehhez kapcsolódnak a csatolmányok (ha vannak).
+            var initialMessage = new TicketMessage
             {
-                var initialMessage = new TicketMessage
-                {
-                    TicketId = ticket.Id,
-                    SenderEmail = fromAddress.Address,
-                    Body = email.Body,
-                    Direction = MessageDirection.Inbound,
-                };
-                db.TicketMessages.Add(initialMessage);
-                await db.SaveChangesAsync();
+                TicketId = ticket.Id,
+                SenderEmail = fromAddress.Address,
+                Body = email.Body,
+                Direction = MessageDirection.Inbound,
+            };
+            db.TicketMessages.Add(initialMessage);
+            await db.SaveChangesAsync();
 
+            if (email.Attachments.Count > 0)
                 await UploadAttachmentsAsync(ticket.Id, initialMessage.Id, email.Attachments);
-            }
         }
         else
         {
