@@ -119,18 +119,100 @@
 }
 
 .swapButton {
-  padding: 5px 10px;
+  padding: 5px 9px;
   background: var(--surface);
   border: 1.5px solid var(--border-light);
   border-radius: var(--radius);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
   cursor: pointer;
+  line-height: 1;
 }
 
 .swapButton:hover {
   color: var(--text);
   border-color: var(--navy);
+}
+
+/* ── Fejléc dropdown (···) ──────────────────────────────── */
+
+.dropdownWrapper {
+  position: relative;
+}
+
+.dropdownTrigger {
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+.dropdownTrigger:hover {
+  border-color: var(--navy);
+  color: var(--text);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  background: var(--surface);
+  border: 1.5px solid var(--navy);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-pop-sm);
+  min-width: 140px;
+  z-index: 200;
+  overflow: hidden;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 9px 14px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dropdownItem:last-child {
+  border-bottom: none;
+}
+
+.dropdownItem:hover {
+  background: var(--bg-alt);
+}
+
+/* Törlés ikon gomb */
+.iconDangerButton {
+  padding: 5px 8px;
+  background: none;
+  border: 1.5px solid var(--red-border, #e53e3e);
+  border-radius: var(--radius);
+  color: var(--red-text, #c53030);
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.iconDangerButton:hover {
+  background: var(--red-bg, #fff5f5);
+}
+
+.iconDangerButton:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .sourceTag {

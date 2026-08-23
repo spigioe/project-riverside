@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -9,8 +9,6 @@ import {
   TicketDetailView,
   TicketListView,
   TicketSource,
-  TicketStatus,
-  UpdateTicketStatusRequest,
   UpdateUserPreferenceRequest,
 } from '../api'
 import { useCustomStatuses } from '../lib/customStatuses'
@@ -72,6 +70,19 @@ export function TicketDetailPage() {
   const [mergeModalOpen, setMergeModalOpen] = useState(false)
   const [activityLogOpen, setActivityLogOpen] = useState(false)
   const [ticketInfoOpen, setTicketInfoOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!dropdownOpen) return
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [dropdownOpen])
 
   const ticketQuery = useQuery({
     queryKey: ['ticket', ticketId],
@@ -109,15 +120,6 @@ export function TicketDetailPage() {
       setAttachments([])
       queryClient.invalidateQueries({ queryKey: ['ticket-messages', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['ticket-attachments', ticketId] })
-      queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
-    },
-  })
-
-  const closeMutation = useMutation({
-    mutationFn: () =>
-      ticketClient.updateStatus(ticketId, new UpdateTicketStatusRequest({ status: TicketStatus.Closed })),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
       queryClient.invalidateQueries({ queryKey: ['ticket-activity', ticketId] })
     },
   })
@@ -210,43 +212,59 @@ export function TicketDetailPage() {
         <div className={styles.titleRow}>
           <h1 className={styles.title}>{ticket.subject}</h1>
           <div className={styles.viewToggleRow}>
-            {!ticket.isMerged && (
+            {/* ··· dropdown */}
+            <div className={styles.dropdownWrapper} ref={dropdownRef}>
               <button
                 type="button"
-                className={shared.secondaryButton}
-                onClick={() => setMergeModalOpen(true)}
+                className={styles.dropdownTrigger}
+                onClick={() => setDropdownOpen((o) => !o)}
+                title="További műveletek"
               >
-                Összevonás
+                ···
               </button>
-            )}
-            {ticket.status !== TicketStatus.Closed && ticket.status !== TicketStatus.Resolved && (
-              <button
-                type="button"
-                className={shared.secondaryButton}
-                disabled={closeMutation.isPending}
-                onClick={() => {
-                  if (confirm('Biztosan le szeretnéd zárni ezt a ticketet?')) closeMutation.mutate()
-                }}
-              >
-                Lezárás
-              </button>
-            )}
+              {dropdownOpen && (
+                <div className={styles.dropdownMenu}>
+                  {!ticket.isMerged && (
+                    <button
+                      type="button"
+                      className={styles.dropdownItem}
+                      onClick={() => { setMergeModalOpen(true); setDropdownOpen(false) }}
+                    >
+                      Összevonás
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={styles.dropdownItem}
+                    onClick={() => { setActivityLogOpen(true); setDropdownOpen(false) }}
+                  >
+                    Napló
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.dropdownItem}
+                    onClick={() => { setTicketInfoOpen(true); setDropdownOpen(false) }}
+                  >
+                    Adatok
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Törlés ikon gomb */}
             <button
               type="button"
-              className={shared.dangerButton}
+              className={styles.iconDangerButton}
               disabled={deleteMutation.isPending}
               onClick={() => {
                 if (confirm(`Biztosan törölni szeretnéd a(z) #${ticketId} jegyet? Ez a művelet nem vonható vissza.`)) deleteMutation.mutate()
               }}
+              title={`#${ticketId} törlése`}
             >
-              Törlés
+              🗑
             </button>
-            <button type="button" className={shared.secondaryButton} onClick={() => setActivityLogOpen(true)}>
-              Napló
-            </button>
-            <button type="button" className={shared.secondaryButton} onClick={() => setTicketInfoOpen(true)}>
-              Adatok
-            </button>
+
+            {/* Csere ikon gomb — csak split módban */}
             {detailView === TicketDetailView.Split && (
               <button
                 type="button"
@@ -254,9 +272,10 @@ export function TicketDetailPage() {
                 onClick={() => detailViewMutation.mutate({ ticketDetailSplitReversed: !splitReversed })}
                 title="Panelek felcserélése"
               >
-                ⇄ Csere
+                ⇄
               </button>
             )}
+
             <button
               type="button"
               className={`${styles.viewToggleButton} ${detailView === TicketDetailView.Classic ? styles.viewToggleButtonActive : ''}`}
