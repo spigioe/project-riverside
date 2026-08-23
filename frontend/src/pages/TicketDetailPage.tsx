@@ -200,8 +200,10 @@ export function TicketDetailPage() {
     />
   )
 
+  const isSplit = detailView === TicketDetailView.Split
+
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${isSplit ? styles.pageSplit : ''}`}>
       <div className={styles.left}>
         <button className={styles.backLink} onClick={() => navigate('/tickets')}>
           ← Vissza a jegyekhez
@@ -334,11 +336,11 @@ export function TicketDetailPage() {
         )}
       </div>
 
-      <div className={styles.right}>
-        {detailView === TicketDetailView.Classic && (
+      {!isSplit && (
+        <div className={styles.right}>
           <TicketSidebar ticket={ticket} ticketId={ticketId} />
-        )}
-      </div>
+        </div>
+      )}
 
       {mergeModalOpen && <MergeModal ticketId={ticketId} onClose={() => setMergeModalOpen(false)} />}
     </div>

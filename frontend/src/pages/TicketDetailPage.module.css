@@ -2,8 +2,12 @@
   display: grid;
   grid-template-columns: 1fr 280px;
   gap: 0;
-  align-items: start;
+  align-items: stretch;
   min-height: calc(100vh - 54px);
+}
+
+.pageSplit {
+  grid-template-columns: 1fr;
 }
 
 @media (max-width: 900px) {
@@ -745,9 +749,7 @@
 /* ── Right column ─────────────────────────────────────── */
 
 .right {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  position: relative;
 }
 
 .panelHeader {
