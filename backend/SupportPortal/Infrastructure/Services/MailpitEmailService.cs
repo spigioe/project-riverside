@@ -2,7 +2,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using MailKit.Net.Smtp;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MimeKit;
 using MimeKit.Utils;
 using SupportPortal.Application.DTOs;
@@ -13,9 +12,9 @@ namespace SupportPortal.Infrastructure.Services;
 // A Mailpit nem biztosít IMAP szervert (csak SMTP + POP3 + HTTP API-t — lásd `mailpit --help`),
 // ezért a bejövő emailek lekérdezése a Mailpit HTTP API-ján keresztül történik, nem IMAP-on.
 // A kimenő küldés (SendAsync) továbbra is valódi SMTP-vel megy MailKit-en keresztül.
-public class EmailService(HttpClient httpClient, IOptions<MailSettings> mailOptions, ILogger<EmailService> logger) : IEmailService
+public class MailpitEmailService(HttpClient httpClient, MailSettings settings, ILogger logger) : IEmailService
 {
-    private readonly MailSettings _settings = mailOptions.Value;
+    private readonly MailSettings _settings = settings;
 
     // A Mailpit API válaszaiban a boríték mezői kisbetűsek ("unread", "messages"), a message
     // objektumok mezői viszont PascalCase-ek ("ID", "Read", ...) — case-insensitive olvasással

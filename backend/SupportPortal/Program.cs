@@ -37,7 +37,9 @@ var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 
-// ── Email (Mailpit) ────────────────────────────────────────────────────────────
+// ── Email ──────────────────────────────────────────────────────────────────────
+// Az appsettings "Mail" szekció az alapértelmezett (Mailpit dev konfig). Ha az IntegrationSettings
+// táblában létezik "Email" rekord, az EmailServiceRouter futásidőben felülbírálja.
 var mailSettings = builder.Configuration.GetSection("Mail").Get<MailSettings>()
     ?? throw new InvalidOperationException("Mail settings not found.");
 
@@ -109,8 +111,11 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddHttpClient<IEmailService, EmailService>(client =>
+// Az EmailServiceRouter-nek szüksége van egy HttpClient-re a Mailpit API-hoz (dev mód).
+// Valódi IMAP módban a router a MailpitEmailService helyett ImapEmailService-t hoz létre.
+builder.Services.AddHttpClient<EmailServiceRouter>(client =>
     client.BaseAddress = new Uri(mailSettings.ApiBaseUrl));
+builder.Services.AddScoped<IEmailService>(sp => sp.GetRequiredService<EmailServiceRouter>());
 builder.Services.AddScoped<ITicketEmailProcessor, TicketEmailProcessor>();
 builder.Services.AddHostedService<EmailPollingService>();
 builder.Services.AddSingleton<INotificationService, NotificationService>();

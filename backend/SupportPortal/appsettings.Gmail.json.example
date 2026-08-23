@@ -1,0 +1,27 @@
+{
+  "Mail": {
+    "Provider": "imap",
+    "SmtpHost": "smtp.gmail.com",
+    "SmtpPort": 587,
+    "ApiBaseUrl": "",
+    "ImapHost": "imap.gmail.com",
+    "ImapPort": 993,
+    "UseSsl": true,
+    "Username": "youremail@gmail.com",
+    "Password": "xxxx xxxx xxxx xxxx",
+    "PollIntervalSeconds": 60,
+    "FromAddress": "youremail@gmail.com"
+  }
+}
+
+// Gmail App Password beállítás:
+// 1. Gmail → Fiókbeállítások → Biztonság → 2 lépéses hitelesítés (kötelező bekapcsolni)
+// 2. "Alkalmazásjelszavak" (App passwords) → + Új alkalmazásjelszó
+// 3. Alkalmazás neve: "Support Portal", majd Létrehozás
+// 4. A kapott 16 karakteres jelszót (pl. "abcd efgh ijkl mnop") másold a Password mezőbe
+//
+// IMAP engedélyezése Gmailben:
+// Gmail → Beállítások → Összes beállítás megtekintése → Továbbítás és POP/IMAP lap
+// → IMAP-hozzáférés: IMAP engedélyezése
+//
+// Megjegyzés: Normál Gmail jelszóval NEM fog működni — App Password szükséges.

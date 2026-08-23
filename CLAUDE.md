@@ -27,7 +27,8 @@ cd frontend && npm run dev               # port 5173
 - Login: admin@supportportal.dev / Admin1234!
 
 ## Fontos technikai döntések
-- Mailpit-nek NINCS IMAP — EmailService a Mailpit HTTP API-t pollozza (ne változtasd)
+- EmailServiceRouter: runtime provider-választás DB-ből (integration_settings, AES-256 titkosítva). Provider=mailpit → MailpitEmailService (HTTP API), Provider=imap → ImapEmailService (MailKit)
+- Mailpit-nek NINCS IMAP — MailpitEmailService a Mailpit HTTP API-t pollozza (ne változtasd)
 - IEmailService.SendAsync → Task<string> (Message-ID visszaadva thread matchinghez)
 - API kulcs: SHA-256 hash-elve, csak létrehozáskor látható egyszer
 - AiService model: claude-sonnet-4-6
@@ -70,6 +71,7 @@ cd frontend && npm run dev               # port 5173
 24. Idézett reply toggle (blockquote / "---" / "On...wrote:" parse, "···" gomb, grey expand), multi-sender RawEmailParts scaffold (longtext nullable, TicketMessageDto, frontend render logic kész, mindig null egyelőre)
 25. Kontaktok és cégek — Company + Contact entitás, auto-upsert ticket létrehozáskor/email feldolgozáskor, REST API (/api/portal/contacts + /api/portal/companies), PATCH /tickets/{id}/contact, TicketDetailDto kibővítve, settings oldalak (/settings/contacts, /settings/companies), ticket lista céges szűrő, KONTAKT ADATOK panel a ticket detail sidebarban
 26. Egyéni státuszok — TicketCustomStatus entitás (Key/Name/ColorVariant/IconKey/DisplayOrder/IsActive), migráció, CRUD API (/api/portal/settings/custom-statuses), PATCH /tickets/{id}/custom-status, 14 FA ikon + 7 szín, /settings/custom-statuses beállítások oldal, StatusBadge custom megjelenítéssel, DetailedCard status dropdown (beépített + egyéni státuszok), TicketDetailPage státusz select kibővítve, minden nézetben customStatusKey alapján badge
+27. IMAP/Gmail email connector — MailSettings kiterjesztve (Provider/ImapHost/ImapPort/UseSsl/Username/Password), ImapEmailService (MailKit ImapClient+SmtpClient, UNSEEN fetch+SEEN jelölés, csatolmányok), EmailServiceRouter (runtime provider-választás DB-ből, AES-256 titkosított config), GET/PUT /api/portal/settings/email + POST /test endpoint, appsettings.Gmail.json.example, frontend SettingsEmailPage szerkeszthetővé téve (provider switch, IMAP/SMTP/auth/általános szekciók, teszt gomb)
 
 ## MCP szerver
 - /mcp/server.js | cd mcp && node server.js
@@ -91,6 +93,7 @@ cd frontend && npm run dev               # port 5173
 - Ticket felosztás (split)
 - [x] ~~SLA visszaszámláló a fejlécen~~ — KÉSZ (22. lépés)
 - [x] ~~Idézett reply toggle + RawEmailParts scaffold~~ — KÉSZ (24. lépés)
+- [x] ~~IMAP/Gmail email connector~~ — KÉSZ (27. lépés)
 - [ ] Részletes kártya nézet vizuális ellenőrzése böngészőben (nincs Playwright)
 
 ## Később implementálandó

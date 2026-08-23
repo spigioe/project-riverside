@@ -3621,6 +3621,84 @@ export class SettingsClient {
         }
         return Promise.resolve<EmailSettingsDto>(null as any);
     }
+
+    updateEmailSettings(request: UpdateEmailSettingsRequest, cancelToken?: CancelToken): Promise<EmailSettingsDto> {
+        let url_ = this.baseUrl + "/api/portal/settings/email";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request.toJSON());
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            const status = _response.status;
+            const _headers: any = {};
+            if (_response.headers && typeof _response.headers === "object") {
+                for (const k in _response.headers) {
+                    if (_response.headers.hasOwnProperty(k)) _headers[k] = _response.headers[k];
+                }
+            }
+            if (status === 200) {
+                return Promise.resolve<EmailSettingsDto>(EmailSettingsDto.fromJS(_response.data));
+            } else {
+                return throwException("An unexpected server error occurred.", status, _response.data, _headers);
+            }
+        });
+    }
+
+    testEmailConnection(request: TestEmailConnectionRequest, cancelToken?: CancelToken): Promise<TestEmailConnectionResponse> {
+        let url_ = this.baseUrl + "/api/portal/settings/email/test";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request.toJSON());
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            const status = _response.status;
+            const _headers: any = {};
+            if (_response.headers && typeof _response.headers === "object") {
+                for (const k in _response.headers) {
+                    if (_response.headers.hasOwnProperty(k)) _headers[k] = _response.headers[k];
+                }
+            }
+            if (status === 200) {
+                return Promise.resolve<TestEmailConnectionResponse>(TestEmailConnectionResponse.fromJS(_response.data));
+            } else {
+                return throwException("An unexpected server error occurred.", status, _response.data, _headers);
+            }
+        });
+    }
 }
 
 export class SlaClient {
@@ -4374,7 +4452,7 @@ export class TicketAttachmentsClient {
                 fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
                 fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
             }
-            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] }), headers: _headers });
+            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] as string | undefined }), headers: _headers });
         } else if (status === 404) {
             const _responseText = response.data;
             let result404: any = null;
@@ -9057,11 +9135,18 @@ export enum UserRole {
 }
 
 export class EmailSettingsDto implements IEmailSettingsDto {
+    provider?: string;
     smtpHost?: string;
     smtpPort?: number;
-    apiBaseUrl?: string;
+    apiBaseUrl?: string | undefined;
+    imapHost?: string;
+    imapPort?: number;
+    useSsl?: boolean;
+    username?: string;
+    passwordMasked?: string;
     pollIntervalSeconds?: number;
     fromAddress?: string;
+    hasStoredConfig?: boolean;
 
     constructor(data?: IEmailSettingsDto) {
         if (data) {
@@ -9074,11 +9159,18 @@ export class EmailSettingsDto implements IEmailSettingsDto {
 
     init(_data?: any) {
         if (_data) {
+            this.provider = _data["provider"];
             this.smtpHost = _data["smtpHost"];
             this.smtpPort = _data["smtpPort"];
             this.apiBaseUrl = _data["apiBaseUrl"];
+            this.imapHost = _data["imapHost"];
+            this.imapPort = _data["imapPort"];
+            this.useSsl = _data["useSsl"];
+            this.username = _data["username"];
+            this.passwordMasked = _data["passwordMasked"];
             this.pollIntervalSeconds = _data["pollIntervalSeconds"];
             this.fromAddress = _data["fromAddress"];
+            this.hasStoredConfig = _data["hasStoredConfig"];
         }
     }
 
@@ -9091,21 +9183,223 @@ export class EmailSettingsDto implements IEmailSettingsDto {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["provider"] = this.provider;
         data["smtpHost"] = this.smtpHost;
         data["smtpPort"] = this.smtpPort;
         data["apiBaseUrl"] = this.apiBaseUrl;
+        data["imapHost"] = this.imapHost;
+        data["imapPort"] = this.imapPort;
+        data["useSsl"] = this.useSsl;
+        data["username"] = this.username;
+        data["passwordMasked"] = this.passwordMasked;
+        data["pollIntervalSeconds"] = this.pollIntervalSeconds;
+        data["fromAddress"] = this.fromAddress;
+        data["hasStoredConfig"] = this.hasStoredConfig;
+        return data;
+    }
+}
+
+export interface IEmailSettingsDto {
+    provider?: string;
+    smtpHost?: string;
+    smtpPort?: number;
+    apiBaseUrl?: string | undefined;
+    imapHost?: string;
+    imapPort?: number;
+    useSsl?: boolean;
+    username?: string;
+    passwordMasked?: string;
+    pollIntervalSeconds?: number;
+    fromAddress?: string;
+    hasStoredConfig?: boolean;
+}
+
+export class UpdateEmailSettingsRequest implements IUpdateEmailSettingsRequest {
+    provider?: string;
+    smtpHost?: string;
+    smtpPort?: number;
+    apiBaseUrl?: string | undefined;
+    imapHost?: string;
+    imapPort?: number;
+    useSsl?: boolean;
+    username?: string;
+    password?: string;
+    pollIntervalSeconds?: number;
+    fromAddress?: string;
+
+    constructor(data?: IUpdateEmailSettingsRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.provider = _data["provider"];
+            this.smtpHost = _data["smtpHost"];
+            this.smtpPort = _data["smtpPort"];
+            this.apiBaseUrl = _data["apiBaseUrl"];
+            this.imapHost = _data["imapHost"];
+            this.imapPort = _data["imapPort"];
+            this.useSsl = _data["useSsl"];
+            this.username = _data["username"];
+            this.password = _data["password"];
+            this.pollIntervalSeconds = _data["pollIntervalSeconds"];
+            this.fromAddress = _data["fromAddress"];
+        }
+    }
+
+    static fromJS(data: any): UpdateEmailSettingsRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateEmailSettingsRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["provider"] = this.provider;
+        data["smtpHost"] = this.smtpHost;
+        data["smtpPort"] = this.smtpPort;
+        data["apiBaseUrl"] = this.apiBaseUrl;
+        data["imapHost"] = this.imapHost;
+        data["imapPort"] = this.imapPort;
+        data["useSsl"] = this.useSsl;
+        data["username"] = this.username;
+        data["password"] = this.password;
         data["pollIntervalSeconds"] = this.pollIntervalSeconds;
         data["fromAddress"] = this.fromAddress;
         return data;
     }
 }
 
-export interface IEmailSettingsDto {
+export interface IUpdateEmailSettingsRequest {
+    provider?: string;
     smtpHost?: string;
     smtpPort?: number;
-    apiBaseUrl?: string;
+    apiBaseUrl?: string | undefined;
+    imapHost?: string;
+    imapPort?: number;
+    useSsl?: boolean;
+    username?: string;
+    password?: string;
     pollIntervalSeconds?: number;
     fromAddress?: string;
+}
+
+export class TestEmailConnectionRequest implements ITestEmailConnectionRequest {
+    provider?: string;
+    smtpHost?: string;
+    smtpPort?: number;
+    apiBaseUrl?: string | undefined;
+    imapHost?: string;
+    imapPort?: number;
+    useSsl?: boolean;
+    username?: string;
+    password?: string;
+    fromAddress?: string;
+
+    constructor(data?: ITestEmailConnectionRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.provider = _data["provider"];
+            this.smtpHost = _data["smtpHost"];
+            this.smtpPort = _data["smtpPort"];
+            this.apiBaseUrl = _data["apiBaseUrl"];
+            this.imapHost = _data["imapHost"];
+            this.imapPort = _data["imapPort"];
+            this.useSsl = _data["useSsl"];
+            this.username = _data["username"];
+            this.password = _data["password"];
+            this.fromAddress = _data["fromAddress"];
+        }
+    }
+
+    static fromJS(data: any): TestEmailConnectionRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new TestEmailConnectionRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["provider"] = this.provider;
+        data["smtpHost"] = this.smtpHost;
+        data["smtpPort"] = this.smtpPort;
+        data["apiBaseUrl"] = this.apiBaseUrl;
+        data["imapHost"] = this.imapHost;
+        data["imapPort"] = this.imapPort;
+        data["useSsl"] = this.useSsl;
+        data["username"] = this.username;
+        data["password"] = this.password;
+        data["fromAddress"] = this.fromAddress;
+        return data;
+    }
+}
+
+export interface ITestEmailConnectionRequest {
+    provider?: string;
+    smtpHost?: string;
+    smtpPort?: number;
+    apiBaseUrl?: string | undefined;
+    imapHost?: string;
+    imapPort?: number;
+    useSsl?: boolean;
+    username?: string;
+    password?: string;
+    fromAddress?: string;
+}
+
+export class TestEmailConnectionResponse implements ITestEmailConnectionResponse {
+    success?: boolean;
+    message?: string;
+
+    constructor(data?: ITestEmailConnectionResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.success = _data["success"];
+            this.message = _data["message"];
+        }
+    }
+
+    static fromJS(data: any): TestEmailConnectionResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new TestEmailConnectionResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["success"] = this.success;
+        data["message"] = this.message;
+        return data;
+    }
+}
+
+export interface ITestEmailConnectionResponse {
+    success?: boolean;
+    message?: string;
 }
 
 export class SlaPolicyDto implements ISlaPolicyDto {
