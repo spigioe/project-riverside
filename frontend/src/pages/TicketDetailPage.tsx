@@ -309,7 +309,6 @@ export function TicketDetailPage() {
               <>
                 <div className={styles.splitPanel}>
                   {composer}
-                  <div className={styles.splitInfoPanel}>{infoPanel(false)}</div>
                 </div>
                 <div className={styles.splitPanel}>
                   <MessageThread ticket={ticket} messages={messages} attachments={attachmentsQuery.data ?? []} detailed />
@@ -324,7 +323,6 @@ export function TicketDetailPage() {
                 </div>
                 <div className={styles.splitPanel}>
                   {composer}
-                  <div className={styles.splitInfoPanel}>{infoPanel(false)}</div>
                 </div>
               </>
             )}
