@@ -9,6 +9,9 @@ import { SettingsSlaPage } from './pages/settings/SettingsSlaPage'
 import { SettingsEmailPage } from './pages/settings/SettingsEmailPage'
 import { SettingsNotificationsPage } from './pages/settings/SettingsNotificationsPage'
 import { SettingsTicketsPage } from './pages/settings/SettingsTicketsPage'
+import { SettingsTicketCategoriesPage } from './pages/settings/SettingsTicketCategoriesPage'
+import { SettingsTicketPropertiesPage } from './pages/settings/SettingsTicketPropertiesPage'
+import { SettingsTicketTemplatesPage } from './pages/settings/SettingsTicketTemplatesPage'
 import { SettingsCsmPage } from './pages/settings/SettingsCsmPage'
 import { SettingsContactsPage } from './pages/settings/SettingsContactsPage'
 import { SettingsCompaniesPage } from './pages/settings/SettingsCompaniesPage'
@@ -39,10 +42,14 @@ function App() {
                 <Route path="/settings/email" element={<SettingsEmailPage />} />
                 <Route path="/settings/notifications" element={<SettingsNotificationsPage />} />
                 <Route path="/settings/tickets" element={<SettingsTicketsPage />} />
+                <Route path="/settings/tickets/categories" element={<SettingsTicketCategoriesPage />} />
+                <Route path="/settings/tickets/properties" element={<SettingsTicketPropertiesPage />} />
+                <Route path="/settings/tickets/statuses" element={<SettingsCustomStatusesPage />} />
+                <Route path="/settings/tickets/templates" element={<SettingsTicketTemplatesPage />} />
                 <Route path="/settings/csm" element={<SettingsCsmPage />} />
                 <Route path="/settings/contacts" element={<SettingsContactsPage />} />
                 <Route path="/settings/companies" element={<SettingsCompaniesPage />} />
-                <Route path="/settings/custom-statuses" element={<SettingsCustomStatusesPage />} />
+                <Route path="/settings/custom-statuses" element={<Navigate to="/settings/tickets/statuses" replace />} />
                 <Route path="/settings/integration" element={<SettingsIntegrationPage />} />
                 <Route element={<RequireRole roles={['MasterAdmin']} />}>
                   <Route path="/settings/system" element={<SettingsSystemPage />} />
