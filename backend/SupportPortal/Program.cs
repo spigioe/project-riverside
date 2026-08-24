@@ -131,6 +131,7 @@ builder.Services.AddScoped<ICsmService, CsmService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IContactService, ContactService>();
 builder.Services.AddScoped<ICustomStatusService, CustomStatusService>();
+builder.Services.AddScoped<ITicketTypeService, TicketTypeService>();
 builder.Services.AddScoped<ICustomFieldService, CustomFieldService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();

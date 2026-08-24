@@ -19,7 +19,7 @@ export class ApiKeysClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -194,7 +194,7 @@ export class AuditLogClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -266,7 +266,7 @@ export class AuthClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -446,7 +446,7 @@ export class CannedResponsesClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -1024,7 +1024,7 @@ export class CategoriesClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -1326,7 +1326,7 @@ export class CompaniesClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -1696,7 +1696,7 @@ export class ContactsClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -2068,7 +2068,7 @@ export class CsmClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -2374,7 +2374,7 @@ export class CustomFieldDefinitionsClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -2614,7 +2614,7 @@ export class CustomStatusesClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -2868,7 +2868,7 @@ export class DashboardClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -3044,7 +3044,7 @@ export class IntegrationClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -3206,7 +3206,7 @@ export class MeClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -3320,7 +3320,7 @@ export class NotificationsClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -3645,7 +3645,7 @@ export class RolesClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -3714,7 +3714,7 @@ export class SettingsClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -3887,7 +3887,7 @@ export class SlaClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -4320,7 +4320,7 @@ export class TicketAiClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -4529,7 +4529,7 @@ export class TicketAttachmentsClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -4646,7 +4646,7 @@ export class TicketAttachmentsClient {
                 fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
                 fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
             }
-            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] as string }), headers: _headers });
+            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] as string | undefined }), headers: _headers });
         } else if (status === 404) {
             const _responseText = response.data;
             let result404: any = null;
@@ -4671,7 +4671,7 @@ export class TicketClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -6124,7 +6124,7 @@ export class TicketCustomFieldsClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -6270,6 +6270,315 @@ export class TicketCustomFieldsClient {
     }
 }
 
+export class TicketTypesClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getAll( cancelToken?: CancelToken): Promise<TicketTypeDto[]> {
+        let url_ = this.baseUrl + "/api/portal/ticket-types";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetAll(_response);
+        });
+    }
+
+    protected processGetAll(response: AxiosResponse): Promise<TicketTypeDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(TicketTypeDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<TicketTypeDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<TicketTypeDto[]>(null as any);
+    }
+
+    create(request: CreateTicketTypeRequest, cancelToken?: CancelToken): Promise<TicketTypeDto> {
+        let url_ = this.baseUrl + "/api/portal/ticket-types";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processCreate(_response);
+        });
+    }
+
+    protected processCreate(response: AxiosResponse): Promise<TicketTypeDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 201) {
+            const _responseText = response.data;
+            let result201: any = null;
+            let resultData201  = _responseText;
+            result201 = TicketTypeDto.fromJS(resultData201);
+            return Promise.resolve<TicketTypeDto>(result201);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<TicketTypeDto>(null as any);
+    }
+
+    update(id: number, request: UpdateTicketTypeDefinitionRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/ticket-types/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdate(_response);
+        });
+    }
+
+    protected processUpdate(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status === 409) {
+            const _responseText = response.data;
+            let result409: any = null;
+            let resultData409  = _responseText;
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    delete(id: number, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/ticket-types/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDelete(_response);
+        });
+    }
+
+    protected processDelete(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    reorder(request: ReorderTicketTypesRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/ticket-types/reorder";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processReorder(_response);
+        });
+    }
+
+    protected processReorder(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+}
+
 export class UsersClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -6279,7 +6588,7 @@ export class UsersClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5100";
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
 
     }
 
@@ -10504,7 +10813,7 @@ export class TicketListItemDto implements ITicketListItemDto {
     createdAt?: Date;
     updatedAt?: Date;
     source?: TicketSource;
-    type?: TicketType | undefined;
+    type?: string | undefined;
     customStatusKey?: string | undefined;
 
     constructor(data?: ITicketListItemDto) {
@@ -10599,7 +10908,7 @@ export interface ITicketListItemDto {
     createdAt?: Date;
     updatedAt?: Date;
     source?: TicketSource;
-    type?: TicketType | undefined;
+    type?: string | undefined;
     customStatusKey?: string | undefined;
 }
 
@@ -10616,13 +10925,6 @@ export enum TicketSource {
     Portal = "Portal",
     Manual = "Manual",
     Api = "Api",
-}
-
-export enum TicketType {
-    Question = "Question",
-    Incident = "Incident",
-    Problem = "Problem",
-    FeatureRequest = "FeatureRequest",
 }
 
 export class TicketSearchResultDto implements ITicketSearchResultDto {
@@ -10679,7 +10981,7 @@ export class TicketDetailDto implements ITicketDetailDto {
     body?: string;
     status?: TicketStatus;
     priority?: TicketPriority;
-    type?: TicketType | undefined;
+    type?: string | undefined;
     categoryId?: number | undefined;
     categoryName?: string | undefined;
     assignedToId?: number | undefined;
@@ -10795,7 +11097,7 @@ export interface ITicketDetailDto {
     body?: string;
     status?: TicketStatus;
     priority?: TicketPriority;
-    type?: TicketType | undefined;
+    type?: string | undefined;
     categoryId?: number | undefined;
     categoryName?: string | undefined;
     assignedToId?: number | undefined;
@@ -11010,7 +11312,7 @@ export interface IUpdateTicketPriorityRequest {
 }
 
 export class UpdateTicketTypeRequest implements IUpdateTicketTypeRequest {
-    type?: TicketType | undefined;
+    type?: string | undefined;
 
     constructor(data?: IUpdateTicketTypeRequest) {
         if (data) {
@@ -11042,7 +11344,7 @@ export class UpdateTicketTypeRequest implements IUpdateTicketTypeRequest {
 }
 
 export interface IUpdateTicketTypeRequest {
-    type?: TicketType | undefined;
+    type?: string | undefined;
 }
 
 export class AssignTicketRequest implements IAssignTicketRequest {
@@ -11688,6 +11990,226 @@ export class UpdateCustomFieldValueItem implements IUpdateCustomFieldValueItem {
 export interface IUpdateCustomFieldValueItem {
     definitionId?: number;
     value?: string | undefined;
+}
+
+export class TicketTypeDto implements ITicketTypeDto {
+    id?: number;
+    name?: string;
+    description?: string | undefined;
+    displayOrder?: number;
+    isActive?: boolean;
+    isSystem?: boolean;
+
+    constructor(data?: ITicketTypeDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.description = _data["description"];
+            this.displayOrder = _data["displayOrder"];
+            this.isActive = _data["isActive"];
+            this.isSystem = _data["isSystem"];
+        }
+    }
+
+    static fromJS(data: any): TicketTypeDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new TicketTypeDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["description"] = this.description;
+        data["displayOrder"] = this.displayOrder;
+        data["isActive"] = this.isActive;
+        data["isSystem"] = this.isSystem;
+        return data;
+    }
+}
+
+export interface ITicketTypeDto {
+    id?: number;
+    name?: string;
+    description?: string | undefined;
+    displayOrder?: number;
+    isActive?: boolean;
+    isSystem?: boolean;
+}
+
+export class CreateTicketTypeRequest implements ICreateTicketTypeRequest {
+    name?: string;
+    description?: string | undefined;
+
+    constructor(data?: ICreateTicketTypeRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.description = _data["description"];
+        }
+    }
+
+    static fromJS(data: any): CreateTicketTypeRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateTicketTypeRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["description"] = this.description;
+        return data;
+    }
+}
+
+export interface ICreateTicketTypeRequest {
+    name?: string;
+    description?: string | undefined;
+}
+
+export class UpdateTicketTypeDefinitionRequest implements IUpdateTicketTypeDefinitionRequest {
+    name?: string;
+    description?: string | undefined;
+
+    constructor(data?: IUpdateTicketTypeDefinitionRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+            this.description = _data["description"];
+        }
+    }
+
+    static fromJS(data: any): UpdateTicketTypeDefinitionRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateTicketTypeDefinitionRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        data["description"] = this.description;
+        return data;
+    }
+}
+
+export interface IUpdateTicketTypeDefinitionRequest {
+    name?: string;
+    description?: string | undefined;
+}
+
+export class ReorderTicketTypesRequest implements IReorderTicketTypesRequest {
+    items?: ReorderTicketTypeItem[];
+
+    constructor(data?: IReorderTicketTypesRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(ReorderTicketTypeItem.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): ReorderTicketTypesRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ReorderTicketTypesRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IReorderTicketTypesRequest {
+    items?: ReorderTicketTypeItem[];
+}
+
+export class ReorderTicketTypeItem implements IReorderTicketTypeItem {
+    id?: number;
+    displayOrder?: number;
+
+    constructor(data?: IReorderTicketTypeItem) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.displayOrder = _data["displayOrder"];
+        }
+    }
+
+    static fromJS(data: any): ReorderTicketTypeItem {
+        data = typeof data === 'object' ? data : {};
+        let result = new ReorderTicketTypeItem();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["displayOrder"] = this.displayOrder;
+        return data;
+    }
+}
+
+export interface IReorderTicketTypeItem {
+    id?: number;
+    displayOrder?: number;
 }
 
 export class UserSummaryDto implements IUserSummaryDto {

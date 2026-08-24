@@ -275,17 +275,17 @@ public class TicketService(
         return true;
     }
 
-    public async Task<bool> UpdateTypeAsync(int id, TicketType? type, int currentUserId)
+    public async Task<bool> UpdateTypeAsync(int id, string? type, int currentUserId)
     {
         var ticket = await db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
         if (ticket is null) return false;
 
-        var oldType = ticket.Type?.ToString() ?? "null";
+        var oldType = ticket.Type ?? "null";
         ticket.Type = type;
         ticket.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
-        await auditLogService.LogAsync(currentUserId, "ticket", id, "type_changed", oldType, type?.ToString() ?? "null");
+        await auditLogService.LogAsync(currentUserId, "ticket", id, "type_changed", oldType, type ?? "null");
 
         return true;
     }

@@ -23,6 +23,6 @@ public record TicketListItemDto(
     DateTime CreatedAt,
     DateTime UpdatedAt,
     TicketSource Source,
-    TicketType? Type,
+    string? Type,
     string? CustomStatusKey
 );

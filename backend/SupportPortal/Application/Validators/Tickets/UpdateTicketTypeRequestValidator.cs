@@ -8,8 +8,8 @@ public class UpdateTicketTypeRequestValidator : AbstractValidator<UpdateTicketTy
     public UpdateTicketTypeRequestValidator()
     {
         RuleFor(x => x.Type)
-            .IsInEnum()
-            .When(x => x.Type.HasValue)
-            .WithMessage("Érvénytelen jegy típus.");
+            .MaximumLength(100)
+            .When(x => x.Type != null)
+            .WithMessage("A típus neve túl hosszú.");
     }
 }

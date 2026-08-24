@@ -20,6 +20,7 @@ import {
   TicketAttachmentsClient,
   TicketClient,
   TicketCustomFieldsClient,
+  TicketTypesClient,
   UsersClient,
 } from './generated-client'
 import { baseURL, httpClient } from './httpClient'
@@ -49,3 +50,4 @@ export const ticketAttachmentsClient = new TicketAttachmentsClient(baseURL, http
 export const companiesClient = new CompaniesClient(baseURL, httpClient)
 export const contactsClient = new ContactsClient(baseURL, httpClient)
 export const customStatusesClient = new CustomStatusesClient(baseURL, httpClient)
+export const ticketTypesClient = new TicketTypesClient(baseURL, httpClient)

@@ -19,6 +19,27 @@ public static class DbSeeder
         }
         await db.SaveChangesAsync();
 
+        // Rendszer ticket típusok seedelése (idempotens)
+        var systemTypeNames = new[] { "Question", "Incident", "Problem", "FeatureRequest" };
+        var systemTypeLabels = new Dictionary<string, string>
+        {
+            { "Question", "Kérdés" },
+            { "Incident", "Incidens" },
+            { "Problem", "Probléma" },
+            { "FeatureRequest", "Funkcióigény" },
+        };
+        var existingTypeNames = await db.TicketTypes.Select(t => t.Name).ToListAsync();
+        var order = await db.TicketTypes.MaxAsync(t => (int?)t.DisplayOrder) ?? -1;
+        foreach (var key in systemTypeNames)
+        {
+            var label = systemTypeLabels[key];
+            if (!existingTypeNames.Contains(label))
+            {
+                db.TicketTypes.Add(new TicketType { Name = label, IsSystem = true, DisplayOrder = ++order });
+            }
+        }
+        await db.SaveChangesAsync();
+
         if (await db.Users.AnyAsync()) return; // már seedelt
 
         var masterAdminRole = await db.Roles.FirstAsync(r => r.Name == UserRole.MasterAdmin);

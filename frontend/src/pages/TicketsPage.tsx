@@ -34,12 +34,13 @@ import {
   TicketPriority,
   TicketSource,
   TicketStatus,
-  TicketType,
+  TicketTypeDto,
   UpdateTicketPriorityRequest,
   UpdateTicketStatusRequest,
   UpdateTicketTypeRequest,
 } from '../api'
 import { useCustomStatuses, CUSTOM_STATUS_ICONS } from '../lib/customStatuses'
+import { useTicketTypes } from '../lib/ticketTypes'
 import { formatDateTime, formatTicketId } from '../lib/format'
 import styles from './TicketsPage.module.css'
 import dc from './DetailedCard.module.css'
@@ -111,13 +112,6 @@ const PRIORITY_LABELS: Record<TicketPriority, string> = {
   [TicketPriority.Urgent]: 'Sürgős',
 }
 
-const TYPE_LABELS: Record<TicketType, string> = {
-  [TicketType.Question]: 'Kérdés',
-  [TicketType.Incident]: 'Incidens',
-  [TicketType.Problem]: 'Probléma',
-  [TicketType.FeatureRequest]: 'Funkciókérés',
-}
-
 const STATUS_LABELS: Record<TicketStatus, string> = {
   [TicketStatus.New]: 'Új',
   [TicketStatus.Open]: 'Nyitott',
@@ -135,12 +129,13 @@ const PRIORITY_DOT: Record<TicketPriority, string> = {
   [TicketPriority.Urgent]: dc.dotUrgent,
 }
 
-const TYPE_ICON: Record<string, { icon: IconDefinition; color: string }> = {
-  [TicketType.Question]:      { icon: faCircleQuestion,     color: 'var(--primary)' },
-  [TicketType.Incident]:      { icon: faFire,               color: 'var(--red-text)' },
-  [TicketType.Problem]:       { icon: faTriangleExclamation, color: 'var(--amber-text)' },
-  [TicketType.FeatureRequest]:{ icon: faLightbulb,          color: 'var(--purple)' },
-  '':                         { icon: faTag,                color: 'var(--text-muted)' },
+const TYPE_ICON_DEFAULT: { icon: IconDefinition; color: string } = { icon: faTag, color: 'var(--text-muted)' }
+
+const TYPE_ICON_BY_NAME: Record<string, { icon: IconDefinition; color: string }> = {
+  'Kérdés':       { icon: faCircleQuestion,      color: 'var(--primary)' },
+  'Incidens':     { icon: faFire,                color: 'var(--red-text)' },
+  'Probléma':     { icon: faTriangleExclamation, color: 'var(--amber-text)' },
+  'Funkcióigény': { icon: faLightbulb,           color: 'var(--purple)' },
 }
 
 const STATUS_ICON: Record<TicketStatus, { icon: IconDefinition; color: string }> = {
@@ -313,14 +308,15 @@ function InlineDropdown({ value, options, onChange }: InlineDropdownProps) {
 interface DetailedCardProps {
   ticket: TicketListItemDto
   customStatuses: CustomStatusDto[]
+  ticketTypes: TicketTypeDto[]
   onStatusChange: (id: number, status: TicketStatus) => void
   onCustomStatusChange: (id: number, key: string | null) => void
   onPriorityChange: (id: number, priority: TicketPriority) => void
-  onTypeChange: (id: number, type: TicketType | null) => void
+  onTypeChange: (id: number, type: string | null) => void
   onDelete: (id: number) => void
 }
 
-function DetailedCard({ ticket, customStatuses, onStatusChange, onCustomStatusChange, onPriorityChange, onTypeChange, onDelete }: DetailedCardProps) {
+function DetailedCard({ ticket, customStatuses, ticketTypes, onStatusChange, onCustomStatusChange, onPriorityChange, onTypeChange, onDelete }: DetailedCardProps) {
   const name = ticket.requesterName ?? ticket.requesterEmail ?? ''
   const initial = name.charAt(0).toUpperCase()
   const bgColor = hashAvatarColor(ticket.requesterEmail ?? name)
@@ -386,10 +382,10 @@ function DetailedCard({ ticket, customStatuses, onStatusChange, onCustomStatusCh
         <InlineDropdown
           value={ticket.type ?? ''}
           options={[
-            { value: '', label: 'Nincs típus', ...TYPE_ICON[''] },
-            ...Object.values(TicketType).map((t) => ({ value: t, label: TYPE_LABELS[t], ...TYPE_ICON[t] })),
+            { value: '', label: 'Nincs típus', ...TYPE_ICON_DEFAULT },
+            ...ticketTypes.filter((t) => t.isActive).map((t) => ({ value: t.name!, label: t.name!, ...(TYPE_ICON_BY_NAME[t.name!] ?? TYPE_ICON_DEFAULT) })),
           ]}
-          onChange={(v) => onTypeChange(ticket.id!, v === '' ? null : v as TicketType)}
+          onChange={(v) => onTypeChange(ticket.id!, v === '' ? null : v)}
         />
 
         <InlineDropdown
@@ -857,13 +853,16 @@ export function TicketsPage() {
   })
 
   const typeMutation = useMutation({
-    mutationFn: ({ id, t }: { id: number; t: TicketType | null }) =>
+    mutationFn: ({ id, t }: { id: number; t: string | null }) =>
       ticketClient.updateType(id, new UpdateTicketTypeRequest({ type: t ?? undefined })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tickets'] }),
   })
 
   const customStatusesQuery = useCustomStatuses()
   const customStatuses = customStatusesQuery.data ?? []
+
+  const ticketTypesQuery = useTicketTypes()
+  const ticketTypes = ticketTypesQuery.data ?? []
 
   const customStatusMutation = useMutation({
     mutationFn: ({ id, key }: { id: number; key: string | null }) =>
@@ -966,6 +965,7 @@ export function TicketsPage() {
                   key={ticket.id}
                   ticket={ticket}
                   customStatuses={customStatuses}
+                  ticketTypes={ticketTypes}
                   onStatusChange={(id, s) => statusMutation.mutate({ id, s })}
                   onCustomStatusChange={(id, key) => customStatusMutation.mutate({ id, key })}
                   onPriorityChange={(id, p) => priorityMutation.mutate({ id, p })}
@@ -1089,10 +1089,10 @@ export function TicketsPage() {
                           <InlineDropdown
                             value={ticket.type ?? ''}
                             options={[
-                              { value: '', label: 'Nincs típus', ...TYPE_ICON[''] },
-                              ...Object.values(TicketType).map((t) => ({ value: t, label: TYPE_LABELS[t], ...TYPE_ICON[t] })),
+                              { value: '', label: 'Nincs típus', ...TYPE_ICON_DEFAULT },
+                              ...ticketTypes.filter((ty) => ty.isActive).map((ty) => ({ value: ty.name!, label: ty.name!, ...(TYPE_ICON_BY_NAME[ty.name!] ?? TYPE_ICON_DEFAULT) })),
                             ]}
-                            onChange={(v) => typeMutation.mutate({ id: ticket.id!, t: v === '' ? null : v as TicketType })}
+                            onChange={(v) => typeMutation.mutate({ id: ticket.id!, t: v === '' ? null : v })}
                           />
                         </td>
                         <td>{ticket.assignedToName ?? '—'}</td>
@@ -1210,10 +1210,10 @@ export function TicketsPage() {
                       <InlineDropdown
                         value={ticket.type ?? ''}
                         options={[
-                          { value: '', label: 'Nincs típus', ...TYPE_ICON[''] },
-                          ...Object.values(TicketType).map((t) => ({ value: t, label: TYPE_LABELS[t], ...TYPE_ICON[t] })),
+                          { value: '', label: 'Nincs típus', ...TYPE_ICON_DEFAULT },
+                          ...ticketTypes.filter((ty) => ty.isActive).map((ty) => ({ value: ty.name!, label: ty.name!, ...(TYPE_ICON_BY_NAME[ty.name!] ?? TYPE_ICON_DEFAULT) })),
                         ]}
-                        onChange={(v) => typeMutation.mutate({ id: ticket.id!, t: v === '' ? null : v as TicketType })}
+                        onChange={(v) => typeMutation.mutate({ id: ticket.id!, t: v === '' ? null : v })}
                       />
                     </div>
                     <div className={styles.mono}>{formatDateTime(ticket.lastMessageAt ?? ticket.createdAt)}</div>

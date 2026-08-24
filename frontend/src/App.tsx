@@ -16,6 +16,7 @@ import { SettingsCsmPage } from './pages/settings/SettingsCsmPage'
 import { SettingsContactsPage } from './pages/settings/SettingsContactsPage'
 import { SettingsCompaniesPage } from './pages/settings/SettingsCompaniesPage'
 import { SettingsCustomStatusesPage } from './pages/settings/SettingsCustomStatusesPage'
+import { SettingsTicketTypesPage } from './pages/settings/SettingsTicketTypesPage'
 import { SettingsIntegrationPage } from './pages/settings/SettingsIntegrationPage'
 import { SettingsSystemPage } from './pages/settings/SettingsSystemPage'
 import { AppLayout } from './components/Layout/AppLayout'
@@ -47,6 +48,7 @@ function App() {
                 <Route path="/settings/tickets/categories" element={<SettingsTicketCategoriesPage />} />
                 <Route path="/settings/tickets/properties" element={<SettingsTicketPropertiesPage />} />
                 <Route path="/settings/tickets/statuses" element={<SettingsCustomStatusesPage />} />
+                <Route path="/settings/tickets/types" element={<SettingsTicketTypesPage />} />
                 <Route path="/settings/tickets/templates" element={<SettingsTicketTemplatesPage />} />
                 <Route path="/settings/csm" element={<SettingsCsmPage />} />
                 <Route path="/settings/contacts" element={<Navigate to="/contacts" replace />} />

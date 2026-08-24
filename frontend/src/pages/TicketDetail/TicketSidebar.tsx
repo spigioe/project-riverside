@@ -22,7 +22,6 @@ import {
   TicketListView,
   TicketPriority,
   TicketStatus,
-  TicketType,
   UpdateCustomFieldValueItem,
   UpdateTicketPriorityRequest,
   UpdateTicketRequest,
@@ -30,6 +29,7 @@ import {
   UpdateTicketTypeRequest,
 } from '../../api'
 import { useCustomStatuses } from '../../lib/customStatuses'
+import { useTicketTypes } from '../../lib/ticketTypes'
 import { Modal } from '../../components/Modal/Modal'
 import { PriorityBadge } from '../../components/Badge/PriorityBadge'
 import badgeStyles from '../../components/Badge/Badge.module.css'
@@ -43,13 +43,6 @@ const PRIORITY_OPTIONS: { value: TicketPriority; label: string }[] = [
   { value: TicketPriority.Medium, label: 'Közepes' },
   { value: TicketPriority.High, label: 'Magas' },
   { value: TicketPriority.Urgent, label: 'Sürgős' },
-]
-
-const TYPE_OPTIONS: { value: TicketType; label: string }[] = [
-  { value: TicketType.Question, label: 'Kérdés' },
-  { value: TicketType.Incident, label: 'Incidens' },
-  { value: TicketType.Problem, label: 'Probléma' },
-  { value: TicketType.FeatureRequest, label: 'Funkció kérés' },
 ]
 
 const STATUS_OPTIONS: { value: TicketStatus; label: string }[] = [
@@ -111,6 +104,9 @@ export function TicketSidebar({ ticket, ticketId, inline = false }: Props) {
   const customStatusesQuery = useCustomStatuses()
   const customStatuses = customStatusesQuery.data ?? []
 
+  const ticketTypesQuery = useTicketTypes()
+  const ticketTypes = ticketTypesQuery.data ?? []
+
   const customFieldsQuery = useQuery({
     queryKey: ['ticket-custom-fields', ticketId],
     queryFn: () => ticketCustomFieldsClient.getValues(ticketId),
@@ -123,7 +119,7 @@ export function TicketSidebar({ ticket, ticketId, inline = false }: Props) {
   const [draftCustomStatusKey, setDraftCustomStatusKey] = useState<string | null>(null)
   const [draftCsmId, setDraftCsmId] = useState<number | undefined>()
   const [draftPriority, setDraftPriority] = useState<TicketPriority | undefined>()
-  const [draftType, setDraftType] = useState<TicketType | undefined>()
+  const [draftType, setDraftType] = useState<string | undefined>()
   const [draftCategoryId, setDraftCategoryId] = useState<number | undefined>()
   const [propertiesDirty, setPropertiesDirty] = useState(false)
 
@@ -195,7 +191,7 @@ export function TicketSidebar({ ticket, ticketId, inline = false }: Props) {
   })
 
   const typeMutation = useMutation({
-    mutationFn: (type: TicketType | undefined) =>
+    mutationFn: (type: string | undefined) =>
       ticketClient.updateType(ticketId, new UpdateTicketTypeRequest({ type })),
     onSuccess: invalidate,
   })
@@ -241,7 +237,7 @@ export function TicketSidebar({ ticket, ticketId, inline = false }: Props) {
         tasks.push(ticketClient.assignCsm(ticketId, new CsmAssignRequest({ csmId: draftCsmId })))
       if (draftPriority !== ticket.priority && draftPriority)
         tasks.push(ticketClient.updatePriority(ticketId, new UpdateTicketPriorityRequest({ priority: draftPriority })))
-      if (draftType !== ticket.type)
+      if (draftType !== (ticket.type ?? undefined))
         tasks.push(ticketClient.updateType(ticketId, new UpdateTicketTypeRequest({ type: draftType })))
       if (draftCategoryId !== (ticket.categoryId ?? undefined))
         tasks.push(ticketClient.updateTicket(ticketId, new UpdateTicketRequest({
@@ -345,14 +341,14 @@ export function TicketSidebar({ ticket, ticketId, inline = false }: Props) {
               className={styles.propSelect}
               value={(autosave ? ticket.type : draftType) ?? ''}
               onChange={(e) => {
-                const value = e.target.value ? (e.target.value as TicketType) : undefined
+                const value = e.target.value || undefined
                 if (autosave) typeMutation.mutate(value)
                 else { setDraftType(value); setPropertiesDirty(true) }
               }}
             >
               <option value="">— nincs megadva —</option>
-              {TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              {ticketTypes.filter((t) => t.isActive).map((t) => (
+                <option key={t.name} value={t.name!}>{t.name}</option>
               ))}
             </select>
           </div>

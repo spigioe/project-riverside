@@ -23,6 +23,12 @@ const CARDS: HubCard[] = [
     emoji: '⚙️',
   },
   {
+    title: 'Ticket típusok',
+    description: 'Jegy típusok kezelése',
+    to: '/settings/tickets/types',
+    emoji: '🏷️',
+  },
+  {
     title: 'Egyéni státuszok',
     description: 'Saját státuszok definiálása',
     to: '/settings/tickets/statuses',
