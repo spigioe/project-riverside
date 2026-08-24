@@ -34,6 +34,8 @@ function App() {
             <Route path="/preferences" element={<PreferencesPage />} />
             <Route path="/tickets" element={<TicketsPage />} />
             <Route path="/tickets/:id" element={<TicketDetailPage />} />
+            <Route path="/contacts" element={<SettingsContactsPage />} />
+            <Route path="/companies" element={<SettingsCompaniesPage />} />
             <Route element={<RequireRole roles={['MasterAdmin', 'Admin']} />}>
               <Route element={<SettingsLayout />}>
                 <Route path="/settings" element={<Navigate to="/settings/users" replace />} />
@@ -47,8 +49,8 @@ function App() {
                 <Route path="/settings/tickets/statuses" element={<SettingsCustomStatusesPage />} />
                 <Route path="/settings/tickets/templates" element={<SettingsTicketTemplatesPage />} />
                 <Route path="/settings/csm" element={<SettingsCsmPage />} />
-                <Route path="/settings/contacts" element={<SettingsContactsPage />} />
-                <Route path="/settings/companies" element={<SettingsCompaniesPage />} />
+                <Route path="/settings/contacts" element={<Navigate to="/contacts" replace />} />
+                <Route path="/settings/companies" element={<Navigate to="/companies" replace />} />
                 <Route path="/settings/custom-statuses" element={<Navigate to="/settings/tickets/statuses" replace />} />
                 <Route path="/settings/integration" element={<SettingsIntegrationPage />} />
                 <Route element={<RequireRole roles={['MasterAdmin']} />}>

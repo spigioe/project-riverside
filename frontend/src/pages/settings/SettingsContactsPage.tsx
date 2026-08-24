@@ -4,10 +4,13 @@ import { companiesClient, contactsClient, BuildFromTicketsResult, CompanyDto, Co
 import { Modal } from '../../components/Modal/Modal'
 import { getErrorMessage } from '../../lib/errors'
 import { formatDateTime } from '../../lib/format'
+import { useAuthStore } from '../../store/useAuthStore'
 import shared from '../../components/Settings/SettingsShared.module.css'
 
 export function SettingsContactsPage() {
   const queryClient = useQueryClient()
+  const user = useAuthStore((state) => state.user)
+  const canEdit = user?.role !== 'Viewer'
   const [createOpen, setCreateOpen] = useState(false)
   const [editContact, setEditContact] = useState<ContactDto | null>(null)
   const [search, setSearch] = useState('')
@@ -48,23 +51,25 @@ export function SettingsContactsPage() {
           <h1 className={shared.title}>Kontaktok</h1>
           <div className={shared.subtitle}>{contactsQuery.data?.totalCount ?? 0} kontakt</div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button
-            type="button"
-            className={shared.secondaryButton}
-            onClick={() => {
-              if (confirm('Végigmegy az összes ticketen és kontaktokat generál a feladók alapján. Folytatod?'))
-                buildMutation.mutate()
-            }}
-            disabled={buildMutation.isPending}
-            title="Kontaktok és cégkapcsolatok generálása a meglévő ticketek feladói alapján"
-          >
-            {buildMutation.isPending ? 'Generálás…' : '⟳ Generálás ticketekből'}
-          </button>
-          <button type="button" className={shared.primaryButton} onClick={() => setCreateOpen(true)}>
-            + Új kontakt
-          </button>
-        </div>
+        {canEdit && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              type="button"
+              className={shared.secondaryButton}
+              onClick={() => {
+                if (confirm('Végigmegy az összes ticketen és kontaktokat generál a feladók alapján. Folytatod?'))
+                  buildMutation.mutate()
+              }}
+              disabled={buildMutation.isPending}
+              title="Kontaktok és cégkapcsolatok generálása a meglévő ticketek feladói alapján"
+            >
+              {buildMutation.isPending ? 'Generálás…' : '⟳ Generálás ticketekből'}
+            </button>
+            <button type="button" className={shared.primaryButton} onClick={() => setCreateOpen(true)}>
+              + Új kontakt
+            </button>
+          </div>
+        )}
       </div>
 
       {buildResult && (
@@ -147,21 +152,23 @@ export function SettingsContactsPage() {
                   </td>
                   <td className={shared.muted}>{formatDateTime(c.createdAt)}</td>
                   <td>
-                    <div className={shared.rowActions}>
-                      <button type="button" className={shared.editButton} onClick={() => setEditContact(c)}>
-                        Szerkesztés
-                      </button>
-                      <button
-                        type="button"
-                        className={shared.deleteButton}
-                        onClick={() => {
-                          if (confirm(`Biztosan törlöd a(z) "${c.name}" kontaktot?`))
-                            deleteMutation.mutate(c.id!)
-                        }}
-                      >
-                        Törlés
-                      </button>
-                    </div>
+                    {canEdit && (
+                      <div className={shared.rowActions}>
+                        <button type="button" className={shared.editButton} onClick={() => setEditContact(c)}>
+                          Szerkesztés
+                        </button>
+                        <button
+                          type="button"
+                          className={shared.deleteButton}
+                          onClick={() => {
+                            if (confirm(`Biztosan törlöd a(z) "${c.name}" kontaktot?`))
+                              deleteMutation.mutate(c.id!)
+                          }}
+                        >
+                          Törlés
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

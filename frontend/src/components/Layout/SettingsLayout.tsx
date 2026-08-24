@@ -8,8 +8,6 @@ const MENU_ITEMS = [
   { to: '/settings/email', label: 'Email konfiguráció' },
   { to: '/settings/notifications', label: 'Értesítések' },
   { to: '/settings/tickets', label: 'Ticket beállítások' },
-  { to: '/settings/contacts', label: 'Kontaktok' },
-  { to: '/settings/companies', label: 'Cégek' },
   { to: '/settings/integration', label: 'Integráció' },
 ]
 

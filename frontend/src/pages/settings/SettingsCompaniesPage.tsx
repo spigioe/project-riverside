@@ -4,10 +4,13 @@ import { companiesClient, CompanyDto, CreateCompanyRequest, UpdateCompanyRequest
 import { Modal } from '../../components/Modal/Modal'
 import { getErrorMessage } from '../../lib/errors'
 import { formatDateTime } from '../../lib/format'
+import { useAuthStore } from '../../store/useAuthStore'
 import shared from '../../components/Settings/SettingsShared.module.css'
 
 export function SettingsCompaniesPage() {
   const queryClient = useQueryClient()
+  const user = useAuthStore((state) => state.user)
+  const canEdit = user?.role !== 'Viewer'
   const [createOpen, setCreateOpen] = useState(false)
   const [editCompany, setEditCompany] = useState<CompanyDto | null>(null)
 
@@ -30,9 +33,11 @@ export function SettingsCompaniesPage() {
           <h1 className={shared.title}>Cégek</h1>
           <div className={shared.subtitle}>{companies.length} cég</div>
         </div>
-        <button type="button" className={shared.primaryButton} onClick={() => setCreateOpen(true)}>
-          + Új cég
-        </button>
+        {canEdit && (
+          <button type="button" className={shared.primaryButton} onClick={() => setCreateOpen(true)}>
+            + Új cég
+          </button>
+        )}
       </div>
 
       {deleteMutation.isError && (
@@ -65,21 +70,23 @@ export function SettingsCompaniesPage() {
                   <td>{c.contactCount}</td>
                   <td className={shared.muted}>{formatDateTime(c.createdAt)}</td>
                   <td>
-                    <div className={shared.rowActions}>
-                      <button type="button" className={shared.editButton} onClick={() => setEditCompany(c)}>
-                        Szerkesztés
-                      </button>
-                      <button
-                        type="button"
-                        className={shared.deleteButton}
-                        onClick={() => {
-                          if (confirm(`Biztosan törlöd a(z) "${c.name}" céget?`))
-                            deleteMutation.mutate(c.id!)
-                        }}
-                      >
-                        Törlés
-                      </button>
-                    </div>
+                    {canEdit && (
+                      <div className={shared.rowActions}>
+                        <button type="button" className={shared.editButton} onClick={() => setEditCompany(c)}>
+                          Szerkesztés
+                        </button>
+                        <button
+                          type="button"
+                          className={shared.deleteButton}
+                          onClick={() => {
+                            if (confirm(`Biztosan törlöd a(z) "${c.name}" céget?`))
+                              deleteMutation.mutate(c.id!)
+                          }}
+                        >
+                          Törlés
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

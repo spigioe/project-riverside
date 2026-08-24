@@ -604,7 +604,7 @@ function ContactSection({ ticket, ticketId }: { ticket: TicketDetailDto; ticketI
   return (
     <>
       <div>
-        <Link to="/settings/contacts" className={styles.contactName}>
+        <Link to="/contacts" className={styles.contactName}>
           {contact.name}
           {!contact.isActive && (
             <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}>(inaktív)</span>
@@ -627,7 +627,7 @@ function ContactSection({ ticket, ticketId }: { ticket: TicketDetailDto; ticketI
             ))}
           </div>
           {(contact.recentTickets ?? []).length > 3 && (
-            <Link to="/settings/contacts" className={styles.allTicketsLink}>
+            <Link to="/contacts" className={styles.allTicketsLink}>
               Összes megtekintése →
             </Link>
           )}

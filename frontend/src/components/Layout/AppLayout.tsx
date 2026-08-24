@@ -59,6 +59,26 @@ function SearchIcon() {
   )
 }
 
+function ContactsIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="7" cy="5" r="2.5" />
+      <path d="M2 12c0-2.2 2.2-4 5-4s5 1.8 5 4" />
+    </svg>
+  )
+}
+
+function CompaniesIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="10" height="8.5" rx="1" />
+      <path d="M5 4V2.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5V4" />
+      <line x1="5" y1="7.5" x2="9" y2="7.5" />
+      <line x1="5" y1="9.5" x2="9" y2="9.5" />
+    </svg>
+  )
+}
+
 export function AppLayout() {
   const user = useAuthStore((state) => state.user)
   const refreshToken = useAuthStore((state) => state.refreshToken)
@@ -113,6 +133,20 @@ export function AppLayout() {
           >
             <span className={styles.navIcon}><TicketsIcon /></span>
             Jegyek
+          </NavLink>
+          <NavLink
+            to="/contacts"
+            className={({ isActive }) => `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}
+          >
+            <span className={styles.navIcon}><ContactsIcon /></span>
+            Kontaktok
+          </NavLink>
+          <NavLink
+            to="/companies"
+            className={({ isActive }) => `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}
+          >
+            <span className={styles.navIcon}><CompaniesIcon /></span>
+            Cégek
           </NavLink>
           {(user?.role === 'MasterAdmin' || user?.role === 'Admin') && (
             <NavLink
