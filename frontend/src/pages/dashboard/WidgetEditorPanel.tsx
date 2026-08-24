@@ -261,19 +261,19 @@ export function WidgetEditorPanel({ widget, onUpdate, onClose, onDelete }: Props
           <div className={styles.sectionTitle}>Elhelyezés</div>
           <div className={styles.gridRow}>
             <div className={styles.field}>
-              <label className={styles.label}>Oszlop (1–6)</label>
+              <label className={styles.label}>Oszlop (1–8)</label>
               <input
-                type="number" min={1} max={6} className={styles.input}
+                type="number" min={1} max={8} className={styles.input}
                 value={widget.col + 1}
-                onChange={e => onUpdate({ ...widget, col: Math.max(0, Math.min(5, Number(e.target.value) - 1)) })}
+                onChange={e => onUpdate({ ...widget, col: Math.max(0, Math.min(7, Number(e.target.value) - 1)) })}
               />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Sor (1–8)</label>
+              <label className={styles.label}>Sor (1–10)</label>
               <input
-                type="number" min={1} max={8} className={styles.input}
+                type="number" min={1} max={10} className={styles.input}
                 value={widget.row + 1}
-                onChange={e => onUpdate({ ...widget, row: Math.max(0, Math.min(7, Number(e.target.value) - 1)) })}
+                onChange={e => onUpdate({ ...widget, row: Math.max(0, Math.min(9, Number(e.target.value) - 1)) })}
               />
             </div>
           </div>
@@ -281,17 +281,17 @@ export function WidgetEditorPanel({ widget, onUpdate, onClose, onDelete }: Props
             <div className={styles.field}>
               <label className={styles.label}>Szélesség (oszlop)</label>
               <input
-                type="number" min={1} max={6} className={styles.input}
+                type="number" min={1} max={8} className={styles.input}
                 value={widget.colSpan}
-                onChange={e => onUpdate({ ...widget, colSpan: Math.max(1, Math.min(6, Number(e.target.value))) })}
+                onChange={e => onUpdate({ ...widget, colSpan: Math.max(1, Math.min(8, Number(e.target.value))) })}
               />
             </div>
             <div className={styles.field}>
               <label className={styles.label}>Magasság (sor)</label>
               <input
-                type="number" min={1} max={8} className={styles.input}
+                type="number" min={1} max={10} className={styles.input}
                 value={widget.rowSpan}
-                onChange={e => onUpdate({ ...widget, rowSpan: Math.max(1, Math.min(8, Number(e.target.value))) })}
+                onChange={e => onUpdate({ ...widget, rowSpan: Math.max(1, Math.min(10, Number(e.target.value))) })}
               />
             </div>
           </div>

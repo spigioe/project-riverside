@@ -18,10 +18,10 @@ public class UpdateDashboardWidgetsRequestValidator : AbstractValidator<UpdateDa
         RuleForEach(x => x.Widgets).ChildRules(widget =>
         {
             widget.RuleFor(w => w.WidgetType).IsInEnum().WithMessage("Érvénytelen widget típus.");
-            widget.RuleFor(w => w.Col).InclusiveBetween(0, 5).WithMessage("Az oszlop értéke 0–5 közé kell essen.");
-            widget.RuleFor(w => w.Row).InclusiveBetween(0, 7).WithMessage("A sor értéke 0–7 közé kell essen.");
-            widget.RuleFor(w => w.ColSpan).InclusiveBetween(1, 6).WithMessage("A colSpan értéke 1–6 közé kell essen.");
-            widget.RuleFor(w => w.RowSpan).InclusiveBetween(1, 8).WithMessage("A rowSpan értéke 1–8 közé kell essen.");
+            widget.RuleFor(w => w.Col).InclusiveBetween(0, 7).WithMessage("Az oszlop értéke 0–7 közé kell essen.");
+            widget.RuleFor(w => w.Row).InclusiveBetween(0, 9).WithMessage("A sor értéke 0–9 közé kell essen.");
+            widget.RuleFor(w => w.ColSpan).InclusiveBetween(1, 8).WithMessage("A colSpan értéke 1–8 közé kell essen.");
+            widget.RuleFor(w => w.RowSpan).InclusiveBetween(1, 10).WithMessage("A rowSpan értéke 1–10 közé kell essen.");
         });
     }
 }

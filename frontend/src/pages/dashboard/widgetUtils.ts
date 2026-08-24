@@ -83,8 +83,8 @@ export function hasCollision(widgets: { id: number; col: number; row: number; co
 }
 
 export function findFreePosition(widgets: { col: number; row: number; colSpan: number; rowSpan: number }[], colSpan: number, rowSpan: number): { col: number; row: number } {
-  for (let row = 0; row <= 8 - rowSpan; row++) {
-    for (let col = 0; col <= 6 - colSpan; col++) {
+  for (let row = 0; row <= 10 - rowSpan; row++) {
+    for (let col = 0; col <= 8 - colSpan; col++) {
       const noCollision = widgets.every(w => {
         return col + colSpan <= w.col || w.col + w.colSpan <= col || row + rowSpan <= w.row || w.row + w.rowSpan <= row
       })

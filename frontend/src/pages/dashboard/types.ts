@@ -127,7 +127,7 @@ export const STAT_NAV_URLS: Partial<Record<DashboardWidgetType, string>> = {
   [DashboardWidgetType.DueToday]:      '/tickets?dueToday=true',
 }
 
-export const GRID_COLS = 6
-export const GRID_ROWS = 8
+export const GRID_COLS = 8
+export const GRID_ROWS = 10
 export const GRID_GAP = 12
 export const GRID_CELL_MIN_H = 120

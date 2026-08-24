@@ -98,10 +98,9 @@
 /* ── Grid ──────────────────────────────────────────────────────────── */
 .grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  grid-auto-rows: minmax(120px, auto);
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(10, 120px);
   gap: 12px;
-  min-height: calc(8 * 120px + 7 * 12px);
 }
 
 .gridEdit {
