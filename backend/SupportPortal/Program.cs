@@ -116,6 +116,8 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddHttpClient<EmailServiceRouter>(client =>
     client.BaseAddress = new Uri(mailSettings.ApiBaseUrl));
 builder.Services.AddScoped<IEmailService>(sp => sp.GetRequiredService<EmailServiceRouter>());
+// Belső HTTP hívások (inline kép letöltés küldéskor) — auth token nem kell, csak a base URL
+builder.Services.AddHttpClient("internal");
 builder.Services.AddScoped<ITicketEmailProcessor, TicketEmailProcessor>();
 builder.Services.AddHostedService<EmailPollingService>();
 builder.Services.AddSingleton<INotificationService, NotificationService>();
@@ -137,6 +139,7 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
 builder.Services.AddScoped<IFileStorageService, MinioFileStorageService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+builder.Services.AddScoped<ITemplateService, TemplateService>();
 builder.Services.AddHttpClient<IIntegrationService, IntegrationService>(client =>
     client.BaseAddress = new Uri("https://api.clickup.com/api/v2/"));
 builder.Services.AddHttpClient<IClickUpLinkService, ClickUpLinkService>(client =>

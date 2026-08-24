@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   settingsClient,
+  AutoResponderDto,
   TestEmailConnectionRequest,
   TestEmailConnectionResponse,
+  UpdateAutoResponderRequest,
   UpdateEmailSettingsRequest,
 } from '../../api'
 import { getErrorMessage } from '../../lib/errors'
@@ -325,6 +327,101 @@ export function SettingsEmailPage() {
           </div>
         </form>
       )}
+
+      <div style={{ marginTop: 32 }}>
+        <AutoResponderSection />
+      </div>
+    </div>
+  )
+}
+
+function AutoResponderSection() {
+  const queryClient = useQueryClient()
+  const arQuery = useQuery({
+    queryKey: ['auto-responder'],
+    queryFn: () => settingsClient.getAutoResponder(),
+  })
+
+  const [isEnabled, setIsEnabled] = useState(false)
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (arQuery.data) {
+      setIsEnabled(arQuery.data.isEnabled)
+      setSubject(arQuery.data.subjectTemplate)
+      setBody(arQuery.data.bodyTemplate)
+    }
+  }, [arQuery.data])
+
+  const saveMutation = useMutation({
+    mutationFn: () => settingsClient.updateAutoResponder(new UpdateAutoResponderRequest({
+      subjectTemplate: subject,
+      bodyTemplate: body,
+      isEnabled,
+    })),
+    onSuccess: (result: AutoResponderDto) => {
+      queryClient.setQueryData(['auto-responder'], result)
+      setSaveError(null)
+    },
+    onError: (err) => setSaveError(getErrorMessage(err, 'Nem sikerült menteni.')),
+  })
+
+  return (
+    <div className={shared.card}>
+      <div className={shared.cardHeader}>
+        <span className={shared.cardHeaderTitle}>Automatikus visszaigazolás</span>
+        <button
+          type="button"
+          className={shared.primaryButton}
+          disabled={saveMutation.isPending}
+          onClick={() => saveMutation.mutate()}
+        >
+          {saveMutation.isPending ? 'Mentés…' : 'Mentés'}
+        </button>
+      </div>
+      <div className={shared.cardBody}>
+        {saveError && <div className={shared.formError}>{saveError}</div>}
+        <div className={shared.formGroup} style={{ marginBottom: 16 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <button
+              type="button"
+              className={`${shared.toggle} ${isEnabled ? shared.toggleOn : ''}`}
+              aria-pressed={isEnabled}
+              onClick={() => setIsEnabled((v) => !v)}
+            >
+              <span className={shared.toggleKnob} />
+            </button>
+            <span style={{ fontSize: 13 }}>Automatikus visszaigazolás bekapcsolva</span>
+          </label>
+          <div className={shared.formHint}>
+            Ha bekapcsolt, minden bejövő emailre automatikusan visszaigazolást küld a rendszer.
+          </div>
+        </div>
+        <div className={shared.formGroup}>
+          <label className={shared.formLabel}>Tárgy sablon</label>
+          <input
+            className={shared.formInput}
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="pl. Megkaptuk megkeresését – #{{ticket.id}}: {{ticket.subject}}"
+          />
+        </div>
+        <div className={shared.formGroup} style={{ marginBottom: 0 }}>
+          <label className={shared.formLabel}>Üzenet sablon</label>
+          <textarea
+            className={shared.formInput}
+            rows={8}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 12.5, resize: 'vertical' }}
+          />
+          <div className={shared.formHint}>
+            Elérhető változók: {'{{ticket.id}}'}, {'{{ticket.subject}}'}, {'{{contact.name}}'}, {'{{contact.email}}'}, {'{{portal.url}}'}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

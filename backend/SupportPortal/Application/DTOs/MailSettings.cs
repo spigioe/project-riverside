@@ -21,4 +21,5 @@ public class MailSettings
 
     public int PollIntervalSeconds { get; set; } = 60;
     public string FromAddress { get; set; } = "support@supportportal.dev";
+    public string PortalUrl { get; set; } = "http://localhost:5173";
 }

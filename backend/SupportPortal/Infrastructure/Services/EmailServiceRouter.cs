@@ -20,6 +20,7 @@ public class EmailServiceRouter(
     IOptions<MailSettings> defaultOptions,
     IEncryptionService encryptionService,
     HttpClient mailpitHttpClient,
+    IHttpClientFactory httpClientFactory,
     ILogger<EmailServiceRouter> logger,
     ILogger<ImapEmailService> imapLogger) : IEmailService
 {
@@ -68,11 +69,9 @@ public class EmailServiceRouter(
         if (settings.Provider.Equals("imap", StringComparison.OrdinalIgnoreCase) ||
             settings.Provider.Equals("gmail", StringComparison.OrdinalIgnoreCase))
         {
-            return new ImapEmailService(settings, imapLogger);
+            return new ImapEmailService(settings, imapLogger, httpClientFactory);
         }
 
-        // Mailpit: az HttpClient-et itt nem tudjuk megváltoztatni (DI-ból jön, rögzített base address-szel),
-        // de fejlesztői módban a base address az appsettings-ből van, ezért ez mindig helyes.
-        return new MailpitEmailService(mailpitHttpClient, settings, logger);
+        return new MailpitEmailService(mailpitHttpClient, settings, logger, httpClientFactory);
     }
 }

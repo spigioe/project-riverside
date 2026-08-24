@@ -93,10 +93,10 @@ export interface WidgetMeta {
 }
 
 export const WIDGET_META: Record<DashboardWidgetType, WidgetMeta> = {
-  [DashboardWidgetType.Unresolved]:        { label: 'Nyitott ügyek',          description: 'Megoldatlan jegyek száma',                         defaultColSpan: 1, defaultRowSpan: 1, icon: '📋' },
+  [DashboardWidgetType.Unresolved]:        { label: 'Megoldatlan',          description: 'Megoldatlan jegyek száma',                         defaultColSpan: 1, defaultRowSpan: 1, icon: '📋' },
   [DashboardWidgetType.Overdue]:           { label: 'Lejárt SLA',             description: 'SLA határidőt túllépett jegyek',                   defaultColSpan: 1, defaultRowSpan: 1, icon: '🔴' },
   [DashboardWidgetType.DueToday]:          { label: 'Ma esedékes',            description: 'Ma lejáró SLA határidős jegyek',                   defaultColSpan: 1, defaultRowSpan: 1, icon: '📅' },
-  [DashboardWidgetType.Open]:              { label: 'Nyitott (Open)',          description: 'Open státuszú jegyek száma',                       defaultColSpan: 1, defaultRowSpan: 1, icon: '🔓' },
+  [DashboardWidgetType.Open]:              { label: 'Nyitott',          description: 'Open státuszú jegyek száma',                       defaultColSpan: 1, defaultRowSpan: 1, icon: '🔓' },
   [DashboardWidgetType.Unassigned]:        { label: 'Hozzá nem rendelve',     description: 'Nincs felelős hozzárendelve',                      defaultColSpan: 1, defaultRowSpan: 1, icon: '👤' },
   [DashboardWidgetType.SlaCompliance]:     { label: 'SLA teljesítés',         description: 'SLA megfelelési arány (%)',                        defaultColSpan: 1, defaultRowSpan: 1, icon: '✅' },
   [DashboardWidgetType.TrendChart]:        { label: 'Jegyvolumen diagram',    description: 'Beérkező és megoldott jegyek időbontásban',         defaultColSpan: 3, defaultRowSpan: 2, icon: '📊' },

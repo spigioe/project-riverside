@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SupportPortal.Application.DTOs.Sla;
 using SupportPortal.Application.Interfaces;
+using SupportPortal.Application.DTOs.Settings;
 
 namespace SupportPortal.Api.Controllers;
 
@@ -94,5 +95,22 @@ public class SlaController(ISlaService slaService) : ControllerBase
     public async Task<IActionResult> UpdateBusinessHours([FromBody] UpdateBusinessHoursRequest request)
     {
         return Ok(await slaService.UpdateBusinessHoursAsync(request));
+    }
+
+    [HttpGet("freeze-statuses")]
+    [ProducesResponseType(typeof(IReadOnlyList<SlaFreezeStatusDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetFreezeStatuses()
+    {
+        return Ok(await slaService.GetFreezeStatusesAsync());
+    }
+
+    [HttpPut("freeze-statuses")]
+    [ProducesResponseType(typeof(IReadOnlyList<SlaFreezeStatusDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateFreezeStatuses([FromBody] UpdateSlaFreezeStatusesRequest request)
+    {
+        if (request.Statuses is null || request.Statuses.Count == 0)
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: "A státuszok listája nem lehet üres.");
+        return Ok(await slaService.UpdateFreezeStatusesAsync(request));
     }
 }

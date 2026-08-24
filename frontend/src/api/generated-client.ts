@@ -4502,6 +4502,51 @@ export class SettingsClient {
         }
         return Promise.resolve<TestEmailConnectionResponse>(null as any);
     }
+
+    getAutoResponder(cancelToken?: CancelToken): Promise<AutoResponderDto> {
+        let url_ = this.baseUrl + "/api/portal/settings/auto-responder";
+        url_ = url_.replace(/[?&]$/, "");
+        let options_: AxiosRequestConfig = {
+            method: "GET", url: url_,
+            headers: { "Accept": "application/json" },
+            cancelToken
+        };
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) return _error.response;
+            else throw _error;
+        }).then((_response: AxiosResponse) => {
+            const status = _response.status;
+            if (status === 200) {
+                return AutoResponderDto.fromJS(_response.data);
+            } else if (status !== 200 && status !== 204) {
+                return throwException("An unexpected server error occurred.", status, _response.data, {});
+            }
+            return Promise.resolve<AutoResponderDto>(null as any);
+        });
+    }
+
+    updateAutoResponder(request: UpdateAutoResponderRequest, cancelToken?: CancelToken): Promise<AutoResponderDto> {
+        let url_ = this.baseUrl + "/api/portal/settings/auto-responder";
+        url_ = url_.replace(/[?&]$/, "");
+        const content_ = JSON.stringify(request);
+        let options_: AxiosRequestConfig = {
+            data: content_, method: "PUT", url: url_,
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            cancelToken
+        };
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) return _error.response;
+            else throw _error;
+        }).then((_response: AxiosResponse) => {
+            const status = _response.status;
+            if (status === 200) {
+                return AutoResponderDto.fromJS(_response.data);
+            } else if (status !== 200 && status !== 204) {
+                return throwException("An unexpected server error occurred.", status, _response.data, {});
+            }
+            return Promise.resolve<AutoResponderDto>(null as any);
+        });
+    }
 }
 
 export class SlaClient {
@@ -4935,6 +4980,53 @@ export class SlaClient {
         }
         return Promise.resolve<BusinessHoursDayDto[]>(null as any);
     }
+
+    getFreezeStatuses(cancelToken?: CancelToken): Promise<SlaFreezeStatusDto[]> {
+        let url_ = this.baseUrl + "/api/portal/sla/freeze-statuses";
+        url_ = url_.replace(/[?&]$/, "");
+        let options_: AxiosRequestConfig = {
+            method: "GET", url: url_,
+            headers: { "Accept": "application/json" },
+            cancelToken
+        };
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) return _error.response;
+            else throw _error;
+        }).then((_response: AxiosResponse) => {
+            const status = _response.status;
+            if (status === 200) {
+                const data = _response.data;
+                return Array.isArray(data) ? data.map((item: any) => SlaFreezeStatusDto.fromJS(item)) : [];
+            } else if (status !== 200 && status !== 204) {
+                return throwException("An unexpected server error occurred.", status, _response.data, {});
+            }
+            return Promise.resolve<SlaFreezeStatusDto[]>(null as any);
+        });
+    }
+
+    updateFreezeStatuses(request: UpdateSlaFreezeStatusesRequest, cancelToken?: CancelToken): Promise<SlaFreezeStatusDto[]> {
+        let url_ = this.baseUrl + "/api/portal/sla/freeze-statuses";
+        url_ = url_.replace(/[?&]$/, "");
+        const content_ = JSON.stringify(request);
+        let options_: AxiosRequestConfig = {
+            data: content_, method: "PUT", url: url_,
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            cancelToken
+        };
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) return _error.response;
+            else throw _error;
+        }).then((_response: AxiosResponse) => {
+            const status = _response.status;
+            if (status === 200) {
+                const data = _response.data;
+                return Array.isArray(data) ? data.map((item: any) => SlaFreezeStatusDto.fromJS(item)) : [];
+            } else if (status !== 200 && status !== 204) {
+                return throwException("An unexpected server error occurred.", status, _response.data, {});
+            }
+            return Promise.resolve<SlaFreezeStatusDto[]>(null as any);
+        });
+    }
 }
 
 export class TicketAiClient {
@@ -5272,7 +5364,7 @@ export class TicketAttachmentsClient {
                 fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
                 fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
             }
-            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] as string }), headers: _headers });
+            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] as string | undefined }), headers: _headers });
         } else if (status === 404) {
             const _responseText = response.data;
             let result404: any = null;
@@ -5285,6 +5377,76 @@ export class TicketAttachmentsClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<FileResponse>(null as any);
+    }
+
+    uploadInline(ticketId: number, file?: FileParameter | null | undefined, cancelToken?: CancelToken): Promise<InlineAttachmentResult> {
+        let url_ = this.baseUrl + "/api/portal/tickets/{ticketId}/attachments/inline";
+        if (ticketId === undefined || ticketId === null)
+            throw new globalThis.Error("The parameter 'ticketId' must be defined.");
+        url_ = url_.replace("{ticketId}", encodeURIComponent("" + ticketId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = new FormData();
+        if (file !== null && file !== undefined)
+            content_.append("file", file.data, file.fileName ? file.fileName : "file");
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUploadInline(_response);
+        });
+    }
+
+    protected processUploadInline(response: AxiosResponse): Promise<InlineAttachmentResult> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = InlineAttachmentResult.fromJS(resultData200);
+            return Promise.resolve<InlineAttachmentResult>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<InlineAttachmentResult>(null as any);
     }
 }
 
@@ -9214,6 +9376,7 @@ export class BuildFromTicketsResult implements IBuildFromTicketsResult {
     contactsCreated?: number;
     contactsLinked?: number;
     ticketsUpdated?: number;
+    companiesCreated?: number;
 
     constructor(data?: IBuildFromTicketsResult) {
         if (data) {
@@ -9229,6 +9392,7 @@ export class BuildFromTicketsResult implements IBuildFromTicketsResult {
             this.contactsCreated = _data["contactsCreated"];
             this.contactsLinked = _data["contactsLinked"];
             this.ticketsUpdated = _data["ticketsUpdated"];
+            this.companiesCreated = _data["companiesCreated"];
         }
     }
 
@@ -9244,6 +9408,7 @@ export class BuildFromTicketsResult implements IBuildFromTicketsResult {
         data["contactsCreated"] = this.contactsCreated;
         data["contactsLinked"] = this.contactsLinked;
         data["ticketsUpdated"] = this.ticketsUpdated;
+        data["companiesCreated"] = this.companiesCreated;
         return data;
     }
 }
@@ -9252,6 +9417,7 @@ export interface IBuildFromTicketsResult {
     contactsCreated?: number;
     contactsLinked?: number;
     ticketsUpdated?: number;
+    companiesCreated?: number;
 }
 
 export class CsmDto implements ICsmDto {
@@ -11702,7 +11868,7 @@ export enum TicketPriority {
 
 export class AttachmentDto implements IAttachmentDto {
     id?: number;
-    messageId?: number;
+    messageId?: number | undefined;
     originalFilename?: string;
     mimeType?: string;
     fileSize?: number;
@@ -11752,11 +11918,51 @@ export class AttachmentDto implements IAttachmentDto {
 
 export interface IAttachmentDto {
     id?: number;
-    messageId?: number;
+    messageId?: number | undefined;
     originalFilename?: string;
     mimeType?: string;
     fileSize?: number;
     uploadedAt?: Date;
+    downloadUrl?: string;
+}
+
+export class InlineAttachmentResult implements IInlineAttachmentResult {
+    fileId?: number;
+    downloadUrl?: string;
+
+    constructor(data?: IInlineAttachmentResult) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.fileId = _data["fileId"];
+            this.downloadUrl = _data["downloadUrl"];
+        }
+    }
+
+    static fromJS(data: any): InlineAttachmentResult {
+        data = typeof data === 'object' ? data : {};
+        let result = new InlineAttachmentResult();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["fileId"] = this.fileId;
+        data["downloadUrl"] = this.downloadUrl;
+        return data;
+    }
+}
+
+export interface IInlineAttachmentResult {
+    fileId?: number;
     downloadUrl?: string;
 }
 
@@ -13793,6 +13999,186 @@ function throwException(message: string, status: number, response: string, heade
         throw result;
     else
         throw new SwaggerException(message, status, response, headers, null);
+}
+
+export class SlaFreezeStatusDto implements ISlaFreezeStatusDto {
+    statusKey!: string;
+    freezeEnabled!: boolean;
+
+    constructor(data?: ISlaFreezeStatusDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.statusKey = _data["statusKey"];
+            this.freezeEnabled = _data["freezeEnabled"];
+        }
+    }
+
+    static fromJS(data: any): SlaFreezeStatusDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new SlaFreezeStatusDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["statusKey"] = this.statusKey;
+        data["freezeEnabled"] = this.freezeEnabled;
+        return data;
+    }
+}
+
+export interface ISlaFreezeStatusDto {
+    statusKey: string;
+    freezeEnabled: boolean;
+}
+
+export class UpdateSlaFreezeStatusesRequest implements IUpdateSlaFreezeStatusesRequest {
+    statuses!: SlaFreezeStatusDto[];
+
+    constructor(data?: IUpdateSlaFreezeStatusesRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["statuses"])) {
+                this.statuses = [] as any;
+                for (let item of _data["statuses"])
+                    this.statuses!.push(SlaFreezeStatusDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): UpdateSlaFreezeStatusesRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateSlaFreezeStatusesRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.statuses)) {
+            data["statuses"] = [];
+            for (let item of this.statuses)
+                data["statuses"].push(item.toJSON());
+        }
+        return data;
+    }
+}
+
+export interface IUpdateSlaFreezeStatusesRequest {
+    statuses: SlaFreezeStatusDto[];
+}
+
+export class AutoResponderDto implements IAutoResponderDto {
+    id!: number;
+    trigger!: string;
+    subjectTemplate!: string;
+    bodyTemplate!: string;
+    isEnabled!: boolean;
+
+    constructor(data?: IAutoResponderDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.trigger = _data["trigger"];
+            this.subjectTemplate = _data["subjectTemplate"];
+            this.bodyTemplate = _data["bodyTemplate"];
+            this.isEnabled = _data["isEnabled"];
+        }
+    }
+
+    static fromJS(data: any): AutoResponderDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new AutoResponderDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["trigger"] = this.trigger;
+        data["subjectTemplate"] = this.subjectTemplate;
+        data["bodyTemplate"] = this.bodyTemplate;
+        data["isEnabled"] = this.isEnabled;
+        return data;
+    }
+}
+
+export interface IAutoResponderDto {
+    id: number;
+    trigger: string;
+    subjectTemplate: string;
+    bodyTemplate: string;
+    isEnabled: boolean;
+}
+
+export class UpdateAutoResponderRequest implements IUpdateAutoResponderRequest {
+    subjectTemplate!: string;
+    bodyTemplate!: string;
+    isEnabled!: boolean;
+
+    constructor(data?: IUpdateAutoResponderRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.subjectTemplate = _data["subjectTemplate"];
+            this.bodyTemplate = _data["bodyTemplate"];
+            this.isEnabled = _data["isEnabled"];
+        }
+    }
+
+    static fromJS(data: any): UpdateAutoResponderRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateAutoResponderRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["subjectTemplate"] = this.subjectTemplate;
+        data["bodyTemplate"] = this.bodyTemplate;
+        data["isEnabled"] = this.isEnabled;
+        return data;
+    }
+}
+
+export interface IUpdateAutoResponderRequest {
+    subjectTemplate: string;
+    bodyTemplate: string;
+    isEnabled: boolean;
 }
 
 function isAxiosError(obj: any): obj is AxiosError {

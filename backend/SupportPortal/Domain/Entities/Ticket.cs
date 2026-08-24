@@ -28,6 +28,7 @@ public class Ticket
     public Contact? Contact { get; set; }
     public string? CustomStatusKey { get; set; }
     public DateTime? SlaDueAt { get; set; }
+    public DateTime? SlaPausedAt { get; set; }
     public bool SlaBreach { get; set; } = false;
     public bool IsDeleted { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -15,4 +15,5 @@ public interface ICompanyService
     Task<CompanySaveResult> UpdateAsync(int id, UpdateCompanyRequest request);
     Task<CompanyDeleteResult> DeleteAsync(int id);
     Task<int?> FindCompanyIdForEmailDomainAsync(string email);
+    Task<int?> UpsertByDomainAsync(string email);
 }

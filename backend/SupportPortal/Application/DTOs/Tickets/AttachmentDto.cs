@@ -2,10 +2,12 @@ namespace SupportPortal.Application.DTOs.Tickets;
 
 public record AttachmentDto(
     int Id,
-    int MessageId,
+    int? MessageId,
     string OriginalFilename,
     string MimeType,
     long FileSize,
     DateTime UploadedAt,
     string DownloadUrl
 );
+
+public record InlineAttachmentResult(int FileId, string DownloadUrl);

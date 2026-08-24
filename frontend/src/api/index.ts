@@ -23,6 +23,7 @@ import {
   TicketCustomFieldsClient,
   TicketTypesClient,
   UsersClient,
+  InlineAttachmentResult,
 } from './generated-client'
 import { baseURL, httpClient } from './httpClient'
 
@@ -53,3 +54,4 @@ export const contactsClient = new ContactsClient(baseURL, httpClient)
 export const customStatusesClient = new CustomStatusesClient(baseURL, httpClient)
 export const ticketTypesClient = new TicketTypesClient(baseURL, httpClient)
 export const analyticsClient = new PortalAnalyticsClient(baseURL, httpClient)
+export { InlineAttachmentResult }

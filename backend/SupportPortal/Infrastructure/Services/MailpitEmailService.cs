@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using MailKit.Net.Smtp;
 using Microsoft.Extensions.Logging;
 using MimeKit;
@@ -12,7 +13,7 @@ namespace SupportPortal.Infrastructure.Services;
 // A Mailpit nem biztosít IMAP szervert (csak SMTP + POP3 + HTTP API-t — lásd `mailpit --help`),
 // ezért a bejövő emailek lekérdezése a Mailpit HTTP API-ján keresztül történik, nem IMAP-on.
 // A kimenő küldés (SendAsync) továbbra is valódi SMTP-vel megy MailKit-en keresztül.
-public class MailpitEmailService(HttpClient httpClient, MailSettings settings, ILogger logger) : IEmailService
+public class MailpitEmailService(HttpClient httpClient, MailSettings settings, ILogger logger, IHttpClientFactory httpClientFactory) : IEmailService
 {
     private readonly MailSettings _settings = settings;
 
@@ -29,8 +30,7 @@ public class MailpitEmailService(HttpClient httpClient, MailSettings settings, I
         AddAddresses(message.Cc, cc);
         AddAddresses(message.Bcc, bcc);
         message.Subject = subject;
-        // A reply composer (TipTap) HTML-t ad — a body itt már HTML, nem plain text.
-        message.Body = new TextPart("html") { Text = body };
+        message.Body = await BuildBodyWithInlineImagesAsync(body);
 
         var messageId = MimeUtils.GenerateMessageId();
         message.MessageId = messageId;
@@ -76,7 +76,17 @@ public class MailpitEmailService(HttpClient httpClient, MailSettings settings, I
                 foreach (var part in detail.Attachments ?? [])
                 {
                     var bytes = await httpClient.GetByteArrayAsync($"/api/v1/message/{id}/part/{part.PartID}");
-                    attachments.Add(new InboundEmailAttachment(part.FileName, part.ContentType, bytes));
+                    attachments.Add(new InboundEmailAttachment(
+                        part.FileName, part.ContentType,
+                        ContentId: null, IsInline: false, bytes));
+                }
+                foreach (var part in detail.Inline ?? [])
+                {
+                    var bytes = await httpClient.GetByteArrayAsync($"/api/v1/message/{id}/part/{part.PartID}");
+                    var contentId = part.ContentID?.Trim('<', '>');
+                    attachments.Add(new InboundEmailAttachment(
+                        part.FileName, part.ContentType,
+                        ContentId: contentId, IsInline: true, bytes));
                 }
 
                 results.Add(new InboundEmail(
@@ -129,11 +139,42 @@ public class MailpitEmailService(HttpClient httpClient, MailSettings settings, I
 
     private static string NormalizeMessageId(string raw) => raw.Trim().Trim('<', '>');
 
+    private async Task<MimeEntity> BuildBodyWithInlineImagesAsync(string html)
+    {
+        var matches = Regex.Matches(html, @"/api/portal/attachments/(\d+)/download");
+        if (matches.Count == 0)
+            return new TextPart("html") { Text = html };
+
+        var builder = new BodyBuilder();
+        var resolvedHtml = html;
+
+        using var http = httpClientFactory.CreateClient("internal");
+        foreach (Match match in matches.Cast<Match>().DistinctBy(m => m.Value))
+        {
+            if (!int.TryParse(match.Groups[1].Value, out _)) continue;
+            try
+            {
+                var bytes = await http.GetByteArrayAsync($"http://localhost:5000{match.Value}");
+                var cid = MimeUtils.GenerateMessageId();
+                var image = builder.LinkedResources.Add(cid, bytes);
+                image.ContentId = cid;
+                resolvedHtml = resolvedHtml.Replace(match.Value, $"cid:{cid}");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Inline kép letöltése sikertelen: {Url}", match.Value);
+            }
+        }
+
+        builder.HtmlBody = resolvedHtml;
+        return builder.ToMessageBody();
+    }
+
     private record MailpitListResponse(int Unread, List<MailpitMessageSummary> Messages);
     private record MailpitMessageSummary(string ID, bool Read);
     private record MailpitAddress(string Name, string Address);
-    private record MailpitAttachment(string PartID, string FileName, string ContentType);
+    private record MailpitAttachment(string PartID, string FileName, string ContentType, string? ContentID = null);
     private record MailpitMessageDetail(
         string MessageID, MailpitAddress? From, List<MailpitAddress> To, string? Subject, string? Text, string? HTML,
-        DateTime Date, List<MailpitAttachment>? Attachments);
+        DateTime Date, List<MailpitAttachment>? Attachments, List<MailpitAttachment>? Inline);
 }

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import shared from '../../components/Settings/SettingsShared.module.css'
 import styles from './SettingsTicketsHubPage.module.css'
+import { faRectangleList } from '@fortawesome/free-solid-svg-icons'
 
 interface HubCard {
   title: string

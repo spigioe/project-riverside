@@ -240,6 +240,23 @@ public class TicketService(
         ticket.Status = status;
         ticket.UpdatedAt = DateTime.UtcNow;
 
+        // SLA freeze logika
+        var freeze = await slaService.GetFreezeStatusForKeyAsync(status.ToString());
+        if (freeze is not null)
+        {
+            if (freeze.FreezeEnabled && ticket.SlaPausedAt is null)
+            {
+                ticket.SlaPausedAt = DateTime.UtcNow;
+            }
+            else if (!freeze.FreezeEnabled && ticket.SlaPausedAt is not null)
+            {
+                var elapsed = DateTime.UtcNow - ticket.SlaPausedAt.Value;
+                if (ticket.SlaDueAt.HasValue)
+                    ticket.SlaDueAt = ticket.SlaDueAt.Value + elapsed;
+                ticket.SlaPausedAt = null;
+            }
+        }
+
         await db.SaveChangesAsync();
 
         if (oldStatus != status)
@@ -633,14 +650,49 @@ public class TicketService(
 
     private async Task SendReplyEmailAsync(Ticket ticket, string body, string? cc, string? bcc)
     {
-        // Az eredeti (legkorábbi) bejövő email erre a jegyre — ennek Message-ID-jére válaszolunk,
-        // hogy a levelezőkliens/Mailpit egy szálban tartsa a beszélgetést.
         var original = await db.EmailQueues
             .Where(q => q.TicketId == ticket.Id && q.ExternalMessageId != null)
             .OrderBy(q => q.CreatedAt)
             .FirstOrDefaultAsync();
 
         var subject = $"Re: [#{ticket.Id}] {ticket.Subject}";
+
+        // Korábbi kimenő üzenetek email előzmény blokkként csatolva
+        var previousMessages = await db.TicketMessages
+            .AsNoTracking()
+            .Where(m => m.TicketId == ticket.Id && m.Direction == MessageDirection.Outbound && !m.IsInternalNote)
+            .Include(m => m.SenderUser)
+            .OrderBy(m => m.CreatedAt)
+            .ToListAsync();
+
+        if (previousMessages.Count > 0)
+        {
+            var historyParts = previousMessages.Select(m =>
+            {
+                var senderName = m.SenderUser?.FullName ?? m.SenderEmail ?? "Support";
+                var senderEmail = m.SenderUser?.Email ?? m.SenderEmail ?? mailOptions.Value.FromAddress;
+                var dateStr = m.CreatedAt.ToLocalTime().ToString("yyyy. MM. dd. HH:mm");
+                return $"""
+                    <div style="margin-bottom:16px">
+                      <div style="font-size:12px;color:#666;margin-bottom:6px">
+                        <strong>Feladó:</strong> {senderName} &lt;{senderEmail}&gt;<br>
+                        <strong>Dátum:</strong> {dateStr}<br>
+                        <strong>Tárgy:</strong> {subject}
+                      </div>
+                      <div style="padding-left:12px;border-left:3px solid #ccc;font-size:14px">
+                        {m.Body}
+                      </div>
+                    </div>
+                    """;
+            });
+
+            var historyBlock = $"""
+                <div style="margin-top:20px;padding-top:10px;border-top:1px solid #e1e1e1">
+                  {string.Join("\n", historyParts)}
+                </div>
+                """;
+            body = body + historyBlock;
+        }
 
         try
         {

@@ -45,7 +45,7 @@ export function SettingsContactsPage() {
   const companies = companiesQuery.data ?? []
 
   return (
-    <div>
+    <div style={{ padding: '28px 32px 40px' }}>
       <div className={shared.header}>
         <div>
           <h1 className={shared.title}>Kontaktok</h1>

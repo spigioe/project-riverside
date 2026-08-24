@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { cannedResponsesClient, CannedResponseDto } from '../../api'
+import { cannedResponsesClient, ticketAttachmentsClient, CannedResponseDto } from '../../api'
 import { Modal } from '../../components/Modal/Modal'
 import { RichTextEditor, type RichTextEditorHandle } from '../../components/RichTextEditor/RichTextEditor'
 import rteStyles from '../../components/RichTextEditor/RichTextEditor.module.css'
@@ -15,6 +15,7 @@ const MAX_ATTACHMENTS = 5
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024
 
 interface ReplyComposerProps {
+  ticketId: number
   ticketSubject: string
   requesterEmail: string
   body: string
@@ -38,7 +39,7 @@ interface ReplyComposerProps {
 }
 
 export function ReplyComposer({
-  ticketSubject, requesterEmail, body, onBodyChange, cc, onCcChange, bcc, onBccChange,
+  ticketId, ticketSubject, requesterEmail, body, onBodyChange, cc, onCcChange, bcc, onBccChange,
   isInternalNote, onInternalNoteChange, attachments, onAttachmentsChange, onSend, sending, editorMinHeight,
   signature, lastInboundBody, disabled = false,
 }: ReplyComposerProps) {
@@ -50,6 +51,11 @@ export function ReplyComposer({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const initializedRef = useRef(false)
   const authUser = useAuthStore((s) => s.user)
+
+  const handleImageUpload = useCallback(async (file: File): Promise<string> => {
+    const result = await ticketAttachmentsClient.uploadInline(ticketId, file)
+    return result.downloadUrl ?? ''
+  }, [ticketId])
 
   // Mount-kori automatikus tartalom: idézet (ha be van kapcsolva és van bejövő üzenet) + aláírás,
   // a kurzor a dokumentum elejére kerül. Csak EGYSZER fut le (ref guard), amint mindkét async adat
@@ -171,6 +177,7 @@ export function ReplyComposer({
         minHeight={editorMinHeight}
         onCannedResponseClick={() => setCannedOpen(true)}
         onAttachClick={() => fileInputRef.current?.click()}
+        onImageUpload={disabled ? undefined : handleImageUpload}
       />
 
       {attachments.length > 0 && (

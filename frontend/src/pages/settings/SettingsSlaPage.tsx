@@ -10,6 +10,8 @@ import {
   SlaPriorityRowRequest,
   UpdateBusinessHoursRequest,
   UpdateSlaPolicyRequest,
+  SlaFreezeStatusDto,
+  UpdateSlaFreezeStatusesRequest,
 } from '../../api'
 import { Modal } from '../../components/Modal/Modal'
 import { getErrorMessage } from '../../lib/errors'
@@ -197,6 +199,7 @@ export function SettingsSlaPage() {
       </div>
 
       <BusinessHoursGrid />
+      <SlaFreezeSection />
 
       {modalMode && (
         <PolicyModal
@@ -483,9 +486,11 @@ function PolicyModal({
               })}
             </div>
           )}
+          {companySearch.trim() && (
           <div style={{
             maxHeight: 140, overflowY: 'auto',
             border: '1px solid var(--border-light)', borderRadius: 'var(--radius)',
+            marginBottom: 6,
           }}>
             {filteredCompanies.length === 0 ? (
               <div style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-muted)' }}>Nincs találat.</div>
@@ -506,6 +511,7 @@ function PolicyModal({
               </label>
             ))}
           </div>
+          )}
           <div className={shared.formHint}>
             Ezek a cégek ehhez a policy-hoz lesznek rendelve (e-mail domain alapján is egyeztetve).
           </div>
@@ -525,6 +531,73 @@ function PolicyModal({
 }
 
 /* ── Business hours grid ───────────────────────────────── */
+
+const STATUS_LABELS: Record<string, string> = {
+  New: 'Új', Open: 'Nyitott', Pending: 'Függőben', Resolved: 'Megoldva', Closed: 'Lezárva',
+}
+
+function SlaFreezeSection() {
+  const queryClient = useQueryClient()
+  const freezeQuery = useQuery({
+    queryKey: ['sla-freeze-statuses'],
+    queryFn: () => slaClient.getFreezeStatuses(),
+  })
+  const [statuses, setStatuses] = useState<SlaFreezeStatusDto[]>([])
+
+  useEffect(() => {
+    if (freezeQuery.data) setStatuses([...freezeQuery.data])
+  }, [freezeQuery.data])
+
+  const saveMutation = useMutation({
+    mutationFn: () => slaClient.updateFreezeStatuses(new UpdateSlaFreezeStatusesRequest({ statuses })),
+    onSuccess: (result) => queryClient.setQueryData(['sla-freeze-statuses'], result),
+  })
+
+  function toggle(statusKey: string) {
+    setStatuses((prev) =>
+      prev.map((s) => s.statusKey === statusKey ? new SlaFreezeStatusDto({ ...s, freezeEnabled: !s.freezeEnabled }) : s)
+    )
+  }
+
+  return (
+    <div className={shared.card}>
+      <div className={shared.cardHeader}>
+        <span className={shared.cardHeaderTitle}>SLA fagyasztás státuszonként</span>
+        <button
+          type="button"
+          className={shared.primaryButton}
+          disabled={saveMutation.isPending}
+          onClick={() => saveMutation.mutate()}
+        >
+          {saveMutation.isPending ? 'Mentés…' : 'Mentés'}
+        </button>
+      </div>
+      <div className={shared.cardBody}>
+        <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 12 }}>
+          Ha egy státusz fagyasztva van, az SLA visszaszámláló leáll, amíg a ticket ebben a státuszban van.
+          Amikor a ticket kilép ebből a státuszból, az eltelt idő visszakerül az SLA határidőbe.
+        </div>
+        {freezeQuery.isPending && <div className={shared.emptyState}>Betöltés…</div>}
+        {statuses.map((s) => (
+          <div key={s.statusKey} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 0', borderBottom: '1px solid var(--border-light)',
+          }}>
+            <span style={{ fontWeight: 500, fontSize: 13 }}>{STATUS_LABELS[s.statusKey] ?? s.statusKey}</span>
+            <button
+              type="button"
+              className={`${shared.toggle} ${s.freezeEnabled ? shared.toggleOn : ''}`}
+              aria-pressed={s.freezeEnabled}
+              onClick={() => toggle(s.statusKey)}
+            >
+              <span className={shared.toggleKnob} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 const ORDERED_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 

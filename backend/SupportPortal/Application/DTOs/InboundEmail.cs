@@ -13,7 +13,13 @@ public record InboundEmail(
     IReadOnlyList<EmailPart>? RawParts = null
 );
 
-public record InboundEmailAttachment(string Filename, string ContentType, byte[] Data);
+public record InboundEmailAttachment(
+    string Filename,
+    string ContentType,
+    string? ContentId,
+    bool IsInline,
+    byte[] Data
+);
 
 // Placeholder a jövőbeli multi-sender szétbontáshoz; egyelőre mindig null
 public record EmailPart(string From, string Body, DateTime SentAt);

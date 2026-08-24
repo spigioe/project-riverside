@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SupportPortal.Application.DTOs;
 using SupportPortal.Application.DTOs.Settings;
+using SupportPortal.Domain.Entities;
 using SupportPortal.Application.Interfaces;
 using SupportPortal.Data;
 using SupportPortal.Domain.Entities;
@@ -208,5 +209,54 @@ public class SettingsController(
             logger.LogWarning(ex, "Email kapcsolat teszt meghiúsult.");
             return Ok(new TestEmailConnectionResponse(false, $"Kapcsolódási hiba: {ex.Message}"));
         }
+    }
+
+    [HttpGet("auto-responder")]
+    [ProducesResponseType(typeof(AutoResponderDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAutoResponder()
+    {
+        var template = await db.AutoResponderTemplates
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Trigger == "new_ticket");
+
+        if (template is null)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "Nincs auto-responder sablon.");
+
+        return Ok(new AutoResponderDto(
+            template.Id,
+            template.Trigger,
+            template.SubjectTemplate,
+            template.BodyTemplate,
+            template.IsEnabled));
+    }
+
+    [HttpPut("auto-responder")]
+    [ProducesResponseType(typeof(AutoResponderDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateAutoResponder([FromBody] UpdateAutoResponderRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.SubjectTemplate))
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: "A tárgy sablon nem lehet üres.");
+
+        if (string.IsNullOrWhiteSpace(request.BodyTemplate))
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Az üzenet sablon nem lehet üres.");
+
+        var template = await db.AutoResponderTemplates.FirstOrDefaultAsync(t => t.Trigger == "new_ticket");
+        if (template is null)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "Nincs auto-responder sablon.");
+
+        template.SubjectTemplate = request.SubjectTemplate;
+        template.BodyTemplate = request.BodyTemplate;
+        template.IsEnabled = request.IsEnabled;
+
+        await db.SaveChangesAsync();
+
+        return Ok(new AutoResponderDto(
+            template.Id,
+            template.Trigger,
+            template.SubjectTemplate,
+            template.BodyTemplate,
+            template.IsEnabled));
     }
 }

@@ -37,6 +37,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<TicketCustomStatus> TicketCustomStatuses => Set<TicketCustomStatus>();
     public DbSet<TicketType> TicketTypes => Set<TicketType>();
+    public DbSet<SlaFreezeStatus> SlaFreezeStatuses => Set<SlaFreezeStatus>();
+    public DbSet<AutoResponderTemplate> AutoResponderTemplates => Set<AutoResponderTemplate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

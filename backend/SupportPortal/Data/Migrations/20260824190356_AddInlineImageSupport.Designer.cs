@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SupportPortal.Data;
 
@@ -11,9 +12,11 @@ using SupportPortal.Data;
 namespace SupportPortal.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260824190356_AddInlineImageSupport")]
+    partial class AddInlineImageSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -140,37 +143,6 @@ namespace SupportPortal.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("AuditLogs");
-                });
-
-            modelBuilder.Entity("SupportPortal.Domain.Entities.AutoResponderTemplate", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("BodyTemplate")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("SubjectTemplate")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Trigger")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AutoResponderTemplates");
                 });
 
             modelBuilder.Entity("SupportPortal.Domain.Entities.BusinessHours", b =>
@@ -838,26 +810,6 @@ namespace SupportPortal.Data.Migrations
                     b.ToTable("Roles");
                 });
 
-            modelBuilder.Entity("SupportPortal.Domain.Entities.SlaFreezeStatus", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("FreezeEnabled")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("StatusKey")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("SlaFreezeStatuses");
-                });
-
             modelBuilder.Entity("SupportPortal.Domain.Entities.SlaPolicy", b =>
                 {
                     b.Property<int>("Id")
@@ -1001,9 +953,6 @@ namespace SupportPortal.Data.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<DateTime?>("SlaDueAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("SlaPausedAt")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Source")

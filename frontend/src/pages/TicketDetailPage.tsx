@@ -183,6 +183,7 @@ export function TicketDetailPage() {
 
   const composer = (
     <ReplyComposer
+      ticketId={ticket.id!}
       ticketSubject={ticket.subject ?? ''}
       requesterEmail={ticket.requesterEmail!}
       body={replyBody}

@@ -1,5 +1,6 @@
 using SupportPortal.Application.DTOs.Sla;
 using SupportPortal.Domain.Enums;
+using SupportPortal.Domain.Entities;
 
 namespace SupportPortal.Application.Interfaces;
 
@@ -19,4 +20,8 @@ public interface ISlaService
 
     Task<IReadOnlyList<BusinessHoursDayDto>> GetBusinessHoursAsync();
     Task<IReadOnlyList<BusinessHoursDayDto>> UpdateBusinessHoursAsync(UpdateBusinessHoursRequest request);
+
+    Task<IReadOnlyList<SlaFreezeStatusDto>> GetFreezeStatusesAsync();
+    Task<IReadOnlyList<SlaFreezeStatusDto>> UpdateFreezeStatusesAsync(UpdateSlaFreezeStatusesRequest request);
+    Task<SlaFreezeStatus?> GetFreezeStatusForKeyAsync(string statusKey);
 }

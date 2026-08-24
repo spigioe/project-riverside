@@ -53,6 +53,7 @@ public class SlaBreachCheckerService(
                 t.Status != TicketStatus.Closed &&
                 t.SlaDueAt.HasValue &&
                 t.SlaDueAt.Value < now &&
+                t.SlaPausedAt == null &&
                 !t.SlaBreach)
             .Select(t => new { t.Id, t.Subject, t.AssignedToId })
             .ToListAsync(stoppingToken);

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using MailKit;
 using MailKit.Net.Imap;
 using MailKit.Net.Smtp;
@@ -16,7 +17,7 @@ namespace SupportPortal.Infrastructure.Services;
 /// A bejövő emaileket IMAP UNSEEN keresés hívja le, majd SEEN-nek jelöli.
 /// A kimenő küldés SMTP-n megy (Gmail esetén 587/STARTTLS vagy 465/SSL).
 /// </summary>
-public class ImapEmailService(MailSettings settings, ILogger<ImapEmailService> logger) : IEmailService
+public class ImapEmailService(MailSettings settings, ILogger<ImapEmailService> logger, IHttpClientFactory httpClientFactory) : IEmailService
 {
     public async Task<string> SendAsync(string to, string subject, string body, string? inReplyTo, string? references, string? cc = null, string? bcc = null)
     {
@@ -26,7 +27,7 @@ public class ImapEmailService(MailSettings settings, ILogger<ImapEmailService> l
         AddAddresses(message.Cc, cc);
         AddAddresses(message.Bcc, bcc);
         message.Subject = subject;
-        message.Body = new TextPart("html") { Text = body };
+        message.Body = await BuildBodyWithInlineImagesAsync(body);
 
         var messageId = MimeUtils.GenerateMessageId();
         message.MessageId = messageId;
@@ -96,6 +97,8 @@ public class ImapEmailService(MailSettings settings, ILogger<ImapEmailService> l
                     var bodyText = mimeMessage.HtmlBody ?? mimeMessage.TextBody ?? string.Empty;
 
                     var attachments = new List<InboundEmailAttachment>();
+
+                    // Reguláris csatolmányok (Content-Disposition: attachment)
                     foreach (var attachment in mimeMessage.Attachments)
                     {
                         if (attachment is MimePart part && part.Content is not null)
@@ -105,8 +108,28 @@ public class ImapEmailService(MailSettings settings, ILogger<ImapEmailService> l
                             attachments.Add(new InboundEmailAttachment(
                                 part.FileName ?? "attachment",
                                 part.ContentType.MimeType,
+                                ContentId: null,
+                                IsInline: false,
                                 ms.ToArray()));
                         }
+                    }
+
+                    // Inline képek (cid: hivatkozások a HTML body-ban)
+                    foreach (var bodyPart in mimeMessage.BodyParts.OfType<MimePart>())
+                    {
+                        if (bodyPart.Content is null) continue;
+                        if (bodyPart.ContentType.MediaType != "image") continue;
+                        if (string.IsNullOrWhiteSpace(bodyPart.ContentId)) continue;
+
+                        var contentId = bodyPart.ContentId.Trim('<', '>');
+                        using var ms = new MemoryStream();
+                        await bodyPart.Content.DecodeToAsync(ms);
+                        attachments.Add(new InboundEmailAttachment(
+                            bodyPart.FileName ?? contentId,
+                            bodyPart.ContentType.MimeType,
+                            ContentId: contentId,
+                            IsInline: true,
+                            ms.ToArray()));
                     }
 
                     var inReplyTo = string.IsNullOrWhiteSpace(mimeMessage.InReplyTo)
@@ -153,5 +176,38 @@ public class ImapEmailService(MailSettings settings, ILogger<ImapEmailService> l
         if (string.IsNullOrWhiteSpace(commaSeparated)) return;
         foreach (var address in commaSeparated.Split(',', StringSplitOptions.RemoveEmptyEntries))
             list.Add(MailboxAddress.Parse(address.Trim()));
+    }
+
+    // /api/portal/attachments/{id}/download mintájú img src-eket CID-re cseréli és multipart/related-be csomagolja.
+    private async Task<MimeEntity> BuildBodyWithInlineImagesAsync(string html)
+    {
+        var matches = Regex.Matches(html, @"/api/portal/attachments/(\d+)/download");
+        if (matches.Count == 0)
+            return new TextPart("html") { Text = html };
+
+        var builder = new BodyBuilder();
+        var resolvedHtml = html;
+
+        using var http = httpClientFactory.CreateClient("internal");
+        foreach (Match match in matches.Cast<Match>().DistinctBy(m => m.Value))
+        {
+            if (!int.TryParse(match.Groups[1].Value, out var fileId)) continue;
+
+            try
+            {
+                var bytes = await http.GetByteArrayAsync($"http://localhost:5000{match.Value}");
+                var cid = MimeUtils.GenerateMessageId();
+                var image = builder.LinkedResources.Add(cid, bytes);
+                image.ContentId = cid;
+                resolvedHtml = resolvedHtml.Replace(match.Value, $"cid:{cid}");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Inline kép letöltése sikertelen: {Url}", match.Value);
+            }
+        }
+
+        builder.HtmlBody = resolvedHtml;
+        return builder.ToMessageBody();
     }
 }

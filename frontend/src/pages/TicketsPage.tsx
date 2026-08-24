@@ -410,14 +410,6 @@ function DetailedCard({ ticket, customStatuses, ticketTypes, onStatusChange, onC
           }}
         />
 
-        <button
-          type="button"
-          className={dc.deleteBtn}
-          title="Törlés"
-          onClick={(e) => { e.stopPropagation(); onDelete(ticket.id!) }}
-        >
-          <FontAwesomeIcon icon={faTrash} />
-        </button>
       </div>
     </div>
   )

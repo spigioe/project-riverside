@@ -34,4 +34,23 @@ public class TicketAttachmentsController(IAttachmentService attachmentService) :
         var (stream, contentType, fileName) = result.Value;
         return File(stream, contentType, fileName);
     }
+
+    [HttpPost("tickets/{ticketId:int}/attachments/inline")]
+    [ProducesResponseType(typeof(InlineAttachmentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UploadInline(int ticketId, IFormFile file)
+    {
+        if (file is null || file.Length == 0)
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Nincs feltöltött fájl.");
+
+        if (!file.ContentType.StartsWith("image/"))
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Csak képfájl tölthető fel inline módban.");
+
+        var result = await attachmentService.UploadInlineAsync(ticketId, file);
+        if (result is null)
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "A jegy nem található.");
+
+        return Ok(result);
+    }
 }

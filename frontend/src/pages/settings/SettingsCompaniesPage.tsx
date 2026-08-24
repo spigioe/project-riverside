@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { companiesClient, CompanyDto, CreateCompanyRequest, UpdateCompanyRequest } from '../../api'
+import { companiesClient, contactsClient, BuildFromTicketsResult, CompanyDto, CreateCompanyRequest, UpdateCompanyRequest } from '../../api'
 import { Modal } from '../../components/Modal/Modal'
 import { getErrorMessage } from '../../lib/errors'
 import { formatDateTime } from '../../lib/format'
@@ -14,6 +14,8 @@ export function SettingsCompaniesPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editCompany, setEditCompany] = useState<CompanyDto | null>(null)
 
+  const [buildResult, setBuildResult] = useState<BuildFromTicketsResult | null>(null)
+
   const companiesQuery = useQuery({
     queryKey: ['settings-companies'],
     queryFn: () => companiesClient.getAllCompanies(),
@@ -24,10 +26,18 @@ export function SettingsCompaniesPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings-companies'] }),
   })
 
+  const buildMutation = useMutation({
+    mutationFn: () => contactsClient.buildFromTickets(),
+    onSuccess: (result) => {
+      setBuildResult(result)
+      queryClient.invalidateQueries({ queryKey: ['settings-companies'] })
+    },
+  })
+
   const companies = companiesQuery.data ?? []
 
   return (
-    <div>
+    <div style={{ padding: '28px 32px 40px' }}>
       <div className={shared.header}>
         <div>
           <h1 className={shared.title}>Cégek</h1>
@@ -39,6 +49,29 @@ export function SettingsCompaniesPage() {
           </button>
         )}
       </div>
+
+      {canEdit && (
+        <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className={shared.secondaryButton}
+            onClick={() => { setBuildResult(null); buildMutation.mutate() }}
+            disabled={buildMutation.isPending}
+          >
+            {buildMutation.isPending ? 'Generálás…' : '⟳ Cégek generálása ticketekből'}
+          </button>
+          {buildResult && (
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              Kész — {buildResult.companiesCreated ?? 0} új cég, {buildResult.contactsCreated} új kontakt, {buildResult.ticketsUpdated} ticket frissítve.
+            </span>
+          )}
+          {buildMutation.isError && (
+            <span style={{ fontSize: 13, color: 'var(--red-text)' }}>
+              {getErrorMessage(buildMutation.error, 'Nem sikerült a generálás.')}
+            </span>
+          )}
+        </div>
+      )}
 
       {deleteMutation.isError && (
         <div className={shared.formError}>{getErrorMessage(deleteMutation.error, 'Nem sikerült törölni a céget.')}</div>

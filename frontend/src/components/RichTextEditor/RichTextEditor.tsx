@@ -4,6 +4,7 @@ import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
+import Image from '@tiptap/extension-image'
 import styles from './RichTextEditor.module.css'
 
 // A paragraph node alapból nem őriz meg tetszőleges class attribútumot parse/szerializálás közben —
@@ -36,6 +37,7 @@ interface RichTextEditorProps {
   minHeight?: number
   onCannedResponseClick?: () => void
   onAttachClick?: () => void
+  onImageUpload?: (file: File) => Promise<string>  // returns the img src URL
 }
 
 export interface RichTextEditorHandle {
@@ -46,19 +48,53 @@ export interface RichTextEditorHandle {
 }
 
 export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(function RichTextEditor(
-  { content, onChange, placeholder, highlighted = false, editable = true, minHeight, onCannedResponseClick, onAttachClick },
+  { content, onChange, placeholder, highlighted = false, editable = true, minHeight, onCannedResponseClick, onAttachClick, onImageUpload },
   ref,
 ) {
+  const onImageUploadRef = useRef(onImageUpload)
+  onImageUploadRef.current = onImageUpload
+
   const editor = useEditor({
     extensions: [
       StarterKit,
       Underline,
       Link.configure({ openOnClick: false, autolink: true }),
+      Image.configure({ inline: true, allowBase64: false }),
       ParagraphAttributes,
     ],
     content,
     editable,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    editorProps: {
+      handleDrop(view, event, _slice, moved) {
+        if (!onImageUploadRef.current) return false
+        const files = Array.from(event.dataTransfer?.files ?? []).filter(f => f.type.startsWith('image/'))
+        if (files.length === 0 || moved) return false
+        event.preventDefault()
+        const coords = view.posAtCoords({ left: event.clientX, top: event.clientY })
+        files.forEach(async (file) => {
+          const src = await onImageUploadRef.current!(file)
+          const { tr } = view.state
+          const node = view.state.schema.nodes.image.create({ src })
+          const pos = coords?.pos ?? tr.doc.content.size
+          view.dispatch(tr.insert(pos, node))
+        })
+        return true
+      },
+      handlePaste(view, event) {
+        if (!onImageUploadRef.current) return false
+        const files = Array.from(event.clipboardData?.files ?? []).filter(f => f.type.startsWith('image/'))
+        if (files.length === 0) return false
+        event.preventDefault()
+        files.forEach(async (file) => {
+          const src = await onImageUploadRef.current!(file)
+          view.dispatch(view.state.tr.replaceSelectionWith(
+            view.state.schema.nodes.image.create({ src })
+          ))
+        })
+        return true
+      },
+    },
   })
 
   // Külső content-frissítés (AI válasz javaslat betöltése, Törlés gomb) szinkronizálása az editorba —

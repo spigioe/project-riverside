@@ -239,6 +239,34 @@ public class SlaService(AppDbContext db) : ISlaService
         return await GetBusinessHoursAsync();
     }
 
+    public async Task<IReadOnlyList<SlaFreezeStatusDto>> GetFreezeStatusesAsync()
+    {
+        return await db.SlaFreezeStatuses
+            .AsNoTracking()
+            .OrderBy(s => s.StatusKey)
+            .Select(s => new SlaFreezeStatusDto(s.StatusKey, s.FreezeEnabled))
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<SlaFreezeStatusDto>> UpdateFreezeStatusesAsync(UpdateSlaFreezeStatusesRequest request)
+    {
+        var all = await db.SlaFreezeStatuses.ToListAsync();
+        foreach (var item in request.Statuses)
+        {
+            var existing = all.FirstOrDefault(s => s.StatusKey == item.StatusKey);
+            if (existing is not null)
+                existing.FreezeEnabled = item.FreezeEnabled;
+        }
+        await db.SaveChangesAsync();
+        return await GetFreezeStatusesAsync();
+    }
+
+    public async Task<SlaFreezeStatus?> GetFreezeStatusForKeyAsync(string statusKey)
+    {
+        return await db.SlaFreezeStatuses
+            .FirstOrDefaultAsync(s => s.StatusKey == statusKey);
+    }
+
     private static SlaPolicyDto MapToDto(SlaPolicy p) => new(
         p.Id,
         p.Name,

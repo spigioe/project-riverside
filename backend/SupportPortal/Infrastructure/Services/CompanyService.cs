@@ -125,6 +125,50 @@ public class CompanyService(AppDbContext db) : ICompanyService
             .FirstOrDefaultAsync();
     }
 
+    public async Task<int?> UpsertByDomainAsync(string email)
+    {
+        var domain = ExtractDomain(email);
+        if (domain is null || IsPersonalEmailDomain(domain)) return null;
+
+        var existing = await db.Companies
+            .Where(c => c.Domain == domain)
+            .Select(c => (int?)c.Id)
+            .FirstOrDefaultAsync();
+
+        if (existing.HasValue) return existing;
+
+        var name = DeriveCompanyName(domain);
+        var company = new Company { Name = name, Domain = domain };
+        db.Companies.Add(company);
+        await db.SaveChangesAsync();
+        return company.Id;
+    }
+
+    private static string DeriveCompanyName(string domain)
+    {
+        // "acme.com" → "Acme", "my-company.io" → "My Company"
+        var parts = domain.Split('.');
+        var label = parts.Length >= 2 ? parts[^2] : parts[0];
+        label = label.Replace('-', ' ').Replace('_', ' ');
+        return System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(label);
+    }
+
+    private static readonly HashSet<string> PersonalDomains = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.uk", "yahoo.co.jp",
+        "hotmail.com", "hotmail.co.uk", "hotmail.fr", "hotmail.de",
+        "outlook.com", "outlook.hu", "live.com", "live.co.uk",
+        "icloud.com", "me.com", "mac.com",
+        "aol.com", "protonmail.com", "proton.me", "pm.me",
+        "tutanota.com", "tutamail.com", "tuta.io",
+        "zoho.com", "yandex.com", "yandex.ru",
+        "mail.com", "gmx.com", "gmx.net", "gmx.de", "gmx.at",
+        "msn.com", "freemail.hu", "citromail.hu",
+    };
+
+    private static bool IsPersonalEmailDomain(string domain) =>
+        PersonalDomains.Contains(domain);
+
     private static string? NormalizeDomain(string? domain) =>
         string.IsNullOrWhiteSpace(domain) ? null : domain.Trim().ToLowerInvariant();
 

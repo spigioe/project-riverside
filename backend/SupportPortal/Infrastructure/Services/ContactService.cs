@@ -114,14 +114,9 @@ public class ContactService(AppDbContext db, ICompanyService companyService) : I
         var contact = await db.Contacts.FirstOrDefaultAsync(c => c.Id == id);
         if (contact is null) return ContactDeleteResult.NotFound;
 
-        var hasTickets = await db.Tickets.AnyAsync(t => t.ContactId == id);
-        if (hasTickets)
-        {
-            contact.IsActive = false;
-            contact.UpdatedAt = DateTime.UtcNow;
-            await db.SaveChangesAsync();
-            return ContactDeleteResult.Deactivated;
-        }
+        await db.Tickets
+            .Where(t => t.ContactId == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.ContactId, (int?)null));
 
         db.Contacts.Remove(contact);
         await db.SaveChangesAsync();
@@ -140,7 +135,7 @@ public class ContactService(AppDbContext db, ICompanyService companyService) : I
         if (existing is not null)
             return MapToDto(existing);
 
-        var companyId = await companyService.FindCompanyIdForEmailDomainAsync(normalizedEmail);
+        var companyId = await companyService.UpsertByDomainAsync(normalizedEmail);
 
         var contact = new Contact
         {
@@ -167,11 +162,12 @@ public class ContactService(AppDbContext db, ICompanyService companyService) : I
         int contactsCreated = 0;
         int contactsLinked = 0;
         int ticketsUpdated = 0;
+        int companiesCreated = 0;
 
-        // Preload all existing contacts to minimise round trips
-        var existingEmails = await db.Contacts
-            .Select(c => new { c.Id, c.Email })
-            .ToDictionaryAsync(c => c.Email, c => c.Id);
+        var existingContacts = await db.Contacts
+            .Select(c => new { c.Id, c.Email, c.CompanyId })
+            .ToListAsync();
+        var contactByEmail = existingContacts.ToDictionary(c => c.Email, c => c);
 
         foreach (var ticket in tickets)
         {
@@ -179,19 +175,32 @@ public class ContactService(AppDbContext db, ICompanyService companyService) : I
             var name = string.IsNullOrWhiteSpace(ticket.RequesterName) ? email : ticket.RequesterName.Trim();
 
             int contactId;
-            if (existingEmails.TryGetValue(email, out var existingId))
+            if (contactByEmail.TryGetValue(email, out var existing))
             {
-                contactId = existingId;
+                contactId = existing.Id;
                 contactsLinked++;
+
+                if (existing.CompanyId is null)
+                {
+                    var companyId = await companyService.UpsertByDomainAsync(email);
+                    if (companyId.HasValue)
+                    {
+                        await db.Contacts
+                            .Where(c => c.Id == existing.Id)
+                            .ExecuteUpdateAsync(s => s.SetProperty(c => c.CompanyId, companyId));
+                        companiesCreated++;
+                    }
+                }
             }
             else
             {
-                var companyId = await companyService.FindCompanyIdForEmailDomainAsync(email);
+                var companyId = await companyService.UpsertByDomainAsync(email);
+                if (companyId.HasValue) companiesCreated++;
                 var contact = new Contact { Email = email, Name = name, CompanyId = companyId };
                 db.Contacts.Add(contact);
                 await db.SaveChangesAsync();
                 contactId = contact.Id;
-                existingEmails[email] = contactId;
+                contactByEmail[email] = new { Id = contactId, Email = email, CompanyId = companyId };
                 contactsCreated++;
             }
 
@@ -204,7 +213,7 @@ public class ContactService(AppDbContext db, ICompanyService companyService) : I
             }
         }
 
-        return new BuildFromTicketsResult(contactsCreated, contactsLinked, ticketsUpdated);
+        return new BuildFromTicketsResult(contactsCreated, contactsLinked, ticketsUpdated, companiesCreated);
     }
 
     private static ContactDto MapToDto(Contact c) =>
