@@ -9419,10 +9419,10 @@ export interface IUpdateCustomStatusRequest {
 export class DashboardWidgetDto implements IDashboardWidgetDto {
     id?: number;
     widgetType?: DashboardWidgetType;
-    positionX?: number;
-    positionY?: number;
-    width?: number;
-    height?: number;
+    col?: number;
+    row?: number;
+    colSpan?: number;
+    rowSpan?: number;
     config?: string | undefined;
 
     constructor(data?: IDashboardWidgetDto) {
@@ -9438,10 +9438,10 @@ export class DashboardWidgetDto implements IDashboardWidgetDto {
         if (_data) {
             this.id = _data["id"];
             this.widgetType = _data["widgetType"];
-            this.positionX = _data["positionX"];
-            this.positionY = _data["positionY"];
-            this.width = _data["width"];
-            this.height = _data["height"];
+            this.col = _data["col"];
+            this.row = _data["row"];
+            this.colSpan = _data["colSpan"];
+            this.rowSpan = _data["rowSpan"];
             this.config = _data["config"];
         }
     }
@@ -9457,10 +9457,10 @@ export class DashboardWidgetDto implements IDashboardWidgetDto {
         data = typeof data === 'object' ? data : {};
         data["id"] = this.id;
         data["widgetType"] = this.widgetType;
-        data["positionX"] = this.positionX;
-        data["positionY"] = this.positionY;
-        data["width"] = this.width;
-        data["height"] = this.height;
+        data["col"] = this.col;
+        data["row"] = this.row;
+        data["colSpan"] = this.colSpan;
+        data["rowSpan"] = this.rowSpan;
         data["config"] = this.config;
         return data;
     }
@@ -9469,10 +9469,10 @@ export class DashboardWidgetDto implements IDashboardWidgetDto {
 export interface IDashboardWidgetDto {
     id?: number;
     widgetType?: DashboardWidgetType;
-    positionX?: number;
-    positionY?: number;
-    width?: number;
-    height?: number;
+    col?: number;
+    row?: number;
+    colSpan?: number;
+    rowSpan?: number;
     config?: string | undefined;
 }
 
@@ -9533,10 +9533,10 @@ export interface IUpdateDashboardWidgetsRequest {
 
 export class UpdateDashboardWidgetItem implements IUpdateDashboardWidgetItem {
     widgetType?: DashboardWidgetType;
-    positionX?: number;
-    positionY?: number;
-    width?: number;
-    height?: number;
+    col?: number;
+    row?: number;
+    colSpan?: number;
+    rowSpan?: number;
     config?: string | undefined;
 
     constructor(data?: IUpdateDashboardWidgetItem) {
@@ -9551,10 +9551,10 @@ export class UpdateDashboardWidgetItem implements IUpdateDashboardWidgetItem {
     init(_data?: any) {
         if (_data) {
             this.widgetType = _data["widgetType"];
-            this.positionX = _data["positionX"];
-            this.positionY = _data["positionY"];
-            this.width = _data["width"];
-            this.height = _data["height"];
+            this.col = _data["col"];
+            this.row = _data["row"];
+            this.colSpan = _data["colSpan"];
+            this.rowSpan = _data["rowSpan"];
             this.config = _data["config"];
         }
     }
@@ -9569,10 +9569,10 @@ export class UpdateDashboardWidgetItem implements IUpdateDashboardWidgetItem {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["widgetType"] = this.widgetType;
-        data["positionX"] = this.positionX;
-        data["positionY"] = this.positionY;
-        data["width"] = this.width;
-        data["height"] = this.height;
+        data["col"] = this.col;
+        data["row"] = this.row;
+        data["colSpan"] = this.colSpan;
+        data["rowSpan"] = this.rowSpan;
         data["config"] = this.config;
         return data;
     }
@@ -9580,10 +9580,10 @@ export class UpdateDashboardWidgetItem implements IUpdateDashboardWidgetItem {
 
 export interface IUpdateDashboardWidgetItem {
     widgetType?: DashboardWidgetType;
-    positionX?: number;
-    positionY?: number;
-    width?: number;
-    height?: number;
+    col?: number;
+    row?: number;
+    colSpan?: number;
+    rowSpan?: number;
     config?: string | undefined;
 }
 

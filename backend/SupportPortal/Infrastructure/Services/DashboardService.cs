@@ -10,31 +10,34 @@ namespace SupportPortal.Infrastructure.Services;
 
 public class DashboardService(AppDbContext db, IAnalyticsService analyticsService) : IDashboardService
 {
-    private static readonly DashboardWidgetType[] DefaultWidgetTypes =
-        [DashboardWidgetType.Unresolved, DashboardWidgetType.Overdue, DashboardWidgetType.Open, DashboardWidgetType.Unassigned];
+    private static readonly (DashboardWidgetType Type, int Col)[] DefaultWidgets =
+    [
+        (DashboardWidgetType.Unresolved, 0),
+        (DashboardWidgetType.Overdue, 1),
+        (DashboardWidgetType.Open, 2),
+        (DashboardWidgetType.Unassigned, 3),
+    ];
 
     public async Task<IReadOnlyList<DashboardWidgetDto>> GetWidgetsAsync(int userId)
     {
         var widgets = await db.DashboardWidgets
             .AsNoTracking()
             .Where(w => w.UserId == userId)
-            .OrderBy(w => w.PositionY).ThenBy(w => w.PositionX)
+            .OrderBy(w => w.Row).ThenBy(w => w.Col)
             .ToListAsync();
 
         if (widgets.Count > 0)
             return widgets.Select(MapToDto).ToList();
 
-        // Nincs még mentett konfig ehhez a userhez — default lista létrehozása és mentése,
-        // hogy a következő GET már a mentett (esetlegesen a user által átrendezett) állapotot adja vissza.
-        var defaults = DefaultWidgetTypes
-            .Select((type, index) => new DashboardWidget
+        var defaults = DefaultWidgets
+            .Select(d => new DashboardWidget
             {
                 UserId = userId,
-                WidgetType = type,
-                PositionX = index,
-                PositionY = 0,
-                Width = 1,
-                Height = 1,
+                WidgetType = d.Type,
+                Col = d.Col,
+                Row = 0,
+                ColSpan = 1,
+                RowSpan = 1,
             })
             .ToList();
 
@@ -54,10 +57,10 @@ public class DashboardService(AppDbContext db, IAnalyticsService analyticsServic
             {
                 UserId = userId,
                 WidgetType = w.WidgetType,
-                PositionX = w.PositionX,
-                PositionY = w.PositionY,
-                Width = w.Width,
-                Height = w.Height,
+                Col = w.Col,
+                Row = w.Row,
+                ColSpan = w.ColSpan,
+                RowSpan = w.RowSpan,
                 Config = w.Config,
             })
             .ToList();
@@ -93,5 +96,5 @@ public class DashboardService(AppDbContext db, IAnalyticsService analyticsServic
     }
 
     private static DashboardWidgetDto MapToDto(DashboardWidget w) =>
-        new(w.Id, w.WidgetType, w.PositionX, w.PositionY, w.Width, w.Height, w.Config);
+        new(w.Id, w.WidgetType, w.Col, w.Row, w.ColSpan, w.RowSpan, w.Config);
 }

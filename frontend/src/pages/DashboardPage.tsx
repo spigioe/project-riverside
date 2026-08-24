@@ -40,7 +40,7 @@ export function DashboardPage() {
     mutationFn: (types: DashboardWidgetType[]) =>
       dashboardClient.saveWidgets(new UpdateDashboardWidgetsRequest({
         widgets: types.map((widgetType, index) =>
-          new UpdateDashboardWidgetItem({ widgetType, positionX: index, positionY: 0, width: 1, height: 1 })),
+          new UpdateDashboardWidgetItem({ widgetType, col: index, row: 0, colSpan: 1, rowSpan: 1 })),
       })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dashboard-widgets'] }),
   })
@@ -49,7 +49,7 @@ export function DashboardPage() {
   const widgets = (widgetsQuery.data ?? [])
     .filter((w) => AVAILABLE_WIDGET_TYPES.includes(w.widgetType!))
     .slice()
-    .sort((a, b) => a.positionX! - b.positionX!)
+    .sort((a, b) => (a.row! - b.row!) || (a.col! - b.col!))
 
   return (
     <div className={styles.page}>
