@@ -60,13 +60,13 @@ const STATUS_OPTIONS: { value: TicketStatus; label: string }[] = [
   { value: TicketStatus.Closed, label: 'Lezárva' },
 ]
 
-function flatCategories(nodes: CategoryDto[], depth = 0): { id: number; name: string; depth: number }[] {
-  const result: { id: number; name: string; depth: number }[] = []
-  for (const n of nodes) {
-    result.push({ id: n.id!, name: n.name!, depth })
-    if (n.children?.length) result.push(...flatCategories(n.children, depth + 1))
+function findParentCat(catId: number | undefined, tree: CategoryDto[]): CategoryDto | undefined {
+  if (!catId) return undefined
+  for (const root of tree) {
+    if (root.id === catId) return root
+    if (root.children?.some((c) => c.id === catId)) return root
   }
-  return result
+  return undefined
 }
 
 function clickUpStatusVariant(status: string | undefined): string {
@@ -104,7 +104,7 @@ export function TicketSidebar({ ticket, ticketId, inline = false }: Props) {
   const users = usersQuery.data ?? []
 
   const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: () => categoriesClient.getTree() })
-  const flatCats = flatCategories(categoriesQuery.data ?? [])
+  const categoryTree = categoriesQuery.data ?? []
 
   const csmListQuery = useQuery({ queryKey: ['settings-csm'], queryFn: () => csmClient.getAll() })
 
@@ -284,145 +284,210 @@ export function TicketSidebar({ ticket, ticketId, inline = false }: Props) {
       <div className={styles.sectionBody}>
         {/* SLA státusz */}
         <SlaStatusRow ticket={ticket} />
-        {/* Felelős */}
-        <div className={styles.propRow}>
-          <label className={styles.propLabel}>Felelős</label>
-          <select
-            className={styles.propSelect}
-            value={(autosave ? ticket.assignedToId : draftAssignedToId) ?? ''}
-            onChange={(e) => {
-              const value = e.target.value ? Number(e.target.value) : undefined
-              if (autosave) assignMutation.mutate(value)
-              else { setDraftAssignedToId(value); setPropertiesDirty(true) }
-            }}
-          >
-            <option value="">Nincs hozzárendelve</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>{u.fullName}</option>
-            ))}
-          </select>
-        </div>
 
-        {/* Státusz */}
-        <div className={styles.propRow}>
-          <label className={styles.propLabel}>Státusz</label>
-          <select
-            className={styles.propSelect}
-            value={autosave
-              ? (ticket.customStatusKey ?? ticket.status)
-              : (draftCustomStatusKey ?? draftStatus ?? ticket.status)}
-            onChange={(e) => {
-              const v = e.target.value
-              const isBuiltIn = (Object.values(TicketStatus) as string[]).includes(v)
-              if (autosave) {
-                if (isBuiltIn) {
-                  statusMutation.mutate(v as TicketStatus)
-                  if (ticket.customStatusKey) customStatusMutation.mutate(null)
+        {/* ── STÁTUSZ & PRIORITÁS ── */}
+        <div className={styles.propGroup}>
+          <span className={styles.propGroupHeader}>Státusz &amp; Prioritás</span>
+
+          <div className={styles.propRow}>
+            <label className={styles.propLabel}>Státusz</label>
+            <select
+              className={styles.propSelect}
+              value={autosave
+                ? (ticket.customStatusKey ?? ticket.status)
+                : (draftCustomStatusKey ?? draftStatus ?? ticket.status)}
+              onChange={(e) => {
+                const v = e.target.value
+                const isBuiltIn = (Object.values(TicketStatus) as string[]).includes(v)
+                if (autosave) {
+                  if (isBuiltIn) {
+                    statusMutation.mutate(v as TicketStatus)
+                    if (ticket.customStatusKey) customStatusMutation.mutate(null)
+                  } else {
+                    customStatusMutation.mutate(v)
+                  }
                 } else {
-                  customStatusMutation.mutate(v)
+                  if (isBuiltIn) { setDraftStatus(v as TicketStatus); setDraftCustomStatusKey(null) }
+                  else { setDraftCustomStatusKey(v) }
+                  setPropertiesDirty(true)
                 }
-              } else {
-                if (isBuiltIn) { setDraftStatus(v as TicketStatus); setDraftCustomStatusKey(null) }
-                else { setDraftCustomStatusKey(v) }
-                setPropertiesDirty(true)
-              }
-            }}
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-            {customStatuses.filter((cs) => cs.isActive).map((cs) => (
-              <option key={cs.key} value={cs.key!}>{cs.name}</option>
-            ))}
-          </select>
+              }}
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+              {customStatuses.filter((cs) => cs.isActive).map((cs) => (
+                <option key={cs.key} value={cs.key!}>{cs.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.propRow}>
+            <label className={styles.propLabel}>Prioritás</label>
+            <select
+              className={styles.propSelect}
+              value={(autosave ? ticket.priority : draftPriority) ?? ''}
+              onChange={(e) => {
+                const value = e.target.value as TicketPriority
+                if (autosave) priorityMutation.mutate(value)
+                else { setDraftPriority(value); setPropertiesDirty(true) }
+              }}
+            >
+              {PRIORITY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.propRow}>
+            <label className={styles.propLabel}>Típus</label>
+            <select
+              className={styles.propSelect}
+              value={(autosave ? ticket.type : draftType) ?? ''}
+              onChange={(e) => {
+                const value = e.target.value ? (e.target.value as TicketType) : undefined
+                if (autosave) typeMutation.mutate(value)
+                else { setDraftType(value); setPropertiesDirty(true) }
+              }}
+            >
+              <option value="">— nincs megadva —</option>
+              {TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Prioritás */}
-        <div className={styles.propRow}>
-          <label className={styles.propLabel}>Prioritás</label>
-          <select
-            className={styles.propSelect}
-            value={(autosave ? ticket.priority : draftPriority) ?? ''}
-            onChange={(e) => {
-              const value = e.target.value as TicketPriority
-              if (autosave) priorityMutation.mutate(value)
-              else { setDraftPriority(value); setPropertiesDirty(true) }
-            }}
-          >
-            {PRIORITY_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+        <div className={styles.propGroupDivider} />
+
+        {/* ── HOZZÁRENDELÉS ── */}
+        <div className={styles.propGroup}>
+          <span className={styles.propGroupHeader}>Hozzárendelés</span>
+
+          <div className={styles.propRow}>
+            <label className={styles.propLabel}>Felelős</label>
+            <select
+              className={styles.propSelect}
+              value={(autosave ? ticket.assignedToId : draftAssignedToId) ?? ''}
+              onChange={(e) => {
+                const value = e.target.value ? Number(e.target.value) : undefined
+                if (autosave) assignMutation.mutate(value)
+                else { setDraftAssignedToId(value); setPropertiesDirty(true) }
+              }}
+            >
+              <option value="">Nincs hozzárendelve</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.fullName}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.propRow}>
+            <label className={styles.propLabel}>CSM felelős</label>
+            <select
+              className={styles.propSelect}
+              value={(autosave ? ticket.csmId : draftCsmId) ?? ''}
+              onChange={(e) => {
+                const value = e.target.value ? Number(e.target.value) : undefined
+                if (autosave) csmAssignMutation.mutate(value)
+                else { setDraftCsmId(value); setPropertiesDirty(true) }
+              }}
+            >
+              <option value="">Nincs hozzárendelve</option>
+              {(csmListQuery.data ?? []).map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Kategória */}
-        <div className={styles.propRow}>
-          <label className={styles.propLabel}>Kategória</label>
-          <select
-            className={styles.propSelect}
-            value={(autosave ? ticket.categoryId : draftCategoryId) ?? ''}
-            onChange={(e) => {
-              const value = e.target.value ? Number(e.target.value) : undefined
-              if (autosave) categoryMutation.mutate(value)
-              else { setDraftCategoryId(value); setPropertiesDirty(true) }
-            }}
-          >
-            <option value="">— nincs megadva —</option>
-            {flatCats.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.depth > 0 ? `${'  '.repeat(c.depth)}${c.name}` : c.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <div className={styles.propGroupDivider} />
 
-        {/* Típus */}
-        <div className={styles.propRow}>
-          <label className={styles.propLabel}>Típus</label>
-          <select
-            className={styles.propSelect}
-            value={(autosave ? ticket.type : draftType) ?? ''}
-            onChange={(e) => {
-              const value = e.target.value ? (e.target.value as TicketType) : undefined
-              if (autosave) typeMutation.mutate(value)
-              else { setDraftType(value); setPropertiesDirty(true) }
-            }}
-          >
-            <option value="">— nincs megadva —</option>
-            {TYPE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
+        {/* ── KATEGORIZÁLÁS ── */}
+        {(() => {
+          const currentCatId = autosave ? (ticket.categoryId ?? undefined) : draftCategoryId
+          const parentCat = findParentCat(currentCatId, categoryTree)
+          const selectedParentId = parentCat?.id
+          const subCats = parentCat?.children ?? []
+          const selectedSubId = subCats.some((c) => c.id === currentCatId) ? currentCatId : undefined
 
-        {/* CSM felelős */}
-        <div className={styles.propRow}>
-          <label className={styles.propLabel}>CSM felelős</label>
-          <select
-            className={styles.propSelect}
-            value={(autosave ? ticket.csmId : draftCsmId) ?? ''}
-            onChange={(e) => {
-              const value = e.target.value ? Number(e.target.value) : undefined
-              if (autosave) csmAssignMutation.mutate(value)
-              else { setDraftCsmId(value); setPropertiesDirty(true) }
-            }}
-          >
-            <option value="">Nincs hozzárendelve</option>
-            {(csmListQuery.data ?? []).map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
+          function handleParentChange(newParentIdStr: string) {
+            const newParentId = newParentIdStr ? Number(newParentIdStr) : undefined
+            const newParentCat = categoryTree.find((r) => r.id === newParentId)
+            const children = newParentCat?.children ?? []
+            let leafId: number | undefined
+            if (!newParentId) {
+              leafId = undefined
+            } else if (children.length === 1) {
+              leafId = children[0].id!
+            } else {
+              leafId = newParentId
+            }
+            if (autosave) categoryMutation.mutate(leafId)
+            else { setDraftCategoryId(leafId); setPropertiesDirty(true) }
+          }
 
-        {/* Egyéni mezők */}
-        {customFields.map((field) => (
-          <CustomFieldRow
-            key={field.definitionId}
-            field={field}
-            value={customFieldValues[field.definitionId!]}
-            onChange={(value) => handleCustomFieldChange(field.definitionId!, value)}
-          />
-        ))}
+          function handleSubChange(newSubIdStr: string) {
+            const newSubId = newSubIdStr ? Number(newSubIdStr) : undefined
+            if (autosave) categoryMutation.mutate(newSubId)
+            else { setDraftCategoryId(newSubId); setPropertiesDirty(true) }
+          }
+
+          return (
+            <div className={styles.propGroup}>
+              <span className={styles.propGroupHeader}>Kategorizálás</span>
+
+              <div className={styles.propRow}>
+                <label className={styles.propLabel}>Kategória</label>
+                <select
+                  className={styles.propSelect}
+                  value={selectedParentId ?? ''}
+                  onChange={(e) => handleParentChange(e.target.value)}
+                >
+                  <option value="">— nincs megadva —</option>
+                  {categoryTree.map((c) => (
+                    <option key={c.id} value={c.id!}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {subCats.length > 0 && (
+                <div className={styles.propRow}>
+                  <label className={styles.propLabel}>Alkategória</label>
+                  <select
+                    className={styles.propSelect}
+                    value={selectedSubId ?? ''}
+                    disabled={subCats.length === 1}
+                    onChange={(e) => handleSubChange(e.target.value)}
+                  >
+                    {subCats.length > 1 && <option value="">— válassz —</option>}
+                    {subCats.map((c) => (
+                      <option key={c.id} value={c.id!}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
+        {customFields.length > 0 && (
+          <>
+            <div className={styles.propGroupDivider} />
+            {/* ── EGYÉNI MEZŐK ── */}
+            <div className={styles.propGroup}>
+              <span className={styles.propGroupHeader}>Egyéni mezők</span>
+              {customFields.map((field) => (
+                <CustomFieldRow
+                  key={field.definitionId}
+                  field={field}
+                  value={customFieldValues[field.definitionId!]}
+                  onChange={(value) => handleCustomFieldChange(field.definitionId!, value)}
+                />
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Mentés gomb (manuális mód) */}
         {!autosave && (

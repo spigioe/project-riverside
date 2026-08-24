@@ -1,5 +1,14 @@
 import { sanitizeHtml } from './sanitizeHtml'
 
+export function htmlToPlainText(html: string): string {
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    return doc.body.textContent ?? ''
+  } catch {
+    return html.replace(/<[^>]*>/g, '')
+  }
+}
+
 // Plain szöveg (canned response, AI válasz javaslat) beillesztése a TipTap editorba — soronként
 // <p> bekezdéssé alakítva, hogy a sortörések megmaradjanak (a setContent nem értelmezi a \n-t).
 export function plainTextToHtml(text: string): string {

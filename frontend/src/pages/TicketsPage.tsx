@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
+import { htmlToPlainText } from '../lib/htmlText'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
@@ -160,6 +161,65 @@ const CUSTOM_STATUS_COLOR_VAR: Record<string, string> = {
   red:     'var(--red-text)',
 }
 
+// ── Tooltip ───────────────────────────────────────────────
+
+interface TooltipProps {
+  text: string | null | undefined
+  children: React.ReactNode
+}
+
+function Tooltip({ text, children }: TooltipProps) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapRef = useRef<HTMLSpanElement>(null)
+
+  function show() {
+    if (!text) return
+    timerRef.current = setTimeout(() => {
+      if (wrapRef.current) {
+        const rect = wrapRef.current.getBoundingClientRect()
+        setPos({ top: rect.bottom + 6, left: rect.left })
+      }
+    }, 400)
+  }
+
+  function hide() {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    setPos(null)
+  }
+
+  const tooltipEl = pos && text ? createPortal(
+    <div
+      style={{
+        position: 'fixed',
+        top: pos.top,
+        left: Math.min(pos.left, window.innerWidth - 310),
+        maxWidth: 300,
+        background: 'var(--navy)',
+        color: '#fff',
+        fontSize: 12,
+        lineHeight: 1.45,
+        borderRadius: 8,
+        padding: '6px 10px',
+        boxShadow: '2px 2px 6px rgba(16,22,47,0.25)',
+        zIndex: 9999,
+        pointerEvents: 'none',
+        wordBreak: 'break-word',
+      }}
+    >
+      {text.length > 200 ? `${text.slice(0, 200)}…` : text}
+    </div>,
+    document.body,
+  ) : null
+
+  return (
+    <span ref={wrapRef} onMouseEnter={show} onMouseLeave={hide} style={{ display: 'contents' }}>
+      {children}
+      {tooltipEl}
+    </span>
+  )
+}
+
 interface DropdownOption {
   value: string
   label: string
@@ -283,9 +343,11 @@ function DetailedCard({ ticket, customStatuses, onStatusChange, onCustomStatusCh
       {/* Middle */}
       <div className={dc.middle}>
         <div className={dc.topRow}>
-          <Link to={`/tickets/${ticket.id}`} className={dc.subject}>
-            {ticket.subject}
-          </Link>
+          <Tooltip text={ticket.lastMessageBody ? htmlToPlainText(ticket.lastMessageBody) : null}>
+            <Link to={`/tickets/${ticket.id}`} className={dc.subject}>
+              {ticket.subject}
+            </Link>
+          </Tooltip>
           <span className={dc.ticketId}>{formatTicketId(ticket.id!)}</span>
         </div>
         <div className={dc.metaRow}>
@@ -988,7 +1050,9 @@ export function TicketsPage() {
                         </td>
                         <td className={styles.mono}>{formatTicketId(ticket.id!)}</td>
                         <td className={styles.subjectCell}>
-                          <Link to={`/tickets/${ticket.id}`} className={styles.subjectLink}>{ticket.subject}</Link>
+                          <Tooltip text={ticket.lastMessageBody ? htmlToPlainText(ticket.lastMessageBody) : null}>
+                            <Link to={`/tickets/${ticket.id}`} className={styles.subjectLink}>{ticket.subject}</Link>
+                          </Tooltip>
                         </td>
                         <td className={styles.muted}>{ticket.requesterEmail}</td>
                         <td>
@@ -1122,14 +1186,19 @@ export function TicketsPage() {
                         </button>
                       </div>
                     </div>
-                    <Link to={`/tickets/${ticket.id}`} className={styles.ticketCardSubject}>{ticket.subject}</Link>
+                    <Tooltip text={ticket.lastMessageBody ? htmlToPlainText(ticket.lastMessageBody) : null}>
+                      <Link to={`/tickets/${ticket.id}`} className={styles.ticketCardSubject}>{ticket.subject}</Link>
+                    </Tooltip>
                     <div className={styles.ticketCardMeta}>
                       {ticket.requesterName}
                       {ticket.requesterCompany && <span className={styles.muted}> · {ticket.requesterCompany}</span>}
                     </div>
                     {ticket.lastMessageBody && (
                       <div className={styles.ticketCardLastMessage}>
-                        {ticket.lastMessageBody.length > 140 ? `${ticket.lastMessageBody.slice(0, 140)}…` : ticket.lastMessageBody}
+                        {(() => {
+                          const plain = htmlToPlainText(ticket.lastMessageBody)
+                          return plain.length > 150 ? `${plain.slice(0, 150)}…` : plain
+                        })()}
                       </div>
                     )}
                     <div className={styles.ticketCardFooter}>
