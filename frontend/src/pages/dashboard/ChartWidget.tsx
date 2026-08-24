@@ -9,18 +9,79 @@ interface Props {
   config: ChartConfig
 }
 
-function formatPeriod(period: string, groupBy: 'day' | 'hour'): string {
-  if (!period) return period
+interface PeriodItem {
+  period: string
+  beerkező: number
+  megoldott: number
+}
+
+function formatPeriodKey(date: Date, groupBy: 'day' | 'hour'): string {
   if (groupBy === 'hour') {
-    // "2024-01-15T14" → "14:00"
-    const parts = period.split('T')
-    return parts[1] ? `${parts[1]}:00` : period
+    // same format the backend returns: "2024-01-15T14"
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    const h = String(date.getHours()).padStart(2, '0')
+    return `${y}-${m}-${d}T${h}`
   }
-  // "2024-01-15" → "jan. 15."
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function formatPeriodLabel(period: string, groupBy: 'day' | 'hour'): string {
+  if (!period) return period
   try {
-    const d = new Date(period)
-    return d.toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' })
+    if (groupBy === 'hour') {
+      // "2024-01-15T14" → parse as local hour
+      const parts = period.split('T')
+      const [y, mo, d] = (parts[0] ?? '').split('-').map(Number)
+      const h = Number(parts[1] ?? '0')
+      const date = new Date(y, mo - 1, d, h)
+      return date.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })
+    }
+    const [y, mo, d] = period.split('-').map(Number)
+    const date = new Date(y, mo - 1, d)
+    return date.toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' })
   } catch { return period }
+}
+
+function fillMissingPeriods(
+  rawData: { period?: string; received?: number; resolved?: number }[],
+  from: Date | null,
+  to: Date | null,
+  groupBy: 'day' | 'hour',
+): PeriodItem[] {
+  const byKey = new Map<string, { received: number; resolved: number }>()
+  for (const item of rawData) {
+    if (item.period) byKey.set(item.period, { received: item.received ?? 0, resolved: item.resolved ?? 0 })
+  }
+
+  const start = from ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  const end = to ?? new Date()
+  const result: PeriodItem[] = []
+  const cursor = new Date(start)
+
+  if (groupBy === 'hour') {
+    cursor.setMinutes(0, 0, 0)
+    while (cursor <= end) {
+      const key = formatPeriodKey(cursor, 'hour')
+      const vals = byKey.get(key) ?? { received: 0, resolved: 0 }
+      result.push({ period: key, beerkező: vals.received, megoldott: vals.resolved })
+      cursor.setHours(cursor.getHours() + 1)
+    }
+  } else {
+    cursor.setHours(0, 0, 0, 0)
+    while (cursor <= end) {
+      const key = formatPeriodKey(cursor, 'day')
+      const vals = byKey.get(key) ?? { received: 0, resolved: 0 }
+      result.push({ period: key, beerkező: vals.received, megoldott: vals.resolved })
+      cursor.setDate(cursor.getDate() + 1)
+    }
+  }
+
+  return result
 }
 
 export function ChartWidget({ config }: Props) {
@@ -35,15 +96,8 @@ export function ChartWidget({ config }: Props) {
     return <div className={styles.chartLoading}>Betöltés…</div>
   }
 
-  const chartData = (data ?? []).map(item => ({
-    period: formatPeriod(item.period ?? '', config.groupBy),
-    beerkező: item.received ?? 0,
-    megoldott: item.resolved ?? 0,
-  }))
-
-  if (chartData.length === 0) {
-    return <div className={styles.chartEmpty}>Nincs adat a kiválasztott időszakban.</div>
-  }
+  const chartData = fillMissingPeriods(data ?? [], from, to, config.groupBy)
+  const tickInterval = chartData.length > 6 ? Math.floor(chartData.length / 6) : 0
 
   const ChartComponent = config.chartType === 'line' ? LineChart : BarChart
 
@@ -51,18 +105,28 @@ export function ChartWidget({ config }: Props) {
     <div className={styles.chartContent}>
       <ResponsiveContainer width="100%" height="100%">
         <ChartComponent data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
+          <CartesianGrid
+            horizontal={true}
+            vertical={false}
+            strokeDasharray="3 3"
+            stroke="var(--border-light)"
+            strokeOpacity={0.6}
+          />
           <XAxis
             dataKey="period"
+            tickFormatter={(v: string) => formatPeriodLabel(v, config.groupBy)}
             tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+            axisLine={false}
             tickLine={false}
-            axisLine={{ stroke: 'var(--border-light)' }}
+            interval={tickInterval}
+            angle={0}
           />
           <YAxis
             tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
-            tickLine={false}
             axisLine={false}
+            tickLine={false}
             allowDecimals={false}
+            width={32}
           />
           <Tooltip
             contentStyle={{
@@ -70,22 +134,58 @@ export function ChartWidget({ config }: Props) {
               border: '1px solid var(--border-light)',
               borderRadius: 4,
               fontSize: 12,
+              boxShadow: 'var(--shadow-pop-sm)',
             }}
             labelStyle={{ color: 'var(--text)', fontWeight: 600 }}
+            labelFormatter={(v) => formatPeriodLabel(String(v ?? ''), config.groupBy)}
           />
           <Legend
-            wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+            iconType="circle"
+            iconSize={8}
+            wrapperStyle={{ fontSize: 12, paddingTop: 4 }}
             formatter={(value) => <span style={{ color: 'var(--text)' }}>{value}</span>}
           />
           {config.chartType === 'line' ? (
             <>
-              <Line type="monotone" dataKey="beerkező" name="Beérkező" stroke="#4A6CF7" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="megoldott" name="Megoldott" stroke="#22c55e" strokeWidth={2} dot={false} />
+              <Line
+                type="monotone"
+                dataKey="beerkező"
+                name="Beérkező"
+                stroke="var(--primary)"
+                strokeWidth={1.5}
+                dot={false}
+                activeDot={{ r: 3, strokeWidth: 0 }}
+                isAnimationActive={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="megoldott"
+                name="Megoldott"
+                stroke="var(--green, #22c55e)"
+                strokeWidth={1.5}
+                dot={false}
+                activeDot={{ r: 3, strokeWidth: 0 }}
+                isAnimationActive={false}
+              />
             </>
           ) : (
             <>
-              <Bar dataKey="beerkező" name="Beérkező" fill="#4A6CF7" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="megoldott" name="Megoldott" fill="#22c55e" radius={[2, 2, 0, 0]} />
+              <Bar
+                dataKey="beerkező"
+                name="Beérkező"
+                fill="var(--primary)"
+                radius={[2, 2, 0, 0]}
+                maxBarSize={32}
+                isAnimationActive={false}
+              />
+              <Bar
+                dataKey="megoldott"
+                name="Megoldott"
+                fill="var(--green, #22c55e)"
+                radius={[2, 2, 0, 0]}
+                maxBarSize={32}
+                isAnimationActive={false}
+              />
             </>
           )}
         </ChartComponent>
