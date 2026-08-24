@@ -282,6 +282,8 @@ export function TicketSidebar({ ticket, ticketId, inline = false }: Props) {
       {/* ── 2. TULAJDONSÁGOK ───────────────────────────── */}
       <div className={styles.sectionHeader}>Tulajdonságok</div>
       <div className={styles.sectionBody}>
+        {/* SLA státusz */}
+        <SlaStatusRow ticket={ticket} />
         {/* Felelős */}
         <div className={styles.propRow}>
           <label className={styles.propLabel}>Felelős</label>
@@ -620,6 +622,58 @@ function CustomFieldRow({
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value || undefined)}
       />
+    </div>
+  )
+}
+
+/* ── SLA status row ────────────────────────────────────── */
+
+function SlaStatusRow({ ticket }: { ticket: TicketDetailDto }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
+  if (!ticket.slaDueAt) return null
+
+  const diffMins = Math.round((ticket.slaDueAt.getTime() - now) / 60_000)
+  const breached = ticket.slaBreach || diffMins < 0
+
+  let bg = '#dcfce7'
+  let color = '#166534'
+  let border = '#86efac'
+  let label: string
+
+  if (breached) {
+    bg = '#fef2f2'; color = '#991b1b'; border = '#fca5a5'
+    const absMins = Math.abs(diffMins)
+    const h = Math.floor(absMins / 60)
+    const m = absMins % 60
+    label = `SLA lejárt${h > 0 ? ` (${h}ó ${m}p)` : ` (${m}p)`}`
+  } else if (diffMins < 120) {
+    bg = '#fffbeb'; color = '#92400e'; border = '#fcd34d'
+    const h = Math.floor(diffMins / 60)
+    const m = diffMins % 60
+    label = `SLA: ${h > 0 ? `${h}ó ` : ''}${m}p van hátra`
+  } else {
+    const h = Math.floor(diffMins / 60)
+    const m = diffMins % 60
+    label = `SLA: ${h > 0 ? `${h}ó ` : ''}${m}p van hátra`
+  }
+
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <span
+        title={`SLA határidő: ${ticket.slaDueAt.toLocaleString('hu-HU')}`}
+        style={{
+          display: 'inline-block', fontSize: 11.5, fontWeight: 600,
+          padding: '3px 9px', borderRadius: 'var(--radius)',
+          background: bg, color, border: `1px solid ${border}`,
+        }}
+      >
+        {label}
+      </span>
     </div>
   )
 }

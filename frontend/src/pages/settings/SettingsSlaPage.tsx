@@ -1,227 +1,530 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  companiesClient,
   slaClient,
   BusinessHoursDayDto,
-  CreateSlaDomainRequest,
+  CompanyDto,
+  CreateSlaPolicyRequest,
   SlaPolicyDto,
+  SlaPriorityRowRequest,
   UpdateBusinessHoursRequest,
   UpdateSlaPolicyRequest,
 } from '../../api'
+import { Modal } from '../../components/Modal/Modal'
 import { getErrorMessage } from '../../lib/errors'
 import { DAY_LABELS, PRIORITY_LABELS } from '../../lib/labels'
 import shared from '../../components/Settings/SettingsShared.module.css'
 
+const PRIORITY_ORDER = ['Low', 'Medium', 'High', 'Urgent']
+
+interface PriorityRow {
+  priority: string
+  responseHours: number
+  resolutionHours: string
+}
+
+interface PolicyForm {
+  name: string
+  isDefault: boolean
+  businessHoursOnly: boolean
+  priorities: PriorityRow[]
+  companyIds: number[]
+}
+
+function defaultPriorities(): PriorityRow[] {
+  return [
+    { priority: 'Low', responseHours: 8, resolutionHours: '' },
+    { priority: 'Medium', responseHours: 4, resolutionHours: '' },
+    { priority: 'High', responseHours: 1, resolutionHours: '' },
+    { priority: 'Urgent', responseHours: 0.5, resolutionHours: '' },
+  ]
+}
+
+function policyToForm(policy: SlaPolicyDto): PolicyForm {
+  const priorities = PRIORITY_ORDER.map((p) => {
+    const row = policy.priorities?.find((r) => r.priority === p)
+    return {
+      priority: p,
+      responseHours: row ? row.responseTimeMinutes! / 60 : 1,
+      resolutionHours: row?.resolutionTimeMinutes ? String(row.resolutionTimeMinutes / 60) : '',
+    }
+  })
+  return {
+    name: policy.name ?? '',
+    isDefault: policy.isDefault ?? false,
+    businessHoursOnly: policy.businessHoursOnly ?? false,
+    priorities,
+    companyIds: policy.companyIds ?? [],
+  }
+}
+
+function formToCreateRequest(form: PolicyForm): CreateSlaPolicyRequest {
+  return new CreateSlaPolicyRequest({
+    name: form.name,
+    isDefault: form.isDefault,
+    businessHoursOnly: form.businessHoursOnly,
+    priorities: form.priorities.map((p) =>
+      new SlaPriorityRowRequest({
+        priority: p.priority,
+        responseTimeMinutes: Math.round(p.responseHours * 60),
+        resolutionTimeMinutes: p.resolutionHours ? Math.round(Number(p.resolutionHours) * 60) : undefined,
+      })
+    ),
+    companyIds: form.companyIds,
+  })
+}
+
+function formToUpdateRequest(form: PolicyForm): UpdateSlaPolicyRequest {
+  return new UpdateSlaPolicyRequest({
+    name: form.name,
+    isDefault: form.isDefault,
+    businessHoursOnly: form.businessHoursOnly,
+    priorities: form.priorities.map((p) =>
+      new SlaPriorityRowRequest({
+        priority: p.priority,
+        responseTimeMinutes: Math.round(p.responseHours * 60),
+        resolutionTimeMinutes: p.resolutionHours ? Math.round(Number(p.resolutionHours) * 60) : undefined,
+      })
+    ),
+    companyIds: form.companyIds,
+  })
+}
+
+/* ── Main page ─────────────────────────────────────────── */
+
 export function SettingsSlaPage() {
+  const queryClient = useQueryClient()
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null)
+  const [editPolicy, setEditPolicy] = useState<SlaPolicyDto | null>(null)
+
+  const policiesQuery = useQuery({
+    queryKey: ['sla-policies'],
+    queryFn: () => slaClient.getPolicies(),
+  })
+
+  const companiesQuery = useQuery({
+    queryKey: ['companies-all'],
+    queryFn: () => companiesClient.getAllCompanies(),
+  })
+
+  const policies = policiesQuery.data ?? []
+  const companies = companiesQuery.data ?? []
+  const hasDefault = policies.some((p) => p.isDefault)
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => slaClient.deletePolicy(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sla-policies'] }),
+  })
+
+  function openCreate() {
+    setEditPolicy(null)
+    setModalMode('create')
+  }
+
+  function openEdit(policy: SlaPolicyDto) {
+    setEditPolicy(policy)
+    setModalMode('edit')
+  }
+
+  function closeModal() {
+    setModalMode(null)
+    setEditPolicy(null)
+  }
+
   return (
     <div>
       <div className={shared.header}>
         <div>
           <h1 className={shared.title}>SLA konfiguráció</h1>
-          <div className={shared.subtitle}>Válaszidők, megoldási idők, domain kivételek és munkaidő</div>
+          <div className={shared.subtitle}>Válaszidők, megoldási idők, cég hozzárendelés és munkaidő</div>
         </div>
+        <button type="button" className={shared.primaryButton} onClick={openCreate}>
+          + Új SLA policy
+        </button>
       </div>
 
-      <PolicyTable />
-      <DomainExceptions />
+      {!hasDefault && policies.length > 0 && (
+        <div style={{
+          padding: '10px 14px', marginBottom: 12, borderRadius: 'var(--radius)',
+          background: 'var(--amber-bg, #fffbeb)', border: '1px solid var(--amber-border, #fcd34d)',
+          fontSize: 13, color: 'var(--amber-text, #92400e)',
+        }}>
+          Nincs alapértelmezett (Master SLA) policy beállítva. A ticketek SLA-ja nem kerül kiszámításra.
+        </div>
+      )}
+
+      <div className={shared.card}>
+        <div className={shared.cardHeader}>
+          <span className={shared.cardHeaderTitle}>SLA policyk</span>
+        </div>
+        {policiesQuery.isPending && (
+          <div className={shared.emptyState} style={{ padding: '24px 16px' }}>Betöltés…</div>
+        )}
+        {!policiesQuery.isPending && policies.length === 0 && (
+          <div className={shared.emptyState} style={{ padding: '24px 16px' }}>Nincs SLA policy.</div>
+        )}
+        {policies.length > 0 && (
+          <div className={shared.tableScroll}>
+            <table className={shared.table}>
+              <thead>
+                <tr>
+                  <th>Név</th>
+                  <th>Típus</th>
+                  <th>Hozzárendelt cégek</th>
+                  <th>Prioritások</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {policies.map((policy) => (
+                  <PolicyRow
+                    key={policy.id}
+                    policy={policy}
+                    companies={companies}
+                    onEdit={() => openEdit(policy)}
+                    onDelete={() => {
+                      if (confirm(`Biztosan törlöd a(z) "${policy.name}" policy-t?`))
+                        deleteMutation.mutate(policy.id!)
+                    }}
+                    deleteDisabled={policy.isDefault ?? false}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <BusinessHoursGrid />
+
+      {modalMode && (
+        <PolicyModal
+          mode={modalMode}
+          policy={editPolicy}
+          companies={companies}
+          onClose={closeModal}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ['sla-policies'] })
+            closeModal()
+          }}
+        />
+      )}
     </div>
   )
 }
 
-function PolicyTable() {
-  const queryClient = useQueryClient()
-  const policiesQuery = useQuery({ queryKey: ['sla-policies'], queryFn: () => slaClient.getPolicies() })
-  const [rows, setRows] = useState<SlaPolicyDto[]>([])
-  const [savingId, setSavingId] = useState<number | null>(null)
+/* ── Policy table row ──────────────────────────────────── */
+
+function PolicyRow({
+  policy, companies, onEdit, onDelete, deleteDisabled,
+}: {
+  policy: SlaPolicyDto
+  companies: CompanyDto[]
+  onEdit: () => void
+  onDelete: () => void
+  deleteDisabled: boolean
+}) {
+  const assignedCompanies = companies.filter((c) => policy.companyIds?.includes(c.id!))
+
+  return (
+    <tr>
+      <td>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontWeight: 600 }}>{policy.name}</span>
+          {policy.isDefault && (
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 7px',
+              background: 'var(--primary)', color: '#fff',
+              borderRadius: 'var(--radius)', letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+            }}>
+              Master SLA
+            </span>
+          )}
+        </div>
+      </td>
+      <td>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+          {policy.businessHoursOnly ? 'Munkaidős' : 'Naptári'}
+        </span>
+      </td>
+      <td>
+        {assignedCompanies.length === 0 ? (
+          <span className={shared.muted} style={{ fontSize: 12 }}>—</span>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {assignedCompanies.map((c) => (
+              <span key={c.id} style={{
+                fontSize: 11, padding: '2px 8px',
+                background: 'var(--bg-alt)', border: '1px solid var(--border-light)',
+                borderRadius: 'var(--radius)', color: 'var(--text)',
+              }}>
+                {c.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </td>
+      <td>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {PRIORITY_ORDER.map((p) => {
+            const row = policy.priorities?.find((r) => r.priority === p)
+            if (!row) return null
+            return (
+              <span key={p} style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                <b style={{ color: 'var(--text)' }}>{PRIORITY_LABELS[p]}:</b> {row.responseTimeMinutes! / 60}ó
+                {row.resolutionTimeMinutes ? ` / ${row.resolutionTimeMinutes / 60}ó` : ''}
+              </span>
+            )
+          })}
+        </div>
+      </td>
+      <td>
+        <div className={shared.rowActions}>
+          <button type="button" className={shared.editButton} onClick={onEdit}>
+            Szerkesztés
+          </button>
+          <button
+            type="button"
+            className={shared.dangerButton}
+            onClick={onDelete}
+            disabled={deleteDisabled}
+            title={deleteDisabled ? 'Az alapértelmezett policy nem törölhető.' : undefined}
+          >
+            Törlés
+          </button>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+/* ── Policy modal ──────────────────────────────────────── */
+
+function PolicyModal({
+  mode, policy, companies, onClose, onSaved,
+}: {
+  mode: 'create' | 'edit'
+  policy: SlaPolicyDto | null
+  companies: CompanyDto[]
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState<PolicyForm>(() =>
+    policy ? policyToForm(policy) : {
+      name: '',
+      isDefault: false,
+      businessHoursOnly: false,
+      priorities: defaultPriorities(),
+      companyIds: [],
+    }
+  )
+  const [companySearch, setCompanySearch] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (policiesQuery.data) setRows(policiesQuery.data)
-  }, [policiesQuery.data])
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, request }: { id: number; request: UpdateSlaPolicyRequest }) =>
-      slaClient.updatePolicy(id, request),
-    onMutate: ({ id }) => { setSavingId(id); setError(null) },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sla-policies'] }),
-    onError: (err) => setError(getErrorMessage(err, 'Nem sikerült menteni az SLA policyt.')),
-    onSettled: () => setSavingId(null),
-  })
-
-  function patchRow(id: number, patch: Partial<SlaPolicyDto>) {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } as SlaPolicyDto : r)))
-  }
-
-  function saveRow(row: SlaPolicyDto) {
-    updateMutation.mutate({
-      id: row.id!,
-      request: new UpdateSlaPolicyRequest({
-        responseTimeMinutes: row.responseTimeMinutes,
-        resolutionTimeMinutes: row.resolutionTimeMinutes,
-        businessHoursOnly: row.businessHoursOnly,
-      }),
-    })
-  }
-
-  return (
-    <div className={shared.card}>
-      <div className={shared.cardHeader}>
-        <span className={shared.cardHeaderTitle}>Master SLA policy</span>
-      </div>
-      {error && <div className={shared.formError} style={{ margin: '0 16px', marginTop: 12 }}>{error}</div>}
-      <div className={shared.tableScroll}>
-        <table className={shared.table}>
-          <thead>
-            <tr>
-              <th>Prioritás</th>
-              <th>Válaszidő (perc)</th>
-              <th>Megoldási idő (perc)</th>
-              <th>Csak munkaidőben</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <td>{PRIORITY_LABELS[row.priority!] ?? row.priority}</td>
-                <td>
-                  <input
-                    type="number"
-                    min={1}
-                    className={shared.inlineInputSm}
-                    value={row.responseTimeMinutes ?? 0}
-                    onChange={(e) => patchRow(row.id!, { responseTimeMinutes: Number(e.target.value) })}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    min={1}
-                    className={shared.inlineInputSm}
-                    value={row.resolutionTimeMinutes ?? 0}
-                    onChange={(e) => patchRow(row.id!, { resolutionTimeMinutes: Number(e.target.value) })}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={row.businessHoursOnly ?? false}
-                    onChange={(e) => patchRow(row.id!, { businessHoursOnly: e.target.checked })}
-                  />
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    className={shared.linkButton}
-                    disabled={savingId === row.id}
-                    onClick={() => saveRow(row)}
-                  >
-                    {savingId === row.id ? 'Mentés…' : 'Mentés'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
-function DomainExceptions() {
-  const queryClient = useQueryClient()
-  const domainsQuery = useQuery({ queryKey: ['sla-domains'], queryFn: () => slaClient.getDomains() })
-  const policiesQuery = useQuery({ queryKey: ['sla-policies'], queryFn: () => slaClient.getPolicies() })
-
-  const [slaPolicyId, setSlaPolicyId] = useState<number>(0)
-  const [emailDomain, setEmailDomain] = useState('')
-
-  const domains = domainsQuery.data ?? []
-  const policies = policiesQuery.data ?? []
+    if (policy) setForm(policyToForm(policy))
+    else setForm({ name: '', isDefault: false, businessHoursOnly: false, priorities: defaultPriorities(), companyIds: [] })
+    setError(null)
+  }, [policy])
 
   const createMutation = useMutation({
-    mutationFn: () => slaClient.createDomain(new CreateSlaDomainRequest({ slaPolicyId, emailDomain })),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sla-domains'] })
-      setEmailDomain('')
-    },
+    mutationFn: () => slaClient.createPolicy(formToCreateRequest(form)),
+    onSuccess: onSaved,
+    onError: (err) => setError(getErrorMessage(err, 'Nem sikerült létrehozni az SLA policyt.')),
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => slaClient.deleteDomain(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sla-domains'] }),
+  const updateMutation = useMutation({
+    mutationFn: () => slaClient.updatePolicy(policy!.id!, formToUpdateRequest(form)),
+    onSuccess: onSaved,
+    onError: (err) => setError(getErrorMessage(err, 'Nem sikerült menteni az SLA policyt.')),
   })
+
+  const isPending = createMutation.isPending || updateMutation.isPending
+
+  function patchPriority(priority: string, patch: Partial<PriorityRow>) {
+    setForm((prev) => ({
+      ...prev,
+      priorities: prev.priorities.map((r) => r.priority === priority ? { ...r, ...patch } : r),
+    }))
+  }
+
+  function toggleCompany(id: number) {
+    setForm((prev) => ({
+      ...prev,
+      companyIds: prev.companyIds.includes(id)
+        ? prev.companyIds.filter((c) => c !== id)
+        : [...prev.companyIds, id],
+    }))
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.name.trim()) { setError('A policy neve kötelező.'); return }
+    setError(null)
+    if (mode === 'create') createMutation.mutate()
+    else updateMutation.mutate()
+  }
+
+  const filteredCompanies = companies.filter((c) =>
+    c.name?.toLowerCase().includes(companySearch.toLowerCase())
+  )
 
   return (
-    <div className={shared.card}>
-      <div className={shared.cardHeader}>
-        <span className={shared.cardHeaderTitle}>Domain kivételek</span>
-      </div>
-      <div className={shared.tableScroll}>
-        <table className={shared.table}>
-          <thead>
-            <tr>
-              <th>Domain</th>
-              <th>SLA policy</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {domains.length === 0 && (
-              <tr><td colSpan={3} className={shared.emptyState}>Nincs domain kivétel.</td></tr>
-            )}
-            {domains.map((d) => (
-              <tr key={d.id}>
-                <td className={shared.mono}>{d.emailDomain}</td>
-                <td>{d.slaPolicyName} ({PRIORITY_LABELS[policies.find((p) => p.id === d.slaPolicyId)?.priority ?? '']})</td>
-                <td>
-                  <button
-                    type="button"
-                    className={shared.dangerButton}
-                    onClick={() => deleteMutation.mutate(d.id!)}
-                  >
-                    Törlés
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <form
-        className={shared.cardBody}
-        style={{ display: 'flex', gap: 10, alignItems: 'flex-end', borderTop: '1px solid var(--border-light)' }}
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (slaPolicyId && emailDomain.trim()) createMutation.mutate()
-        }}
-      >
-        <div className={shared.field} style={{ margin: 0, flex: 1 }}>
-          <label>Domain</label>
+    <Modal title={mode === 'create' ? 'Új SLA policy' : 'SLA policy szerkesztése'} onClose={onClose}>
+      <form onSubmit={handleSubmit}>
+        {error && <div className={shared.formError}>{error}</div>}
+
+        <div className={shared.formGroup}>
+          <label className={shared.formLabel}>Név</label>
           <input
-            type="text"
-            placeholder="pelda.hu"
-            value={emailDomain}
-            onChange={(e) => setEmailDomain(e.target.value)}
+            className={shared.formInput}
+            placeholder="pl. Prémium SLA"
+            value={form.name}
+            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+            autoFocus
           />
         </div>
-        <div className={shared.field} style={{ margin: 0, flex: 1 }}>
-          <label>SLA policy</label>
-          <select value={slaPolicyId} onChange={(e) => setSlaPolicyId(Number(e.target.value))}>
-            <option value={0}>Válassz…</option>
-            {policies.map((p) => (
-              <option key={p.id} value={p.id}>{PRIORITY_LABELS[p.priority!] ?? p.priority}</option>
-            ))}
-          </select>
+
+        <div className={shared.formGroup}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={form.isDefault}
+              onChange={(e) => setForm((prev) => ({ ...prev, isDefault: e.target.checked }))}
+            />
+            <span style={{ fontSize: 13 }}>Master SLA (alapértelmezett)</span>
+          </label>
+          <div className={shared.formHint}>
+            Ha be van jelölve, ez a policy lesz az alap minden ticketre, amelyhez nincs cégspecifikus policy.
+          </div>
         </div>
-        <button type="submit" className={shared.primaryButton} disabled={createMutation.isPending}>
-          Hozzáadás
-        </button>
+
+        <div className={shared.formGroup}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={form.businessHoursOnly}
+              onChange={(e) => setForm((prev) => ({ ...prev, businessHoursOnly: e.target.checked }))}
+            />
+            <span style={{ fontSize: 13 }}>Munkaidő alapú számítás</span>
+          </label>
+          <div className={shared.formHint}>
+            Ha be van jelölve, az SLA határidő csak a munkaidő-beállításokban szereplő órákat számolja.
+          </div>
+        </div>
+
+        <div className={shared.formGroup}>
+          <label className={shared.formLabel}>Prioritások (órában)</label>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-light)', background: 'var(--bg-alt)' }}>
+                <th style={{ padding: '6px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Prioritás</th>
+                <th style={{ padding: '6px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Válaszidő (óra)</th>
+                <th style={{ padding: '6px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Megoldási idő (óra)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {form.priorities.map((row) => (
+                <tr key={row.priority} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                  <td style={{ padding: '8px 10px', fontSize: 13 }}>{PRIORITY_LABELS[row.priority]}</td>
+                  <td style={{ padding: '8px 10px' }}>
+                    <input
+                      type="number"
+                      min={0.25}
+                      step={0.25}
+                      className={shared.inlineInputSm}
+                      style={{ width: 90 }}
+                      value={row.responseHours}
+                      onChange={(e) => patchPriority(row.priority, { responseHours: Number(e.target.value) })}
+                    />
+                  </td>
+                  <td style={{ padding: '8px 10px' }}>
+                    <input
+                      type="number"
+                      min={0.25}
+                      step={0.25}
+                      className={shared.inlineInputSm}
+                      style={{ width: 90 }}
+                      placeholder="—"
+                      value={row.resolutionHours}
+                      onChange={(e) => patchPriority(row.priority, { resolutionHours: e.target.value })}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className={shared.formGroup}>
+          <label className={shared.formLabel}>Hozzárendelt cégek</label>
+          <input
+            className={shared.formInput}
+            placeholder="Keresés cégek között…"
+            value={companySearch}
+            onChange={(e) => setCompanySearch(e.target.value)}
+            style={{ marginBottom: 6 }}
+          />
+          {form.companyIds.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
+              {form.companyIds.map((id) => {
+                const c = companies.find((c) => c.id === id)
+                return (
+                  <span key={id} style={{
+                    fontSize: 11, padding: '2px 8px',
+                    background: 'var(--primary)', color: '#fff',
+                    borderRadius: 'var(--radius)', cursor: 'pointer',
+                  }} onClick={() => toggleCompany(id)}>
+                    {c?.name ?? `#${id}`} ×
+                  </span>
+                )
+              })}
+            </div>
+          )}
+          <div style={{
+            maxHeight: 140, overflowY: 'auto',
+            border: '1px solid var(--border-light)', borderRadius: 'var(--radius)',
+          }}>
+            {filteredCompanies.length === 0 ? (
+              <div style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-muted)' }}>Nincs találat.</div>
+            ) : filteredCompanies.map((c) => (
+              <label key={c.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 12px', cursor: 'pointer', fontSize: 13,
+                borderBottom: '1px solid var(--border-light)',
+                background: form.companyIds.includes(c.id!) ? 'var(--bg-alt)' : undefined,
+              }}>
+                <input
+                  type="checkbox"
+                  checked={form.companyIds.includes(c.id!)}
+                  onChange={() => toggleCompany(c.id!)}
+                />
+                {c.name}
+                {c.domain && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{c.domain}</span>}
+              </label>
+            ))}
+          </div>
+          <div className={shared.formHint}>
+            Ezek a cégek ehhez a policy-hoz lesznek rendelve (e-mail domain alapján is egyeztetve).
+          </div>
+        </div>
+
+        <div className={shared.formActions}>
+          <button type="button" className={shared.secondaryButton} onClick={onClose} disabled={isPending}>
+            Mégse
+          </button>
+          <button type="submit" className={shared.primaryButton} disabled={isPending}>
+            {isPending ? 'Mentés…' : (mode === 'create' ? 'Létrehozás' : 'Mentés')}
+          </button>
+        </div>
       </form>
-    </div>
+    </Modal>
   )
 }
+
+/* ── Business hours grid ───────────────────────────────── */
 
 const ORDERED_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -241,9 +544,7 @@ function BusinessHoursGrid() {
 
   const saveMutation = useMutation({
     mutationFn: () => slaClient.updateBusinessHours(new UpdateBusinessHoursRequest({ days })),
-    onSuccess: (result) => {
-      queryClient.setQueryData(['business-hours'], result)
-    },
+    onSuccess: (result) => queryClient.setQueryData(['business-hours'], result),
   })
 
   function patchDay(dayOfWeek: string, patch: Partial<BusinessHoursDayDto>) {
@@ -254,7 +555,12 @@ function BusinessHoursGrid() {
     <div className={shared.card}>
       <div className={shared.cardHeader}>
         <span className={shared.cardHeaderTitle}>Munkaidő</span>
-        <button type="button" className={shared.primaryButton} disabled={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+        <button
+          type="button"
+          className={shared.primaryButton}
+          disabled={saveMutation.isPending}
+          onClick={() => saveMutation.mutate()}
+        >
           {saveMutation.isPending ? 'Mentés…' : 'Mentés'}
         </button>
       </div>

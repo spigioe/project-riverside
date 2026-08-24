@@ -8,6 +8,7 @@ public record SlaPriorityRowRequest(
 
 public record UpdateSlaPolicyRequest(
     string Name,
+    bool IsDefault,
     bool BusinessHoursOnly,
     IReadOnlyList<SlaPriorityRowRequest> Priorities,
     IReadOnlyList<int> CompanyIds

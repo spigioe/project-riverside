@@ -103,6 +103,18 @@ public class SlaService(AppDbContext db) : ISlaService
         policy.BusinessHoursOnly = request.BusinessHoursOnly;
         policy.UpdatedAt = DateTime.UtcNow;
 
+        if (request.IsDefault && !policy.IsDefault)
+        {
+            await db.SlaPolicies
+                .Where(p => p.Id != id && p.IsDefault)
+                .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsDefault, false));
+            policy.IsDefault = true;
+        }
+        else if (!request.IsDefault)
+        {
+            policy.IsDefault = false;
+        }
+
         db.SlaPolicyPriorities.RemoveRange(policy.Priorities);
         db.SlaPolicyCompanies.RemoveRange(policy.Companies);
 

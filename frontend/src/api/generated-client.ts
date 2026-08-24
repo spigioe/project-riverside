@@ -9752,6 +9752,7 @@ export interface ISlaPriorityRowRequest {
 
 export class UpdateSlaPolicyRequest implements IUpdateSlaPolicyRequest {
     name?: string;
+    isDefault?: boolean;
     businessHoursOnly?: boolean;
     priorities?: SlaPriorityRowRequest[];
     companyIds?: number[];
@@ -9768,6 +9769,7 @@ export class UpdateSlaPolicyRequest implements IUpdateSlaPolicyRequest {
     init(_data?: any) {
         if (_data) {
             this.name = _data["name"];
+            this.isDefault = _data["isDefault"];
             this.businessHoursOnly = _data["businessHoursOnly"];
             if (Array.isArray(_data["priorities"])) {
                 this.priorities = [] as any;
@@ -9792,6 +9794,7 @@ export class UpdateSlaPolicyRequest implements IUpdateSlaPolicyRequest {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["name"] = this.name;
+        data["isDefault"] = this.isDefault;
         data["businessHoursOnly"] = this.businessHoursOnly;
         if (Array.isArray(this.priorities)) {
             data["priorities"] = [];
@@ -9809,6 +9812,7 @@ export class UpdateSlaPolicyRequest implements IUpdateSlaPolicyRequest {
 
 export interface IUpdateSlaPolicyRequest {
     name?: string;
+    isDefault?: boolean;
     businessHoursOnly?: boolean;
     priorities?: SlaPriorityRowRequest[];
     companyIds?: number[];
