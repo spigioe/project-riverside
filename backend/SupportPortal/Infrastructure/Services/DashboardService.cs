@@ -74,15 +74,16 @@ public class DashboardService(AppDbContext db, IAnalyticsService analyticsServic
         var tomorrow = today.AddDays(1);
 
         var unresolved = await db.Tickets.CountAsync(t =>
-            t.Status == TicketStatus.New || t.Status == TicketStatus.Open || t.Status == TicketStatus.Pending);
+            !t.IsMerged &&
+            (t.Status == TicketStatus.New || t.Status == TicketStatus.Open || t.Status == TicketStatus.Pending));
 
-        var overdue = await db.Tickets.CountAsync(t => t.SlaBreach);
+        var overdue = await db.Tickets.CountAsync(t => t.SlaBreach && !t.IsMerged);
 
         var dueToday = await db.Tickets.CountAsync(t =>
-            !t.SlaBreach && t.SlaDueAt != null && t.SlaDueAt >= today && t.SlaDueAt < tomorrow &&
+            !t.IsMerged && !t.SlaBreach && t.SlaDueAt != null && t.SlaDueAt >= today && t.SlaDueAt < tomorrow &&
             t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved);
 
-        var open = await db.Tickets.CountAsync(t => t.Status == TicketStatus.Open);
+        var open = await db.Tickets.CountAsync(t => t.Status == TicketStatus.Open && !t.IsMerged);
 
         var unassigned = await db.Tickets.CountAsync(t => t.AssignedToId == null && !t.IsMerged);
 

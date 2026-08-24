@@ -3,6 +3,7 @@ using SupportPortal.Application.DTOs.Analytics;
 using SupportPortal.Application.Interfaces;
 using SupportPortal.Data;
 using SupportPortal.Domain.Enums;
+using MessageDirection = SupportPortal.Domain.Enums.MessageDirection;
 
 namespace SupportPortal.Infrastructure.Services;
 
@@ -92,6 +93,136 @@ public class AnalyticsService(AppDbContext db) : IAnalyticsService
             .ToList();
     }
 
+    public async Task<ResponseTimesDto> GetResponseTimesAsync(AnalyticsQuery query, int? userId)
+    {
+        var ticketsQuery = ApplyAnalyticsQuery(db.Tickets.AsNoTracking(), query, userId);
+        var tickets = await ticketsQuery
+            .Select(t => new { t.Id, t.CreatedAt, t.Status, t.UpdatedAt })
+            .ToListAsync();
+
+        if (tickets.Count == 0)
+            return new ResponseTimesDto(0, 0, 0, 0, query.Scope ?? "all");
+
+        var ticketIds = tickets.Select(t => t.Id).ToList();
+
+        var messages = await db.TicketMessages.AsNoTracking()
+            .Where(m => ticketIds.Contains(m.TicketId) && !m.IsInternalNote)
+            .OrderBy(m => m.TicketId).ThenBy(m => m.CreatedAt)
+            .Select(m => new { m.TicketId, m.Direction, m.SenderUserId, m.CreatedAt })
+            .ToListAsync();
+
+        var messagesByTicket = messages.GroupBy(m => m.TicketId).ToDictionary(g => g.Key, g => g.ToList());
+
+        var firstResponseMinutes = new List<double>();
+        var resolutionMinutes = new List<double>();
+        var responseMinutes = new List<double>();
+
+        foreach (var ticket in tickets)
+        {
+            if (ticket.Status == TicketStatus.Resolved || ticket.Status == TicketStatus.Closed)
+                resolutionMinutes.Add((ticket.UpdatedAt - ticket.CreatedAt).TotalMinutes);
+
+            if (!messagesByTicket.TryGetValue(ticket.Id, out var msgs))
+                continue;
+
+            var firstOutbound = msgs.FirstOrDefault(m => m.Direction == MessageDirection.Outbound && m.SenderUserId != null);
+            if (firstOutbound != null)
+                firstResponseMinutes.Add((firstOutbound.CreatedAt - ticket.CreatedAt).TotalMinutes);
+
+            for (var i = 0; i < msgs.Count - 1; i++)
+            {
+                if (msgs[i].Direction != MessageDirection.Inbound)
+                    continue;
+
+                var nextOutbound = msgs.Skip(i + 1)
+                    .FirstOrDefault(m => m.Direction == MessageDirection.Outbound && m.SenderUserId != null);
+                if (nextOutbound != null)
+                    responseMinutes.Add((nextOutbound.CreatedAt - msgs[i].CreatedAt).TotalMinutes);
+            }
+        }
+
+        return new ResponseTimesDto(
+            firstResponseMinutes.Count > 0 ? Math.Round(firstResponseMinutes.Average(), 1) : 0,
+            responseMinutes.Count > 0 ? Math.Round(responseMinutes.Average(), 1) : 0,
+            resolutionMinutes.Count > 0 ? Math.Round(resolutionMinutes.Average(), 1) : 0,
+            tickets.Count,
+            query.Scope ?? "all");
+    }
+
+    public async Task<IReadOnlyList<TicketVolumeItemDto>> GetTicketVolumeAsync(AnalyticsQuery query, string groupBy, int? userId)
+    {
+        var ticketsQuery = ApplyAnalyticsQuery(db.Tickets.AsNoTracking(), query, userId);
+        var tickets = await ticketsQuery
+            .Select(t => new { t.CreatedAt, t.Status, t.UpdatedAt })
+            .ToListAsync();
+
+        if (tickets.Count == 0)
+            return [];
+
+        var from = (query.From ?? tickets.Min(t => t.CreatedAt));
+        var to = (query.To ?? DateTime.UtcNow);
+
+        if (groupBy == "hour")
+        {
+            var receivedByHour = tickets
+                .GroupBy(t => new DateTime(t.CreatedAt.Year, t.CreatedAt.Month, t.CreatedAt.Day, t.CreatedAt.Hour, 0, 0, DateTimeKind.Utc))
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var resolvedByHour = tickets
+                .Where(t => t.Status == TicketStatus.Resolved || t.Status == TicketStatus.Closed)
+                .GroupBy(t => new DateTime(t.UpdatedAt.Year, t.UpdatedAt.Month, t.UpdatedAt.Day, t.UpdatedAt.Hour, 0, 0, DateTimeKind.Utc))
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var result = new List<TicketVolumeItemDto>();
+            var cursor = new DateTime(from.Year, from.Month, from.Day, from.Hour, 0, 0, DateTimeKind.Utc);
+            var end = new DateTime(to.Year, to.Month, to.Day, to.Hour, 0, 0, DateTimeKind.Utc);
+            while (cursor <= end)
+            {
+                receivedByHour.TryGetValue(cursor, out var received);
+                resolvedByHour.TryGetValue(cursor, out var resolved);
+                result.Add(new TicketVolumeItemDto(cursor.ToString("yyyy-MM-dd HH:00"), received, resolved));
+                cursor = cursor.AddHours(1);
+            }
+            return result;
+        }
+        else
+        {
+            var receivedByDay = tickets
+                .GroupBy(t => t.CreatedAt.Date)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var resolvedByDay = tickets
+                .Where(t => t.Status == TicketStatus.Resolved || t.Status == TicketStatus.Closed)
+                .GroupBy(t => t.UpdatedAt.Date)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var result = new List<TicketVolumeItemDto>();
+            var cursor = from.Date;
+            var end = to.Date;
+            while (cursor <= end)
+            {
+                receivedByDay.TryGetValue(cursor, out var received);
+                resolvedByDay.TryGetValue(cursor, out var resolved);
+                result.Add(new TicketVolumeItemDto(cursor.ToString("yyyy-MM-dd"), received, resolved));
+                cursor = cursor.AddDays(1);
+            }
+            return result;
+        }
+    }
+
+    public async Task<SlaComplianceDto> GetSlaComplianceScopedAsync(AnalyticsQuery query, int? userId)
+    {
+        var ticketsQuery = ApplyAnalyticsQuery(db.Tickets.AsNoTracking(), query, userId)
+            .Where(t => t.SlaDueAt != null);
+
+        var total = await ticketsQuery.CountAsync();
+        var breached = await ticketsQuery.CountAsync(t => t.SlaBreach);
+        var compliant = total - breached;
+        var percentage = total == 0 ? 0 : Math.Round(compliant / (double)total * 100, 1);
+
+        return new SlaComplianceDto(total, compliant, breached, percentage);
+    }
+
     private static IQueryable<Domain.Entities.Ticket> ApplyPeriod(IQueryable<Domain.Entities.Ticket> ticketsQuery, AnalyticsPeriodQuery query)
     {
         if (query.DateFrom.HasValue)
@@ -101,5 +232,19 @@ public class AnalyticsService(AppDbContext db) : IAnalyticsService
             ticketsQuery = ticketsQuery.Where(t => t.CreatedAt <= query.DateTo.Value);
 
         return ticketsQuery;
+    }
+
+    private static IQueryable<Domain.Entities.Ticket> ApplyAnalyticsQuery(IQueryable<Domain.Entities.Ticket> q, AnalyticsQuery query, int? userId)
+    {
+        q = q.Where(t => !t.IsMerged);
+
+        if (query.From.HasValue)
+            q = q.Where(t => t.CreatedAt >= query.From.Value);
+        if (query.To.HasValue)
+            q = q.Where(t => t.CreatedAt <= query.To.Value);
+        if (userId.HasValue)
+            q = q.Where(t => t.AssignedToId == userId.Value);
+
+        return q;
     }
 }

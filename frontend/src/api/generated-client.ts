@@ -3636,6 +3636,214 @@ export class NotificationsClient {
     }
 }
 
+export class PortalAnalyticsClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "http://localhost:5000";
+
+    }
+
+    getResponseTimes(from?: Date | null | undefined, to?: Date | null | undefined, scope?: string | null | undefined, cancelToken?: CancelToken): Promise<ResponseTimesDto> {
+        let url_ = this.baseUrl + "/api/portal/analytics/response-times?";
+        if (from !== undefined && from !== null)
+            url_ += "From=" + encodeURIComponent(from ? "" + from.toISOString() : "") + "&";
+        if (to !== undefined && to !== null)
+            url_ += "To=" + encodeURIComponent(to ? "" + to.toISOString() : "") + "&";
+        if (scope !== undefined && scope !== null)
+            url_ += "Scope=" + encodeURIComponent("" + scope) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetResponseTimes(_response);
+        });
+    }
+
+    protected processGetResponseTimes(response: AxiosResponse): Promise<ResponseTimesDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = ResponseTimesDto.fromJS(resultData200);
+            return Promise.resolve<ResponseTimesDto>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ResponseTimesDto>(null as any);
+    }
+
+    getTicketVolume(from?: Date | null | undefined, to?: Date | null | undefined, scope?: string | null | undefined, groupBy?: string | undefined, cancelToken?: CancelToken): Promise<TicketVolumeItemDto[]> {
+        let url_ = this.baseUrl + "/api/portal/analytics/ticket-volume?";
+        if (from !== undefined && from !== null)
+            url_ += "From=" + encodeURIComponent(from ? "" + from.toISOString() : "") + "&";
+        if (to !== undefined && to !== null)
+            url_ += "To=" + encodeURIComponent(to ? "" + to.toISOString() : "") + "&";
+        if (scope !== undefined && scope !== null)
+            url_ += "Scope=" + encodeURIComponent("" + scope) + "&";
+        if (groupBy === null)
+            throw new globalThis.Error("The parameter 'groupBy' cannot be null.");
+        else if (groupBy !== undefined)
+            url_ += "groupBy=" + encodeURIComponent("" + groupBy) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetTicketVolume(_response);
+        });
+    }
+
+    protected processGetTicketVolume(response: AxiosResponse): Promise<TicketVolumeItemDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(TicketVolumeItemDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<TicketVolumeItemDto[]>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<TicketVolumeItemDto[]>(null as any);
+    }
+
+    getSlaCompliance(from?: Date | null | undefined, to?: Date | null | undefined, scope?: string | null | undefined, cancelToken?: CancelToken): Promise<SlaComplianceDto> {
+        let url_ = this.baseUrl + "/api/portal/analytics/sla-compliance?";
+        if (from !== undefined && from !== null)
+            url_ += "From=" + encodeURIComponent(from ? "" + from.toISOString() : "") + "&";
+        if (to !== undefined && to !== null)
+            url_ += "To=" + encodeURIComponent(to ? "" + to.toISOString() : "") + "&";
+        if (scope !== undefined && scope !== null)
+            url_ += "Scope=" + encodeURIComponent("" + scope) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetSlaCompliance(_response);
+        });
+    }
+
+    protected processGetSlaCompliance(response: AxiosResponse): Promise<SlaComplianceDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = SlaComplianceDto.fromJS(resultData200);
+            return Promise.resolve<SlaComplianceDto>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SlaComplianceDto>(null as any);
+    }
+}
+
 export class RolesClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -9828,6 +10036,150 @@ export interface IUpdateNotificationPreferencesRequest {
     preferences?: NotificationPreferenceDto[];
 }
 
+export class ResponseTimesDto implements IResponseTimesDto {
+    avgFirstResponseMinutes?: number;
+    avgResponseMinutes?: number;
+    avgResolutionMinutes?: number;
+    totalTickets?: number;
+    scope?: string;
+
+    constructor(data?: IResponseTimesDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.avgFirstResponseMinutes = _data["avgFirstResponseMinutes"];
+            this.avgResponseMinutes = _data["avgResponseMinutes"];
+            this.avgResolutionMinutes = _data["avgResolutionMinutes"];
+            this.totalTickets = _data["totalTickets"];
+            this.scope = _data["scope"];
+        }
+    }
+
+    static fromJS(data: any): ResponseTimesDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new ResponseTimesDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["avgFirstResponseMinutes"] = this.avgFirstResponseMinutes;
+        data["avgResponseMinutes"] = this.avgResponseMinutes;
+        data["avgResolutionMinutes"] = this.avgResolutionMinutes;
+        data["totalTickets"] = this.totalTickets;
+        data["scope"] = this.scope;
+        return data;
+    }
+}
+
+export interface IResponseTimesDto {
+    avgFirstResponseMinutes?: number;
+    avgResponseMinutes?: number;
+    avgResolutionMinutes?: number;
+    totalTickets?: number;
+    scope?: string;
+}
+
+export class TicketVolumeItemDto implements ITicketVolumeItemDto {
+    period?: string;
+    received?: number;
+    resolved?: number;
+
+    constructor(data?: ITicketVolumeItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.period = _data["period"];
+            this.received = _data["received"];
+            this.resolved = _data["resolved"];
+        }
+    }
+
+    static fromJS(data: any): TicketVolumeItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new TicketVolumeItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["period"] = this.period;
+        data["received"] = this.received;
+        data["resolved"] = this.resolved;
+        return data;
+    }
+}
+
+export interface ITicketVolumeItemDto {
+    period?: string;
+    received?: number;
+    resolved?: number;
+}
+
+export class SlaComplianceDto implements ISlaComplianceDto {
+    totalWithSla?: number;
+    compliant?: number;
+    breached?: number;
+    compliancePercentage?: number;
+
+    constructor(data?: ISlaComplianceDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.totalWithSla = _data["totalWithSla"];
+            this.compliant = _data["compliant"];
+            this.breached = _data["breached"];
+            this.compliancePercentage = _data["compliancePercentage"];
+        }
+    }
+
+    static fromJS(data: any): SlaComplianceDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new SlaComplianceDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["totalWithSla"] = this.totalWithSla;
+        data["compliant"] = this.compliant;
+        data["breached"] = this.breached;
+        data["compliancePercentage"] = this.compliancePercentage;
+        return data;
+    }
+}
+
+export interface ISlaComplianceDto {
+    totalWithSla?: number;
+    compliant?: number;
+    breached?: number;
+    compliancePercentage?: number;
+}
+
 export class RoleDto implements IRoleDto {
     id?: number;
     name?: UserRole;
@@ -12498,54 +12850,6 @@ export class TicketsByStatusDto implements ITicketsByStatusDto {
 export interface ITicketsByStatusDto {
     status?: TicketStatus;
     count?: number;
-}
-
-export class SlaComplianceDto implements ISlaComplianceDto {
-    totalWithSla?: number;
-    compliant?: number;
-    breached?: number;
-    compliancePercentage?: number;
-
-    constructor(data?: ISlaComplianceDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.totalWithSla = _data["totalWithSla"];
-            this.compliant = _data["compliant"];
-            this.breached = _data["breached"];
-            this.compliancePercentage = _data["compliancePercentage"];
-        }
-    }
-
-    static fromJS(data: any): SlaComplianceDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new SlaComplianceDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["totalWithSla"] = this.totalWithSla;
-        data["compliant"] = this.compliant;
-        data["breached"] = this.breached;
-        data["compliancePercentage"] = this.compliancePercentage;
-        return data;
-    }
-}
-
-export interface ISlaComplianceDto {
-    totalWithSla?: number;
-    compliant?: number;
-    breached?: number;
-    compliancePercentage?: number;
 }
 
 export class RecentActivityItemDto implements IRecentActivityItemDto {
