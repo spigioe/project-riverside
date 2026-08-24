@@ -432,6 +432,8 @@ interface FilterState {
   dateRange: 'any' | 'today' | 'week' | 'month'
   companyId: number | null
   showDeleted: boolean
+  slaBreachOnly: boolean
+  unassignedOnly: boolean
 }
 
 const EMPTY_FILTER: FilterState = {
@@ -443,10 +445,12 @@ const EMPTY_FILTER: FilterState = {
   dateRange: 'any',
   companyId: null,
   showDeleted: false,
+  slaBreachOnly: false,
+  unassignedOnly: false,
 }
 
 function hasActiveFilters(f: FilterState): boolean {
-  return !!(f.assignedToId || f.statuses.length || f.priorities.length || f.source || f.categoryId || f.dateRange !== 'any' || f.companyId || f.showDeleted)
+  return !!(f.assignedToId || f.statuses.length || f.priorities.length || f.source || f.categoryId || f.dateRange !== 'any' || f.companyId || f.showDeleted || f.slaBreachOnly || f.unassignedOnly)
 }
 
 const FILTER_STORAGE_KEY = 'ticketListFilter'
@@ -700,6 +704,12 @@ function ActiveFilterPills({ filter, setFilter, users, categories, companies }: 
   if (filter.showDeleted) {
     pills.push({ label: 'Törölt jegyek', remove: () => setFilter({ ...filter, showDeleted: false }) })
   }
+  if (filter.slaBreachOnly) {
+    pills.push({ label: 'SLA megszegett', remove: () => setFilter({ ...filter, slaBreachOnly: false }) })
+  }
+  if (filter.unassignedOnly) {
+    pills.push({ label: 'Hozzá nem rendelve', remove: () => setFilter({ ...filter, unassignedOnly: false }) })
+  }
 
   if (pills.length === 0) return null
 
@@ -728,12 +738,41 @@ export function TicketsPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [view, setViewRaw] = useState<TicketListView>(() => loadView() ?? TicketListView.Table)
   const [viewInitialized, setViewInitialized] = useState(false)
-  const [detailedFilter, setDetailedFilterRaw] = useState<FilterState>(loadFilter)
+  const [detailedFilter, setDetailedFilterRaw] = useState<FilterState>(() => {
+    const params = new URLSearchParams(window.location.search)
+    const statusParam = params.get('status')
+    const slaBreachParam = params.get('slaBreach')
+    const unassignedParam = params.get('unassigned')
+    const dueTodayParam = params.get('dueToday')
+    if (statusParam || slaBreachParam || unassignedParam || dueTodayParam) {
+      const validStatuses = Object.values(TicketStatus)
+      const override: Partial<FilterState> = {}
+      if (statusParam) {
+        override.statuses = statusParam.split(',').filter(s => validStatuses.includes(s as TicketStatus)) as TicketStatus[]
+      }
+      if (slaBreachParam === 'true') override.slaBreachOnly = true
+      if (unassignedParam === 'true') override.unassignedOnly = true
+      if (dueTodayParam === 'true') override.dateRange = 'today'
+      return { ...EMPTY_FILTER, ...override }
+    }
+    return loadFilter()
+  })
 
   function setDetailedFilter(f: FilterState) {
     setDetailedFilterRaw(f)
     saveFilter(f)
   }
+
+  // Remove dashboard quick-filter URL params after reading them
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('status') || params.has('slaBreach') || params.has('unassigned') || params.has('dueToday')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('status'); next.delete('slaBreach'); next.delete('unassigned'); next.delete('dueToday')
+      setSearchParams(next, { replace: true })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function changeView(v: TicketListView) {
     setViewRaw(v)
@@ -803,7 +842,7 @@ export function TicketsPage() {
   const userWantsCompleted = detailedFilter.statuses.some((s) => COMPLETED_STATUSES.has(s))
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange, effectiveCompanyId, userWantsCompleted, detailedFilter.showDeleted],
+    queryKey: ['tickets', effectiveStatus, effectivePriority, effectiveCategory, search, page, effectiveAssignedTo, effectiveSource, detailedFilter.dateRange, effectiveCompanyId, userWantsCompleted, detailedFilter.showDeleted, detailedFilter.slaBreachOnly, detailedFilter.unassignedOnly],
     queryFn: () =>
       ticketClient.getTickets(
         effectiveStatus,
@@ -830,6 +869,12 @@ export function TicketsPage() {
   }
   if (detailedFilter.priorities.length > 1) {
     tickets = tickets.filter((t) => detailedFilter.priorities.includes(t.priority!))
+  }
+  if (detailedFilter.slaBreachOnly) {
+    tickets = tickets.filter((t) => t.slaBreach === true)
+  }
+  if (detailedFilter.unassignedOnly) {
+    tickets = tickets.filter((t) => !t.assignedToId)
   }
 
   const totalCount = data?.totalCount ?? 0

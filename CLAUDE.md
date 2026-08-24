@@ -80,6 +80,7 @@ cd frontend && npm run dev               # port 5173
 34. Drag-and-drop sorrend + beépített elemek — TicketCategory.DisplayOrder + CannedResponse.DisplayOrder migráció (AddDisplayOrders), PUT /api/portal/categories/reorder + PUT /api/portal/canned-response-folders/reorder + PUT /api/portal/canned-responses/reorder, CategoryService/CannedResponseService frissítve (ordering, reorder impl), NSwag regenerálva; Frontend: SettingsCustomStatusesPage beépített státuszok RENDSZER badge-dzsel + DnD az egész listán (localStorage a beépített sorrendjéhez), SettingsTicketCategoriesPage szülő+gyerek DnD (⠿ fogópont), SettingsTicketTemplatesPage mappa+válasz DnD, SettingsTicketPropertiesPage DnD meglévő (ellenőrizve)
 35. Ticket típusok dinamikusan + sorrendek javítása — AddTicketTypes migráció (ticket_types tábla: name/description/display_order/is_active/is_system), 4 rendszer típus seed (Kérdés/Incidens/Probléma/Funkcióigény), TicketType enum törölve, Ticket.Type → string?, TicketConfiguration HasConversion eltávolítva, TicketDetailDto/TicketListItemDto/UpdateTicketTypeRequest string-re migrálva, CRUD API (/api/portal/ticket-types GET/POST/PUT{id}/DELETE{id}/PUT reorder), ITicketTypeService + TicketTypeService, NSwag regenerálva; Frontend: SettingsTicketTypesPage (DnD, RENDSZER badge, modal), /settings/tickets/types route, hub kártya, useTicketTypes hook, TicketSidebar + TicketsPage típus dropdown API-alapú
 36. Dashboard widget grid konfig — ExpandDashboardWidgets migráció (PositionX/PositionY/Width/Height → Col/Row/ColSpan/RowSpan rename), DashboardWidget entity + DashboardWidgetDto + UpdateDashboardWidgetItem frissítve, DashboardService default layout (4 widget, col 0-3 row 0), validator col 0-5 / row 0-7 / colSpan 1-6 / rowSpan 1-8, NSwag regenerálva; Frontend: DashboardPage saveMutation col/row/colSpan/rowSpan, rendezés row→col alapján
+37. Dashboard frontend újraépítés — 6×8 CSS grid, view/edit mód (Szerkesztés/Mentés/Mégse), Widget Store oldalpanel (bal, 260px, DnD a gridre), Widget Editor oldalpanel (jobb, 300px, config form), pointer event alapú DnD (widget húzás+drop, store→grid), resize handle (jobb alsó sarok), 3 widget típus: StatWidget (kattintható, navigál /tickets-re), ChartWidget (Recharts LineChart/BarChart, ticket volumen), ResponseTimeWidget (átlag válaszidők); recharts telepítve; analyticsClient hozzáadva api/index.ts-hez; TicketsPage: slaBreachOnly + unassignedOnly FilterState mezők, URL param szűrők (status=, slaBreach=, unassigned=, dueToday=), kliens oldali szűrés + filter pill-ek
 
 ## MCP szerver
 - /mcp/server.js | cd mcp && node server.js
@@ -92,7 +93,7 @@ cd frontend && npm run dev               # port 5173
 - [ ] Bejövő email csatolmányok Mailpit part letöltése — TODO a kódban
 - [ ] Notification bell SSE több userrel nem tesztelt
 - [ ] MCP + AI valós API kulccsal nem tesztelt
-- [ ] Dashboard drag-and-drop nincs (MVP: checkbox lista)
+- [x] ~~Dashboard drag-and-drop nincs (MVP: checkbox lista)~~ — KÉSZ (37. lépés)
 - [ ] Ticket #12, #13 + test CSM bent van dev DB-ben
 
 ## Holnap scope

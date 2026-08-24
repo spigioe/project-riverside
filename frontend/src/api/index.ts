@@ -13,6 +13,7 @@ import {
   IntegrationClient,
   MeClient,
   NotificationsClient,
+  PortalAnalyticsClient,
   RolesClient,
   SettingsClient,
   SlaClient,
@@ -51,3 +52,4 @@ export const companiesClient = new CompaniesClient(baseURL, httpClient)
 export const contactsClient = new ContactsClient(baseURL, httpClient)
 export const customStatusesClient = new CustomStatusesClient(baseURL, httpClient)
 export const ticketTypesClient = new TicketTypesClient(baseURL, httpClient)
+export const analyticsClient = new PortalAnalyticsClient(baseURL, httpClient)
