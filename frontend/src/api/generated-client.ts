@@ -19,7 +19,7 @@ export class ApiKeysClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -194,7 +194,7 @@ export class AuditLogClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -266,7 +266,7 @@ export class AuthClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -446,7 +446,7 @@ export class CannedResponsesClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -690,6 +690,54 @@ export class CannedResponsesClient {
         return Promise.resolve<void>(null as any);
     }
 
+    reorderFolders(request: ReorderCannedRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/canned-response-folders/reorder";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processReorderFolders(_response);
+        });
+    }
+
+    protected processReorderFolders(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
     getResponses(folderId?: number | null | undefined, cancelToken?: CancelToken): Promise<CannedResponseDto[]> {
         let url_ = this.baseUrl + "/api/portal/canned-responses?";
         if (folderId !== undefined && folderId !== null)
@@ -917,6 +965,54 @@ export class CannedResponsesClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    reorderResponses(request: ReorderCannedRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/canned-responses/reorder";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processReorderResponses(_response);
+        });
+    }
+
+    protected processReorderResponses(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
 }
 
 export class CategoriesClient {
@@ -928,7 +1024,7 @@ export class CategoriesClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -1171,6 +1267,54 @@ export class CategoriesClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    reorder(request: ReorderCategoriesRequest, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/portal/categories/reorder";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processReorder(_response);
+        });
+    }
+
+    protected processReorder(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 204) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
 }
 
 export class CompaniesClient {
@@ -1182,7 +1326,7 @@ export class CompaniesClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -1552,7 +1696,7 @@ export class ContactsClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -1924,7 +2068,7 @@ export class CsmClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -2230,7 +2374,7 @@ export class CustomFieldDefinitionsClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -2470,7 +2614,7 @@ export class CustomStatusesClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -2724,7 +2868,7 @@ export class DashboardClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -2900,7 +3044,7 @@ export class IntegrationClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -3062,7 +3206,7 @@ export class MeClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -3176,7 +3320,7 @@ export class NotificationsClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -3501,7 +3645,7 @@ export class RolesClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -3570,7 +3714,7 @@ export class SettingsClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -3743,7 +3887,7 @@ export class SlaClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -4176,7 +4320,7 @@ export class TicketAiClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -4385,7 +4529,7 @@ export class TicketAttachmentsClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -4502,7 +4646,7 @@ export class TicketAttachmentsClient {
                 fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
                 fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
             }
-            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] as string | undefined }), headers: _headers });
+            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] as string }), headers: _headers });
         } else if (status === 404) {
             const _responseText = response.data;
             let result404: any = null;
@@ -4527,7 +4671,7 @@ export class TicketClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -5980,7 +6124,7 @@ export class TicketCustomFieldsClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -6135,7 +6279,7 @@ export class UsersClient {
 
         this.instance = instance || axios.create();
 
-        this.baseUrl = baseUrl ?? "http://localhost:5000";
+        this.baseUrl = baseUrl ?? "http://localhost:5100";
 
     }
 
@@ -7079,6 +7223,90 @@ export interface IUpdateCannedResponseFolderRequest {
     displayOrder?: number;
 }
 
+export class ReorderCannedRequest implements IReorderCannedRequest {
+    items?: ReorderCannedItem[];
+
+    constructor(data?: IReorderCannedRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(ReorderCannedItem.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): ReorderCannedRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ReorderCannedRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IReorderCannedRequest {
+    items?: ReorderCannedItem[];
+}
+
+export class ReorderCannedItem implements IReorderCannedItem {
+    id?: number;
+    displayOrder?: number;
+
+    constructor(data?: IReorderCannedItem) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.displayOrder = _data["displayOrder"];
+        }
+    }
+
+    static fromJS(data: any): ReorderCannedItem {
+        data = typeof data === 'object' ? data : {};
+        let result = new ReorderCannedItem();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["displayOrder"] = this.displayOrder;
+        return data;
+    }
+}
+
+export interface IReorderCannedItem {
+    id?: number;
+    displayOrder?: number;
+}
+
 export class CannedResponseDto implements ICannedResponseDto {
     id?: number;
     folderId?: number;
@@ -7088,6 +7316,7 @@ export class CannedResponseDto implements ICannedResponseDto {
     createdById?: number;
     createdByName?: string;
     createdAt?: Date;
+    displayOrder?: number;
 
     constructor(data?: ICannedResponseDto) {
         if (data) {
@@ -7108,6 +7337,7 @@ export class CannedResponseDto implements ICannedResponseDto {
             this.createdById = _data["createdById"];
             this.createdByName = _data["createdByName"];
             this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.displayOrder = _data["displayOrder"];
         }
     }
 
@@ -7128,6 +7358,7 @@ export class CannedResponseDto implements ICannedResponseDto {
         data["createdById"] = this.createdById;
         data["createdByName"] = this.createdByName;
         data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["displayOrder"] = this.displayOrder;
         return data;
     }
 }
@@ -7141,6 +7372,7 @@ export interface ICannedResponseDto {
     createdById?: number;
     createdByName?: string;
     createdAt?: Date;
+    displayOrder?: number;
 }
 
 export class CreateCannedResponseRequest implements ICreateCannedResponseRequest {
@@ -7235,6 +7467,7 @@ export class CategoryDto implements ICategoryDto {
     id?: number;
     name?: string;
     parentId?: number | undefined;
+    displayOrder?: number;
     children?: CategoryDto[];
 
     constructor(data?: ICategoryDto) {
@@ -7251,6 +7484,7 @@ export class CategoryDto implements ICategoryDto {
             this.id = _data["id"];
             this.name = _data["name"];
             this.parentId = _data["parentId"];
+            this.displayOrder = _data["displayOrder"];
             if (Array.isArray(_data["children"])) {
                 this.children = [] as any;
                 for (let item of _data["children"])
@@ -7271,6 +7505,7 @@ export class CategoryDto implements ICategoryDto {
         data["id"] = this.id;
         data["name"] = this.name;
         data["parentId"] = this.parentId;
+        data["displayOrder"] = this.displayOrder;
         if (Array.isArray(this.children)) {
             data["children"] = [];
             for (let item of this.children)
@@ -7284,6 +7519,7 @@ export interface ICategoryDto {
     id?: number;
     name?: string;
     parentId?: number | undefined;
+    displayOrder?: number;
     children?: CategoryDto[];
 }
 
@@ -7365,6 +7601,90 @@ export class UpdateCategoryRequest implements IUpdateCategoryRequest {
 export interface IUpdateCategoryRequest {
     name?: string;
     parentId?: number | undefined;
+}
+
+export class ReorderCategoriesRequest implements IReorderCategoriesRequest {
+    items?: ReorderCategoryItem[];
+
+    constructor(data?: IReorderCategoriesRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(ReorderCategoryItem.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): ReorderCategoriesRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ReorderCategoriesRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IReorderCategoriesRequest {
+    items?: ReorderCategoryItem[];
+}
+
+export class ReorderCategoryItem implements IReorderCategoryItem {
+    id?: number;
+    displayOrder?: number;
+
+    constructor(data?: IReorderCategoryItem) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.displayOrder = _data["displayOrder"];
+        }
+    }
+
+    static fromJS(data: any): ReorderCategoryItem {
+        data = typeof data === 'object' ? data : {};
+        let result = new ReorderCategoryItem();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["displayOrder"] = this.displayOrder;
+        return data;
+    }
+}
+
+export interface IReorderCategoryItem {
+    id?: number;
+    displayOrder?: number;
 }
 
 export class PagedResultOfCompanyDto implements IPagedResultOfCompanyDto {

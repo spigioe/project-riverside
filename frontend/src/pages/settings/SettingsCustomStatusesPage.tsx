@@ -37,6 +37,62 @@ export const CUSTOM_STATUS_ICON_OPTIONS = [
   { value: 'circle-question', label: '❓ Kérdés' },
 ]
 
+const LS_BUILTIN_ORDER_KEY = 'custom-statuses-builtin-order'
+
+type BuiltinStatus = { key: string; name: string; icon: string; color: string }
+
+const BUILTIN_STATUSES: BuiltinStatus[] = [
+  { key: 'new',      name: 'Új',       icon: '📥', color: 'primary' },
+  { key: 'open',     name: 'Nyitott',  icon: '● ', color: 'green' },
+  { key: 'pending',  name: 'Függőben', icon: '⏳', color: 'amber' },
+  { key: 'resolved', name: 'Megoldva', icon: '✅', color: 'gray' },
+  { key: 'closed',   name: 'Lezárva',  icon: '🔒', color: 'dark' },
+]
+
+type ListItem =
+  | { kind: 'builtin'; status: BuiltinStatus; listIdx: number }
+  | { kind: 'custom'; status: CustomStatusDto; listIdx: number }
+
+function loadBuiltinOrder(): string[] {
+  try {
+    const raw = localStorage.getItem(LS_BUILTIN_ORDER_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return BUILTIN_STATUSES.map((s) => s.key)
+}
+
+function saveBuiltinOrder(keys: string[]) {
+  try { localStorage.setItem(LS_BUILTIN_ORDER_KEY, JSON.stringify(keys)) } catch { /* ignore */ }
+}
+
+function buildCombinedList(builtinOrder: string[], customs: CustomStatusDto[]): ListItem[] {
+  const builtinMap = new Map(BUILTIN_STATUSES.map((s) => [s.key, s]))
+  const orderedBuiltins = builtinOrder
+    .map((k) => builtinMap.get(k))
+    .filter((s): s is BuiltinStatus => !!s)
+
+  // Add any missing builtins at end (safety)
+  for (const s of BUILTIN_STATUSES) {
+    if (!orderedBuiltins.find((b) => b.key === s.key)) orderedBuiltins.push(s)
+  }
+
+  const items: ListItem[] = []
+  let listIdx = 0
+
+  const sortedCustoms = [...customs].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+
+  // Interleave: we keep builtins first for simplicity, then customs
+  // The combined list allows drag-and-drop across all items
+  for (const s of orderedBuiltins) {
+    items.push({ kind: 'builtin', status: s, listIdx: listIdx++ })
+  }
+  for (const s of sortedCustoms) {
+    items.push({ kind: 'custom', status: s, listIdx: listIdx++ })
+  }
+
+  return items
+}
+
 export function SettingsCustomStatusesPage() {
   const queryClient = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
@@ -52,15 +108,15 @@ export function SettingsCustomStatusesPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['custom-statuses'] }),
   })
 
-  const [orderedStatuses, setOrderedStatuses] = useState<CustomStatusDto[]>([])
+  const [builtinOrder, setBuiltinOrder] = useState<string[]>(loadBuiltinOrder)
+  const [combinedList, setCombinedList] = useState<ListItem[]>([])
   const dragIndex = useRef<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
 
   useEffect(() => {
-    if (statusesQuery.data) {
-      setOrderedStatuses([...statusesQuery.data].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)))
-    }
-  }, [statusesQuery.data])
+    const customs = statusesQuery.data ?? []
+    setCombinedList(buildCombinedList(builtinOrder, customs))
+  }, [statusesQuery.data, builtinOrder])
 
   const reorderMutation = useMutation({
     mutationFn: async (items: CustomStatusDto[]) => {
@@ -88,12 +144,29 @@ export function SettingsCustomStatusesPage() {
     const from = dragIndex.current
     dragIndex.current = null
     if (from === null || from === dropIdx) return
-    const next = [...orderedStatuses]
+
+    const next = [...combinedList]
     const [moved] = next.splice(from, 1)
     next.splice(dropIdx, 0, moved)
-    const updated = next.map((s, i) => CustomStatusDto.fromJS({ ...s, displayOrder: i }))
-    setOrderedStatuses(updated)
+
+    // Reassign listIdx
+    const reindexed = next.map((item, i) => ({ ...item, listIdx: i }))
+    setCombinedList(reindexed)
+
+    // Save builtin order to localStorage
+    const newBuiltinOrder = reindexed
+      .filter((item): item is ListItem & { kind: 'builtin' } => item.kind === 'builtin')
+      .map((item) => item.status.key)
+    setBuiltinOrder(newBuiltinOrder)
+    saveBuiltinOrder(newBuiltinOrder)
+
+    // Update custom status display orders
+    const customItems = reindexed
+      .filter((item): item is ListItem & { kind: 'custom' } => item.kind === 'custom')
     const origMap = new Map((statusesQuery.data ?? []).map((s) => [s.id, s.displayOrder]))
+    const updated = customItems.map((item, i) =>
+      CustomStatusDto.fromJS({ ...item.status, displayOrder: i })
+    )
     const changed = updated.filter((s) => origMap.get(s.id) !== s.displayOrder)
     if (changed.length) reorderMutation.mutate(changed)
   }
@@ -106,7 +179,7 @@ export function SettingsCustomStatusesPage() {
         <div>
           <h1 className={shared.title}>Egyéni státuszok</h1>
           <div className={shared.subtitle}>
-            {statuses.length} státusz — a beépített státuszok (Új, Nyitott, Függőben, Megoldva, Lezárva) mellett jelennek meg
+            {statuses.length} egyéni státusz — a beépített státuszok (Új, Nyitott, Függőben, Megoldva, Lezárva) mellett jelennek meg
           </div>
         </div>
         <button type="button" className={shared.primaryButton} onClick={() => setCreateOpen(true)}>
@@ -128,7 +201,7 @@ export function SettingsCustomStatusesPage() {
                 <th>Megnevezés</th>
                 <th>Kulcs</th>
                 <th>Szín</th>
-                <th>Státusz</th>
+                <th>Típus</th>
                 <th></th>
               </tr>
             </thead>
@@ -136,15 +209,45 @@ export function SettingsCustomStatusesPage() {
               {statusesQuery.isLoading && (
                 <tr><td colSpan={7} className={shared.emptyState}>Betöltés…</td></tr>
               )}
-              {!statusesQuery.isLoading && orderedStatuses.length === 0 && (
-                <tr><td colSpan={7} className={shared.emptyState}>Még nincs egyéni státusz.</td></tr>
-              )}
-              {orderedStatuses.map((s, idx) => {
+              {combinedList.map((item, idx) => {
+                if (item.kind === 'builtin') {
+                  const s = item.status
+                  return (
+                    <tr
+                      key={`builtin-${s.key}`}
+                      draggable
+                      onDragStart={() => handleDragStart(idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDragLeave={() => setDragOverIdx(null)}
+                      onDrop={() => handleDrop(idx)}
+                      onDragEnd={() => { setDragOverIdx(null); dragIndex.current = null }}
+                      style={{ borderTop: dragOverIdx === idx && dragIndex.current !== idx ? '2px solid var(--primary)' : undefined }}
+                    >
+                      <td style={{ textAlign: 'center', cursor: 'grab', color: 'var(--text-muted)', userSelect: 'none', fontSize: 14 }}>⠿</td>
+                      <td style={{ fontSize: 18, textAlign: 'center' }}>{s.icon}</td>
+                      <td style={{ fontWeight: 600 }}>{s.name}</td>
+                      <td className={shared.mono}>{s.key}</td>
+                      <td className={shared.muted}>{CUSTOM_STATUS_COLOR_OPTIONS.find((o) => o.value === s.color)?.label ?? s.color}</td>
+                      <td>
+                        <span style={{
+                          display: 'inline-block', padding: '2px 6px', borderRadius: 3, fontSize: 10,
+                          fontWeight: 700, background: 'var(--bg-alt)', color: 'var(--text-muted)',
+                          textTransform: 'uppercase', letterSpacing: '0.05em', border: '1px solid var(--border-light)',
+                        }}>
+                          Rendszer
+                        </span>
+                      </td>
+                      <td></td>
+                    </tr>
+                  )
+                }
+
+                const s = item.status
                 const iconOpt = CUSTOM_STATUS_ICON_OPTIONS.find((o) => o.value === s.iconKey)
                 const colorOpt = CUSTOM_STATUS_COLOR_OPTIONS.find((o) => o.value === s.colorVariant)
                 return (
                   <tr
-                    key={s.id}
+                    key={`custom-${s.id}`}
                     draggable
                     onDragStart={() => handleDragStart(idx)}
                     onDragOver={(e) => handleDragOver(e, idx)}
@@ -195,7 +298,7 @@ export function SettingsCustomStatusesPage() {
             setCreateOpen(false)
             queryClient.invalidateQueries({ queryKey: ['custom-statuses'] })
           }}
-          nextOrder={orderedStatuses.length}
+          nextOrder={statuses.length}
         />
       )}
       {editStatus && (

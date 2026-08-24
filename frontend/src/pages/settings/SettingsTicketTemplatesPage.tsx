@@ -1,10 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cannedResponsesClient,
   CannedResponseDto,
+  CannedResponseFolderDto,
   CreateCannedResponseFolderRequest,
   CreateCannedResponseRequest,
+  ReorderCannedItem,
+  ReorderCannedRequest,
+  UpdateCannedResponseFolderRequest,
   UpdateCannedResponseRequest,
 } from '../../api'
 import { Modal } from '../../components/Modal/Modal'
@@ -18,7 +22,21 @@ export function SettingsTicketTemplatesPage() {
   const [folderModalOpen, setFolderModalOpen] = useState(false)
   const [responseModal, setResponseModal] = useState<{ mode: 'create' | 'edit'; response?: CannedResponseDto } | null>(null)
 
-  const folders = foldersQuery.data ?? []
+  const [orderedFolders, setOrderedFolders] = useState<CannedResponseFolderDto[]>([])
+  const folderDragIdx = useRef<number | null>(null)
+  const [folderDragOver, setFolderDragOver] = useState<number | null>(null)
+
+  const [orderedResponses, setOrderedResponses] = useState<CannedResponseDto[]>([])
+  const responseDragIdx = useRef<number | null>(null)
+  const [responseDragOver, setResponseDragOver] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (foldersQuery.data) {
+      setOrderedFolders([...foldersQuery.data].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)))
+    }
+  }, [foldersQuery.data])
+
+  const folders = orderedFolders
   const activeFolderId = selectedFolderId ?? folders[0]?.id ?? null
 
   const responsesQuery = useQuery({
@@ -26,6 +44,12 @@ export function SettingsTicketTemplatesPage() {
     queryFn: () => cannedResponsesClient.getResponses(activeFolderId!),
     enabled: activeFolderId !== null,
   })
+
+  useEffect(() => {
+    if (responsesQuery.data) {
+      setOrderedResponses([...responsesQuery.data].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)))
+    }
+  }, [responsesQuery.data])
 
   const deleteFolderMutation = useMutation({
     mutationFn: (id: number) => cannedResponsesClient.deleteFolder(id),
@@ -37,7 +61,63 @@ export function SettingsTicketTemplatesPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['canned-responses', activeFolderId] }),
   })
 
-  const responses = responsesQuery.data ?? []
+  const reorderFoldersMutation = useMutation({
+    mutationFn: (req: ReorderCannedRequest) => cannedResponsesClient.reorderFolders(req),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['canned-folders'] }),
+  })
+
+  const reorderResponsesMutation = useMutation({
+    mutationFn: (req: ReorderCannedRequest) => cannedResponsesClient.reorderResponses(req),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['canned-responses', activeFolderId] }),
+  })
+
+  // Folder DnD
+  function handleFolderDragStart(idx: number) { folderDragIdx.current = idx }
+
+  function handleFolderDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault()
+    setFolderDragOver(idx)
+  }
+
+  function handleFolderDrop(dropIdx: number) {
+    setFolderDragOver(null)
+    const from = folderDragIdx.current
+    folderDragIdx.current = null
+    if (from === null || from === dropIdx) return
+
+    const next = [...orderedFolders]
+    const [moved] = next.splice(from, 1)
+    next.splice(dropIdx, 0, moved)
+    setOrderedFolders(next)
+
+    const items = next.map((f, i) => new ReorderCannedItem({ id: f.id!, displayOrder: i }))
+    reorderFoldersMutation.mutate(new ReorderCannedRequest({ items }))
+  }
+
+  // Response DnD
+  function handleResponseDragStart(idx: number) { responseDragIdx.current = idx }
+
+  function handleResponseDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault()
+    setResponseDragOver(idx)
+  }
+
+  function handleResponseDrop(dropIdx: number) {
+    setResponseDragOver(null)
+    const from = responseDragIdx.current
+    responseDragIdx.current = null
+    if (from === null || from === dropIdx) return
+
+    const next = [...orderedResponses]
+    const [moved] = next.splice(from, 1)
+    next.splice(dropIdx, 0, moved)
+    setOrderedResponses(next)
+
+    const items = next.map((r, i) => new ReorderCannedItem({ id: r.id!, displayOrder: i }))
+    reorderResponsesMutation.mutate(new ReorderCannedRequest({ items }))
+  }
+
+  const responses = orderedResponses
 
   return (
     <div>
@@ -53,11 +133,18 @@ export function SettingsTicketTemplatesPage() {
 
       <div className={shared.card}>
         <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: 200 }}>
+          {/* Folder list with DnD */}
           <div style={{ borderRight: '1px solid var(--border-light)' }}>
             {folders.length === 0 && <div className={shared.emptyState}>Nincs mappa.</div>}
-            {folders.map((f) => (
+            {folders.map((f, idx) => (
               <div
                 key={f.id}
+                draggable
+                onDragStart={() => handleFolderDragStart(idx)}
+                onDragOver={(e) => handleFolderDragOver(e, idx)}
+                onDragLeave={() => setFolderDragOver(null)}
+                onDrop={() => handleFolderDrop(idx)}
+                onDragEnd={() => { setFolderDragOver(null); folderDragIdx.current = null }}
                 onClick={() => setSelectedFolderId(f.id!)}
                 style={{
                   padding: '10px 14px', cursor: 'pointer', fontSize: 13,
@@ -66,9 +153,13 @@ export function SettingsTicketTemplatesPage() {
                   fontWeight: f.id === activeFolderId ? 600 : 400,
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   borderBottom: '1px solid var(--border-light)',
+                  borderTop: folderDragOver === idx && folderDragIdx.current !== idx ? '2px solid var(--primary)' : undefined,
                 }}
               >
-                <span>{f.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ cursor: 'grab', color: 'var(--text-muted)', fontSize: 13, userSelect: 'none' }}>⠿</span>
+                  <span>{f.name}</span>
+                </div>
                 <button
                   type="button"
                   className={shared.linkButton}
@@ -83,6 +174,8 @@ export function SettingsTicketTemplatesPage() {
               </div>
             ))}
           </div>
+
+          {/* Response list with DnD */}
           <div>
             {activeFolderId !== null && (
               <>
@@ -94,10 +187,25 @@ export function SettingsTicketTemplatesPage() {
                 {responses.length === 0 && (
                   <div className={shared.emptyState}>Nincs válaszsablon ebben a mappában.</div>
                 )}
-                {responses.map((r) => (
-                  <div key={r.id} style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-light)' }}>
+                {responses.map((r, idx) => (
+                  <div
+                    key={r.id}
+                    draggable
+                    onDragStart={() => handleResponseDragStart(idx)}
+                    onDragOver={(e) => handleResponseDragOver(e, idx)}
+                    onDragLeave={() => setResponseDragOver(null)}
+                    onDrop={() => handleResponseDrop(idx)}
+                    onDragEnd={() => { setResponseDragOver(null); responseDragIdx.current = null }}
+                    style={{
+                      padding: '10px 14px', borderBottom: '1px solid var(--border-light)',
+                      borderTop: responseDragOver === idx && responseDragIdx.current !== idx ? '2px solid var(--primary)' : undefined,
+                    }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 600, fontSize: 13.5 }}>{r.title}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ cursor: 'grab', color: 'var(--text-muted)', fontSize: 13, userSelect: 'none' }}>⠿</span>
+                        <span style={{ fontWeight: 600, fontSize: 13.5 }}>{r.title}</span>
+                      </div>
                       <div className={shared.actionsCell}>
                         <button
                           type="button"
@@ -118,7 +226,7 @@ export function SettingsTicketTemplatesPage() {
                         </button>
                       </div>
                     </div>
-                    <div className={shared.muted} style={{ fontSize: 12.5, marginTop: 4, whiteSpace: 'pre-wrap' }}>
+                    <div className={shared.muted} style={{ fontSize: 12.5, marginTop: 4, whiteSpace: 'pre-wrap', paddingLeft: 20 }}>
                       {r.body}
                     </div>
                   </div>
@@ -132,7 +240,12 @@ export function SettingsTicketTemplatesPage() {
         </div>
       </div>
 
-      {folderModalOpen && <FolderModal onClose={() => setFolderModalOpen(false)} />}
+      {folderModalOpen && (
+        <FolderModal
+          nextOrder={folders.length}
+          onClose={() => setFolderModalOpen(false)}
+        />
+      )}
       {responseModal && activeFolderId !== null && (
         <ResponseModal
           mode={responseModal.mode}
@@ -145,13 +258,13 @@ export function SettingsTicketTemplatesPage() {
   )
 }
 
-function FolderModal({ onClose }: { onClose: () => void }) {
+function FolderModal({ nextOrder, onClose }: { nextOrder: number; onClose: () => void }) {
   const queryClient = useQueryClient()
   const [name, setName] = useState('')
 
   const createMutation = useMutation({
     mutationFn: () =>
-      cannedResponsesClient.createFolder(new CreateCannedResponseFolderRequest({ name, displayOrder: 0 })),
+      cannedResponsesClient.createFolder(new CreateCannedResponseFolderRequest({ name, displayOrder: nextOrder })),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['canned-folders'] })
       onClose()

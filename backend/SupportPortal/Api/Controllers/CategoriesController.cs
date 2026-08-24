@@ -74,4 +74,13 @@ public class CategoriesController(ICategoryService categoryService) : Controller
             _ => Problem(statusCode: StatusCodes.Status500InternalServerError),
         };
     }
+
+    [HttpPut("reorder")]
+    [Authorize(Roles = "MasterAdmin,Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Reorder([FromBody] ReorderCategoriesRequest request)
+    {
+        await categoryService.ReorderAsync(request);
+        return NoContent();
+    }
 }

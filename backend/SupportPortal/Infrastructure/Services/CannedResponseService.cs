@@ -64,6 +64,16 @@ public class CannedResponseService(AppDbContext db) : ICannedResponseService
         return DeleteFolderResult.Success;
     }
 
+    public async Task ReorderFoldersAsync(ReorderCannedRequest request)
+    {
+        var ids = request.Items.Select(i => i.Id).ToList();
+        var folders = await db.CannedResponseFolders.Where(f => ids.Contains(f.Id)).ToListAsync();
+        var orderMap = request.Items.ToDictionary(i => i.Id, i => i.DisplayOrder);
+        foreach (var f in folders)
+            f.DisplayOrder = orderMap[f.Id];
+        await db.SaveChangesAsync();
+    }
+
     public async Task<IReadOnlyList<CannedResponseDto>> GetResponsesAsync(int? folderId)
     {
         var query = db.CannedResponses.AsNoTracking().AsQueryable();
@@ -71,8 +81,8 @@ public class CannedResponseService(AppDbContext db) : ICannedResponseService
             query = query.Where(r => r.FolderId == folderId.Value);
 
         return await query
-            .OrderBy(r => r.Title)
-            .Select(r => new CannedResponseDto(r.Id, r.FolderId, r.Title, r.Body, r.IsActive, r.CreatedById, r.CreatedBy.FullName, r.CreatedAt))
+            .OrderBy(r => r.DisplayOrder).ThenBy(r => r.Title)
+            .Select(r => new CannedResponseDto(r.Id, r.FolderId, r.Title, r.Body, r.IsActive, r.CreatedById, r.CreatedBy.FullName, r.CreatedAt, r.DisplayOrder))
             .ToListAsync();
     }
 
@@ -81,12 +91,17 @@ public class CannedResponseService(AppDbContext db) : ICannedResponseService
         var folderExists = await db.CannedResponseFolders.AnyAsync(f => f.Id == request.FolderId);
         if (!folderExists) return (CreateResponseResult.FolderNotFound, null);
 
+        var maxOrder = await db.CannedResponses
+            .Where(r => r.FolderId == request.FolderId)
+            .MaxAsync(r => (int?)r.DisplayOrder) ?? -1;
+
         var response = new CannedResponse
         {
             FolderId = request.FolderId,
             Title = request.Title,
             Body = request.Body,
             CreatedById = currentUserId,
+            DisplayOrder = maxOrder + 1,
         };
         db.CannedResponses.Add(response);
         await db.SaveChangesAsync();
@@ -94,7 +109,7 @@ public class CannedResponseService(AppDbContext db) : ICannedResponseService
         var created = await db.CannedResponses
             .AsNoTracking()
             .Where(r => r.Id == response.Id)
-            .Select(r => new CannedResponseDto(r.Id, r.FolderId, r.Title, r.Body, r.IsActive, r.CreatedById, r.CreatedBy.FullName, r.CreatedAt))
+            .Select(r => new CannedResponseDto(r.Id, r.FolderId, r.Title, r.Body, r.IsActive, r.CreatedById, r.CreatedBy.FullName, r.CreatedAt, r.DisplayOrder))
             .FirstAsync();
 
         return (CreateResponseResult.Success, created);
@@ -121,5 +136,15 @@ public class CannedResponseService(AppDbContext db) : ICannedResponseService
         db.CannedResponses.Remove(response);
         await db.SaveChangesAsync();
         return true;
+    }
+
+    public async Task ReorderResponsesAsync(ReorderCannedRequest request)
+    {
+        var ids = request.Items.Select(i => i.Id).ToList();
+        var responses = await db.CannedResponses.Where(r => ids.Contains(r.Id)).ToListAsync();
+        var orderMap = request.Items.ToDictionary(i => i.Id, i => i.DisplayOrder);
+        foreach (var r in responses)
+            r.DisplayOrder = orderMap[r.Id];
+        await db.SaveChangesAsync();
     }
 }

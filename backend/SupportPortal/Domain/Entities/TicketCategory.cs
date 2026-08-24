@@ -5,6 +5,7 @@ public class TicketCategory
     public int Id { get; set; }
     public string Name { get; set; } = null!;
     public int? ParentId { get; set; }
+    public int DisplayOrder { get; set; } = 0;
     public TicketCategory? Parent { get; set; }
     public ICollection<TicketCategory> Children { get; set; } = [];
     public ICollection<Ticket> Tickets { get; set; } = [];

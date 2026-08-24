@@ -13,13 +13,13 @@ public class CategoryService(AppDbContext db) : ICategoryService
     {
         var all = await db.TicketCategories
             .AsNoTracking()
-            .OrderBy(c => c.Name)
-            .Select(c => new { c.Id, c.Name, c.ParentId })
+            .OrderBy(c => c.DisplayOrder).ThenBy(c => c.Name)
+            .Select(c => new { c.Id, c.Name, c.ParentId, c.DisplayOrder })
             .ToListAsync();
 
         List<CategoryDto> BuildChildren(int? parentId) =>
             all.Where(c => c.ParentId == parentId)
-                .Select(c => new CategoryDto(c.Id, c.Name, c.ParentId, BuildChildren(c.Id)))
+                .Select(c => new CategoryDto(c.Id, c.Name, c.ParentId, c.DisplayOrder, BuildChildren(c.Id)))
                 .ToList();
 
         return BuildChildren(null);
@@ -33,11 +33,15 @@ public class CategoryService(AppDbContext db) : ICategoryService
             if (!parentExists) return (CreateCategoryResult.ParentNotFound, null);
         }
 
-        var category = new TicketCategory { Name = request.Name, ParentId = request.ParentId };
+        var maxOrder = await db.TicketCategories
+            .Where(c => c.ParentId == request.ParentId)
+            .MaxAsync(c => (int?)c.DisplayOrder) ?? -1;
+
+        var category = new TicketCategory { Name = request.Name, ParentId = request.ParentId, DisplayOrder = maxOrder + 1 };
         db.TicketCategories.Add(category);
         await db.SaveChangesAsync();
 
-        return (CreateCategoryResult.Success, new CategoryDto(category.Id, category.Name, category.ParentId, []));
+        return (CreateCategoryResult.Success, new CategoryDto(category.Id, category.Name, category.ParentId, category.DisplayOrder, []));
     }
 
     public async Task<UpdateCategoryResult> UpdateAsync(int id, UpdateCategoryRequest request)
@@ -75,5 +79,15 @@ public class CategoryService(AppDbContext db) : ICategoryService
         db.TicketCategories.Remove(category);
         await db.SaveChangesAsync();
         return DeleteCategoryResult.Success;
+    }
+
+    public async Task ReorderAsync(ReorderCategoriesRequest request)
+    {
+        var ids = request.Items.Select(i => i.Id).ToList();
+        var categories = await db.TicketCategories.Where(c => ids.Contains(c.Id)).ToListAsync();
+        var orderMap = request.Items.ToDictionary(i => i.Id, i => i.DisplayOrder);
+        foreach (var c in categories)
+            c.DisplayOrder = orderMap[c.Id];
+        await db.SaveChangesAsync();
     }
 }

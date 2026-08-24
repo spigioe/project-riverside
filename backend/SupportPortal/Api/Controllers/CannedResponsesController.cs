@@ -71,6 +71,15 @@ public class CannedResponsesController(ICannedResponseService cannedResponseServ
         };
     }
 
+    [HttpPut("api/portal/canned-response-folders/reorder")]
+    [Authorize(Roles = "MasterAdmin,Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ReorderFolders([FromBody] ReorderCannedRequest request)
+    {
+        await cannedResponseService.ReorderFoldersAsync(request);
+        return NoContent();
+    }
+
     [HttpGet("api/portal/canned-responses")]
     [ProducesResponseType(typeof(IReadOnlyList<CannedResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetResponses([FromQuery] int? folderId)
@@ -117,6 +126,15 @@ public class CannedResponsesController(ICannedResponseService cannedResponseServ
         if (!success)
             return Problem(statusCode: StatusCodes.Status404NotFound, title: "A válaszsablon nem található.");
 
+        return NoContent();
+    }
+
+    [HttpPut("api/portal/canned-responses/reorder")]
+    [Authorize(Roles = "MasterAdmin,Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ReorderResponses([FromBody] ReorderCannedRequest request)
+    {
+        await cannedResponseService.ReorderResponsesAsync(request);
         return NoContent();
     }
 }
