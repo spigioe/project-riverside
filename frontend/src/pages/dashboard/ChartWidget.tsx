@@ -16,17 +16,14 @@ interface PeriodItem {
 }
 
 function formatPeriodKey(date: Date, groupBy: 'day' | 'hour'): string {
-  if (groupBy === 'hour') {
-    // same format the backend returns: "2024-01-15T14"
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, '0')
-    const d = String(date.getDate()).padStart(2, '0')
-    const h = String(date.getHours()).padStart(2, '0')
-    return `${y}-${m}-${d}T${h}`
-  }
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
+  if (groupBy === 'hour') {
+    // matches backend: "2024-01-15 14:00"
+    const h = String(date.getHours()).padStart(2, '0')
+    return `${y}-${m}-${d} ${h}:00`
+  }
   return `${y}-${m}-${d}`
 }
 
@@ -34,10 +31,10 @@ function formatPeriodLabel(period: string, groupBy: 'day' | 'hour'): string {
   if (!period) return period
   try {
     if (groupBy === 'hour') {
-      // "2024-01-15T14" → parse as local hour
-      const parts = period.split('T')
-      const [y, mo, d] = (parts[0] ?? '').split('-').map(Number)
-      const h = Number(parts[1] ?? '0')
+      // "2024-01-15 14:00" → parse date part and hour
+      const [datePart, timePart] = period.split(' ')
+      const [y, mo, d] = (datePart ?? '').split('-').map(Number)
+      const h = Number((timePart ?? '0:00').split(':')[0])
       const date = new Date(y, mo - 1, d, h)
       return date.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })
     }
