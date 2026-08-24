@@ -12,4 +12,11 @@ public interface IAnalyticsService
     Task<ResponseTimesDto> GetResponseTimesAsync(AnalyticsQuery query, int? userId);
     Task<IReadOnlyList<TicketVolumeItemDto>> GetTicketVolumeAsync(AnalyticsQuery query, string groupBy, int? userId);
     Task<SlaComplianceDto> GetSlaComplianceScopedAsync(AnalyticsQuery query, int? userId);
+
+    Task<SlaComplianceDto> GetSlaBreakdownAsync(AnalyticsQuery query, int? userId);
+    Task<IReadOnlyList<RecentTicketItemDto>> GetRecentTicketsAsync(AnalyticsQuery query, int limit);
+    Task<IReadOnlyList<MyOpenTicketItemDto>> GetMyOpenTicketsAsync(int userId, int limit);
+    Task<IReadOnlyList<CategoryBreakdownItemDto>> GetCategoryBreakdownAsync(AnalyticsQuery query, int? userId, int limit);
+    Task<IReadOnlyList<AgentPerformanceItemDto>> GetAgentPerformanceAsync(AnalyticsQuery query);
+    Task<IReadOnlyList<CustomerActivityItemDto>> GetCustomerActivityAsync(AnalyticsQuery query, int limit);
 }

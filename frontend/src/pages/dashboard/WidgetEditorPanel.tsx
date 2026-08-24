@@ -1,5 +1,5 @@
 import { DashboardWidgetType } from '../../api'
-import type { LocalWidget, ChartConfig, ResponseTimeConfig, StatConfig, TimeRange, ChartType, Scope } from './types'
+import type { LocalWidget, ChartConfig, ResponseTimeConfig, StatConfig, TimeRange, ChartType, Scope, SlaBreakdownConfig, RecentTicketsConfig, MyOpenTicketsConfig, CategoryBreakdownConfig, AgentPerformanceConfig, CustomerActivityConfig } from './types'
 import { WIDGET_META } from './types'
 import styles from './WidgetEditorPanel.module.css'
 
@@ -116,6 +116,101 @@ function ResponseTimeEditor({ config, onChange }: { config: ResponseTimeConfig; 
   )
 }
 
+function LimitSelect({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div className={styles.field}>
+      <label className={styles.label}>Megjelenített sorok</label>
+      <select className={styles.select} value={value} onChange={e => onChange(Number(e.target.value))}>
+        <option value={5}>5</option>
+        <option value={10}>10</option>
+        <option value={20}>20</option>
+      </select>
+    </div>
+  )
+}
+
+function SlaBreakdownEditor({ config, onChange }: { config: SlaBreakdownConfig; onChange: (c: SlaBreakdownConfig) => void }) {
+  return (
+    <>
+      <ScopeSelect value={config.scope} onChange={v => onChange({ ...config, scope: v })} />
+      <TimeRangeSelect
+        value={config.timeRange}
+        onChange={v => onChange({ ...config, timeRange: v })}
+        dateFrom={config.dateFrom}
+        dateTo={config.dateTo}
+        onDateFrom={v => onChange({ ...config, dateFrom: v })}
+        onDateTo={v => onChange({ ...config, dateTo: v })}
+      />
+    </>
+  )
+}
+
+function RecentTicketsEditor({ config, onChange }: { config: RecentTicketsConfig; onChange: (c: RecentTicketsConfig) => void }) {
+  return (
+    <>
+      <LimitSelect value={config.limit} onChange={v => onChange({ ...config, limit: v })} />
+      <TimeRangeSelect
+        value={config.timeRange}
+        onChange={v => onChange({ ...config, timeRange: v })}
+        dateFrom={config.dateFrom}
+        dateTo={config.dateTo}
+        onDateFrom={v => onChange({ ...config, dateFrom: v })}
+        onDateTo={v => onChange({ ...config, dateTo: v })}
+      />
+    </>
+  )
+}
+
+function MyOpenTicketsEditor({ config, onChange }: { config: MyOpenTicketsConfig; onChange: (c: MyOpenTicketsConfig) => void }) {
+  return <LimitSelect value={config.limit} onChange={v => onChange({ ...config, limit: v })} />
+}
+
+function CategoryBreakdownEditor({ config, onChange }: { config: CategoryBreakdownConfig; onChange: (c: CategoryBreakdownConfig) => void }) {
+  return (
+    <>
+      <LimitSelect value={config.limit} onChange={v => onChange({ ...config, limit: v })} />
+      <ScopeSelect value={config.scope} onChange={v => onChange({ ...config, scope: v })} />
+      <TimeRangeSelect
+        value={config.timeRange}
+        onChange={v => onChange({ ...config, timeRange: v })}
+        dateFrom={config.dateFrom}
+        dateTo={config.dateTo}
+        onDateFrom={v => onChange({ ...config, dateFrom: v })}
+        onDateTo={v => onChange({ ...config, dateTo: v })}
+      />
+    </>
+  )
+}
+
+function AgentPerformanceEditor({ config, onChange }: { config: AgentPerformanceConfig; onChange: (c: AgentPerformanceConfig) => void }) {
+  return (
+    <TimeRangeSelect
+      value={config.timeRange}
+      onChange={v => onChange({ ...config, timeRange: v })}
+      dateFrom={config.dateFrom}
+      dateTo={config.dateTo}
+      onDateFrom={v => onChange({ ...config, dateFrom: v })}
+      onDateTo={v => onChange({ ...config, dateTo: v })}
+    />
+  )
+}
+
+function CustomerActivityEditor({ config, onChange }: { config: CustomerActivityConfig; onChange: (c: CustomerActivityConfig) => void }) {
+  return (
+    <>
+      <LimitSelect value={config.limit} onChange={v => onChange({ ...config, limit: v })} />
+      <TimeRangeSelect
+        value={config.timeRange}
+        onChange={v => onChange({ ...config, timeRange: v })}
+        dateFrom={config.dateFrom}
+        dateTo={config.dateTo}
+        onDateFrom={v => onChange({ ...config, dateFrom: v })}
+        onDateTo={v => onChange({ ...config, dateTo: v })}
+      />
+    </>
+  )
+}
+
 export function WidgetEditorPanel({ widget, onUpdate, onClose, onDelete }: Props) {
   const meta = WIDGET_META[widget.widgetType]
 
@@ -139,7 +234,25 @@ export function WidgetEditorPanel({ widget, onUpdate, onClose, onDelete }: Props
           {widget.widgetType === DashboardWidgetType.RecentActivity && (
             <ResponseTimeEditor config={widget.config as ResponseTimeConfig} onChange={updateConfig} />
           )}
-          {widget.widgetType !== DashboardWidgetType.TrendChart && widget.widgetType !== DashboardWidgetType.RecentActivity && (
+          {widget.widgetType === DashboardWidgetType.SlaBreakdown && (
+            <SlaBreakdownEditor config={widget.config as SlaBreakdownConfig} onChange={updateConfig} />
+          )}
+          {widget.widgetType === DashboardWidgetType.RecentTickets && (
+            <RecentTicketsEditor config={widget.config as RecentTicketsConfig} onChange={updateConfig} />
+          )}
+          {widget.widgetType === DashboardWidgetType.MyOpenTickets && (
+            <MyOpenTicketsEditor config={widget.config as MyOpenTicketsConfig} onChange={updateConfig} />
+          )}
+          {widget.widgetType === DashboardWidgetType.CategoryBreakdown && (
+            <CategoryBreakdownEditor config={widget.config as CategoryBreakdownConfig} onChange={updateConfig} />
+          )}
+          {widget.widgetType === DashboardWidgetType.AgentPerformance && (
+            <AgentPerformanceEditor config={widget.config as AgentPerformanceConfig} onChange={updateConfig} />
+          )}
+          {widget.widgetType === DashboardWidgetType.CustomerActivity && (
+            <CustomerActivityEditor config={widget.config as CustomerActivityConfig} onChange={updateConfig} />
+          )}
+          {![DashboardWidgetType.TrendChart, DashboardWidgetType.RecentActivity, DashboardWidgetType.SlaBreakdown, DashboardWidgetType.RecentTickets, DashboardWidgetType.MyOpenTickets, DashboardWidgetType.CategoryBreakdown, DashboardWidgetType.AgentPerformance, DashboardWidgetType.CustomerActivity].includes(widget.widgetType) && (
             <StatEditor config={widget.config as StatConfig} onChange={updateConfig} />
           )}
         </div>

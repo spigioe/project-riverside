@@ -2,12 +2,18 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { dashboardClient, DashboardWidgetType, UpdateDashboardWidgetItem, UpdateDashboardWidgetsRequest } from '../api'
 import type { DashboardStatsDto } from '../api'
-import type { LocalWidget, ChartConfig, ResponseTimeConfig } from './dashboard/types'
-import { WIDGET_META, DEFAULT_STAT_CONFIG, DEFAULT_CHART_CONFIG, DEFAULT_RESPONSE_TIME_CONFIG, GRID_COLS, GRID_ROWS, GRID_GAP, GRID_CELL_MIN_H } from './dashboard/types'
+import type { LocalWidget, ChartConfig, ResponseTimeConfig, SlaBreakdownConfig, RecentTicketsConfig, MyOpenTicketsConfig, CategoryBreakdownConfig, AgentPerformanceConfig, CustomerActivityConfig } from './dashboard/types'
+import { WIDGET_META, DEFAULT_STAT_CONFIG, DEFAULT_CHART_CONFIG, DEFAULT_RESPONSE_TIME_CONFIG, DEFAULT_SLA_BREAKDOWN_CONFIG, DEFAULT_RECENT_TICKETS_CONFIG, DEFAULT_MY_OPEN_TICKETS_CONFIG, DEFAULT_CATEGORY_BREAKDOWN_CONFIG, DEFAULT_AGENT_PERFORMANCE_CONFIG, DEFAULT_CUSTOMER_ACTIVITY_CONFIG, GRID_COLS, GRID_ROWS, GRID_GAP, GRID_CELL_MIN_H } from './dashboard/types'
 import { parseConfig, hasCollision, findFreePosition } from './dashboard/widgetUtils'
 import { StatWidget } from './dashboard/StatWidget'
 import { ChartWidget } from './dashboard/ChartWidget'
 import { ResponseTimeWidget } from './dashboard/ResponseTimeWidget'
+import { SlaBreakdownWidget } from './dashboard/SlaBreakdownWidget'
+import { RecentTicketsWidget } from './dashboard/RecentTicketsWidget'
+import { MyOpenTicketsWidget } from './dashboard/MyOpenTicketsWidget'
+import { CategoryBreakdownWidget } from './dashboard/CategoryBreakdownWidget'
+import { AgentPerformanceWidget } from './dashboard/AgentPerformanceWidget'
+import { CustomerActivityWidget } from './dashboard/CustomerActivityWidget'
 import { WidgetEditorPanel } from './dashboard/WidgetEditorPanel'
 import { WidgetStorePanel } from './dashboard/WidgetStorePanel'
 import styles from './DashboardPage.module.css'
@@ -37,8 +43,14 @@ interface ResizeState {
 const TEMP_STORE_ID = -9999
 
 function defaultConfig(type: DashboardWidgetType): LocalWidget['config'] {
-  if (type === DashboardWidgetType.TrendChart) return DEFAULT_CHART_CONFIG
-  if (type === DashboardWidgetType.RecentActivity) return DEFAULT_RESPONSE_TIME_CONFIG
+  if (type === DashboardWidgetType.TrendChart)        return DEFAULT_CHART_CONFIG
+  if (type === DashboardWidgetType.RecentActivity)    return DEFAULT_RESPONSE_TIME_CONFIG
+  if (type === DashboardWidgetType.SlaBreakdown)      return DEFAULT_SLA_BREAKDOWN_CONFIG
+  if (type === DashboardWidgetType.RecentTickets)     return DEFAULT_RECENT_TICKETS_CONFIG
+  if (type === DashboardWidgetType.MyOpenTickets)     return DEFAULT_MY_OPEN_TICKETS_CONFIG
+  if (type === DashboardWidgetType.CategoryBreakdown) return DEFAULT_CATEGORY_BREAKDOWN_CONFIG
+  if (type === DashboardWidgetType.AgentPerformance)  return DEFAULT_AGENT_PERFORMANCE_CONFIG
+  if (type === DashboardWidgetType.CustomerActivity)  return DEFAULT_CUSTOMER_ACTIVITY_CONFIG
   return DEFAULT_STAT_CONFIG
 }
 
@@ -474,6 +486,18 @@ export function DashboardPage() {
                       <ChartWidget config={w.config as ChartConfig} />
                     ) : w.widgetType === DashboardWidgetType.RecentActivity ? (
                       <ResponseTimeWidget config={w.config as ResponseTimeConfig} />
+                    ) : w.widgetType === DashboardWidgetType.SlaBreakdown ? (
+                      <SlaBreakdownWidget config={w.config as SlaBreakdownConfig} />
+                    ) : w.widgetType === DashboardWidgetType.RecentTickets ? (
+                      <RecentTicketsWidget config={w.config as RecentTicketsConfig} />
+                    ) : w.widgetType === DashboardWidgetType.MyOpenTickets ? (
+                      <MyOpenTicketsWidget config={w.config as MyOpenTicketsConfig} />
+                    ) : w.widgetType === DashboardWidgetType.CategoryBreakdown ? (
+                      <CategoryBreakdownWidget config={w.config as CategoryBreakdownConfig} />
+                    ) : w.widgetType === DashboardWidgetType.AgentPerformance ? (
+                      <AgentPerformanceWidget config={w.config as AgentPerformanceConfig} />
+                    ) : w.widgetType === DashboardWidgetType.CustomerActivity ? (
+                      <CustomerActivityWidget config={w.config as CustomerActivityConfig} />
                     ) : (
                       <StatWidget widgetType={w.widgetType} stats={stats} editMode={mode === 'edit'} />
                     )}

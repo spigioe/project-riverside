@@ -99,3 +99,194 @@
   background: var(--border-light);
   flex-shrink: 0;
 }
+
+/* ── Shared ─────────────────────────────────────────────── */
+.loading,
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 16px;
+}
+
+/* ── SLA Breakdown ───────────────────────────────────────── */
+.slaBreakdownRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+.slaBreakdownChart {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.slaBreakdownCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.slaBreakdownPct {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.slaBreakdownLabel {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.slaBreakdownLegend {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-shrink: 0;
+  padding-bottom: 4px;
+}
+
+.slaBreakdownItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.slaBreakdownDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Ticket List ─────────────────────────────────────────── */
+.ticketList {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  gap: 2px;
+  padding: 2px 0;
+}
+
+.ticketRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  min-width: 0;
+  transition: background 0.1s;
+}
+
+.ticketRow:hover {
+  background: var(--bg-hover);
+}
+
+.ticketStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ticketSubject {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ticketMeta {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── SLA Badges ──────────────────────────────────────────── */
+.slaBadgeBreach,
+.slaBadgeWarning,
+.slaBadgeOk {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.slaBadgeBreach {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.slaBadgeWarning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.slaBadgeOk {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+/* ── Agent Performance ───────────────────────────────────── */
+.agentTable {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.th {
+  text-align: left;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: var(--card-bg, var(--bg));
+}
+
+.tr:hover {
+  background: var(--bg-hover);
+}
+
+.td {
+  padding: 5px 8px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.tdNum {
+  padding: 5px 8px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border-light);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

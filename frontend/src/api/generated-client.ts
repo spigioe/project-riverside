@@ -3842,6 +3842,424 @@ export class PortalAnalyticsClient {
         }
         return Promise.resolve<SlaComplianceDto>(null as any);
     }
+
+    getSlaBreakdown(from?: Date | null | undefined, to?: Date | null | undefined, scope?: string | null | undefined, cancelToken?: CancelToken): Promise<SlaComplianceDto> {
+        let url_ = this.baseUrl + "/api/portal/analytics/sla-breakdown?";
+        if (from !== undefined && from !== null)
+            url_ += "From=" + encodeURIComponent(from ? "" + from.toISOString() : "") + "&";
+        if (to !== undefined && to !== null)
+            url_ += "To=" + encodeURIComponent(to ? "" + to.toISOString() : "") + "&";
+        if (scope !== undefined && scope !== null)
+            url_ += "Scope=" + encodeURIComponent("" + scope) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetSlaBreakdown(_response);
+        });
+    }
+
+    protected processGetSlaBreakdown(response: AxiosResponse): Promise<SlaComplianceDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = SlaComplianceDto.fromJS(resultData200);
+            return Promise.resolve<SlaComplianceDto>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SlaComplianceDto>(null as any);
+    }
+
+    getRecentTickets(from?: Date | null | undefined, to?: Date | null | undefined, scope?: string | null | undefined, limit?: number | undefined, cancelToken?: CancelToken): Promise<RecentTicketItemDto[]> {
+        let url_ = this.baseUrl + "/api/portal/analytics/recent-tickets?";
+        if (from !== undefined && from !== null)
+            url_ += "From=" + encodeURIComponent(from ? "" + from.toISOString() : "") + "&";
+        if (to !== undefined && to !== null)
+            url_ += "To=" + encodeURIComponent(to ? "" + to.toISOString() : "") + "&";
+        if (scope !== undefined && scope !== null)
+            url_ += "Scope=" + encodeURIComponent("" + scope) + "&";
+        if (limit === null)
+            throw new globalThis.Error("The parameter 'limit' cannot be null.");
+        else if (limit !== undefined)
+            url_ += "limit=" + encodeURIComponent("" + limit) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetRecentTickets(_response);
+        });
+    }
+
+    protected processGetRecentTickets(response: AxiosResponse): Promise<RecentTicketItemDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(RecentTicketItemDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<RecentTicketItemDto[]>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<RecentTicketItemDto[]>(null as any);
+    }
+
+    getMyOpenTickets(limit?: number | undefined, cancelToken?: CancelToken): Promise<MyOpenTicketItemDto[]> {
+        let url_ = this.baseUrl + "/api/portal/analytics/my-open-tickets?";
+        if (limit === null)
+            throw new globalThis.Error("The parameter 'limit' cannot be null.");
+        else if (limit !== undefined)
+            url_ += "limit=" + encodeURIComponent("" + limit) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetMyOpenTickets(_response);
+        });
+    }
+
+    protected processGetMyOpenTickets(response: AxiosResponse): Promise<MyOpenTicketItemDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(MyOpenTicketItemDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<MyOpenTicketItemDto[]>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<MyOpenTicketItemDto[]>(null as any);
+    }
+
+    getTicketsByCategory(from?: Date | null | undefined, to?: Date | null | undefined, scope?: string | null | undefined, limit?: number | undefined, cancelToken?: CancelToken): Promise<CategoryBreakdownItemDto[]> {
+        let url_ = this.baseUrl + "/api/portal/analytics/tickets-by-category?";
+        if (from !== undefined && from !== null)
+            url_ += "From=" + encodeURIComponent(from ? "" + from.toISOString() : "") + "&";
+        if (to !== undefined && to !== null)
+            url_ += "To=" + encodeURIComponent(to ? "" + to.toISOString() : "") + "&";
+        if (scope !== undefined && scope !== null)
+            url_ += "Scope=" + encodeURIComponent("" + scope) + "&";
+        if (limit === null)
+            throw new globalThis.Error("The parameter 'limit' cannot be null.");
+        else if (limit !== undefined)
+            url_ += "limit=" + encodeURIComponent("" + limit) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetTicketsByCategory(_response);
+        });
+    }
+
+    protected processGetTicketsByCategory(response: AxiosResponse): Promise<CategoryBreakdownItemDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CategoryBreakdownItemDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<CategoryBreakdownItemDto[]>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CategoryBreakdownItemDto[]>(null as any);
+    }
+
+    getAgentPerformance(from?: Date | null | undefined, to?: Date | null | undefined, scope?: string | null | undefined, cancelToken?: CancelToken): Promise<AgentPerformanceItemDto[]> {
+        let url_ = this.baseUrl + "/api/portal/analytics/agent-performance?";
+        if (from !== undefined && from !== null)
+            url_ += "From=" + encodeURIComponent(from ? "" + from.toISOString() : "") + "&";
+        if (to !== undefined && to !== null)
+            url_ += "To=" + encodeURIComponent(to ? "" + to.toISOString() : "") + "&";
+        if (scope !== undefined && scope !== null)
+            url_ += "Scope=" + encodeURIComponent("" + scope) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetAgentPerformance(_response);
+        });
+    }
+
+    protected processGetAgentPerformance(response: AxiosResponse): Promise<AgentPerformanceItemDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(AgentPerformanceItemDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<AgentPerformanceItemDto[]>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status === 401) {
+            const _responseText = response.data;
+            let result401: any = null;
+            let resultData401  = _responseText;
+            result401 = ProblemDetails.fromJS(resultData401);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result401);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AgentPerformanceItemDto[]>(null as any);
+    }
+
+    getCustomerActivity(from?: Date | null | undefined, to?: Date | null | undefined, scope?: string | null | undefined, limit?: number | undefined, cancelToken?: CancelToken): Promise<CustomerActivityItemDto[]> {
+        let url_ = this.baseUrl + "/api/portal/analytics/customer-activity?";
+        if (from !== undefined && from !== null)
+            url_ += "From=" + encodeURIComponent(from ? "" + from.toISOString() : "") + "&";
+        if (to !== undefined && to !== null)
+            url_ += "To=" + encodeURIComponent(to ? "" + to.toISOString() : "") + "&";
+        if (scope !== undefined && scope !== null)
+            url_ += "Scope=" + encodeURIComponent("" + scope) + "&";
+        if (limit === null)
+            throw new globalThis.Error("The parameter 'limit' cannot be null.");
+        else if (limit !== undefined)
+            url_ += "limit=" + encodeURIComponent("" + limit) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetCustomerActivity(_response);
+        });
+    }
+
+    protected processGetCustomerActivity(response: AxiosResponse): Promise<CustomerActivityItemDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CustomerActivityItemDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<CustomerActivityItemDto[]>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CustomerActivityItemDto[]>(null as any);
+    }
 }
 
 export class RolesClient {
@@ -4854,7 +5272,7 @@ export class TicketAttachmentsClient {
                 fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
                 fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
             }
-            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] as string | undefined }), headers: _headers });
+            return Promise.resolve({ fileName: fileName, status: status, data: new Blob([response.data], { type: response.headers["content-type"] as string }), headers: _headers });
         } else if (status === 404) {
             const _responseText = response.data;
             let result404: any = null;
@@ -9485,6 +9903,12 @@ export enum DashboardWidgetType {
     SlaCompliance = "SlaCompliance",
     TrendChart = "TrendChart",
     RecentActivity = "RecentActivity",
+    SlaBreakdown = "SlaBreakdown",
+    RecentTickets = "RecentTickets",
+    MyOpenTickets = "MyOpenTickets",
+    CategoryBreakdown = "CategoryBreakdown",
+    AgentPerformance = "AgentPerformance",
+    CustomerActivity = "CustomerActivity",
 }
 
 export class UpdateDashboardWidgetsRequest implements IUpdateDashboardWidgetsRequest {
@@ -10178,6 +10602,258 @@ export interface ISlaComplianceDto {
     compliant?: number;
     breached?: number;
     compliancePercentage?: number;
+}
+
+export class RecentTicketItemDto implements IRecentTicketItemDto {
+    id?: number;
+    subject?: string;
+    status?: string;
+    priority?: string;
+    requesterName?: string;
+    createdAt?: Date;
+    assignedToName?: string | undefined;
+
+    constructor(data?: IRecentTicketItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.subject = _data["subject"];
+            this.status = _data["status"];
+            this.priority = _data["priority"];
+            this.requesterName = _data["requesterName"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.assignedToName = _data["assignedToName"];
+        }
+    }
+
+    static fromJS(data: any): RecentTicketItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new RecentTicketItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["subject"] = this.subject;
+        data["status"] = this.status;
+        data["priority"] = this.priority;
+        data["requesterName"] = this.requesterName;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["assignedToName"] = this.assignedToName;
+        return data;
+    }
+}
+
+export interface IRecentTicketItemDto {
+    id?: number;
+    subject?: string;
+    status?: string;
+    priority?: string;
+    requesterName?: string;
+    createdAt?: Date;
+    assignedToName?: string | undefined;
+}
+
+export class MyOpenTicketItemDto implements IMyOpenTicketItemDto {
+    id?: number;
+    subject?: string;
+    status?: string;
+    priority?: string;
+    slaDueAt?: Date | undefined;
+    slaBreach?: boolean;
+
+    constructor(data?: IMyOpenTicketItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.subject = _data["subject"];
+            this.status = _data["status"];
+            this.priority = _data["priority"];
+            this.slaDueAt = _data["slaDueAt"] ? new Date(_data["slaDueAt"].toString()) : undefined as any;
+            this.slaBreach = _data["slaBreach"];
+        }
+    }
+
+    static fromJS(data: any): MyOpenTicketItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new MyOpenTicketItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["subject"] = this.subject;
+        data["status"] = this.status;
+        data["priority"] = this.priority;
+        data["slaDueAt"] = this.slaDueAt ? this.slaDueAt.toISOString() : undefined as any;
+        data["slaBreach"] = this.slaBreach;
+        return data;
+    }
+}
+
+export interface IMyOpenTicketItemDto {
+    id?: number;
+    subject?: string;
+    status?: string;
+    priority?: string;
+    slaDueAt?: Date | undefined;
+    slaBreach?: boolean;
+}
+
+export class CategoryBreakdownItemDto implements ICategoryBreakdownItemDto {
+    categoryName?: string;
+    count?: number;
+
+    constructor(data?: ICategoryBreakdownItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.categoryName = _data["categoryName"];
+            this.count = _data["count"];
+        }
+    }
+
+    static fromJS(data: any): CategoryBreakdownItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new CategoryBreakdownItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["categoryName"] = this.categoryName;
+        data["count"] = this.count;
+        return data;
+    }
+}
+
+export interface ICategoryBreakdownItemDto {
+    categoryName?: string;
+    count?: number;
+}
+
+export class AgentPerformanceItemDto implements IAgentPerformanceItemDto {
+    agentName?: string;
+    resolved?: number;
+    avgResolutionMinutes?: number;
+    avgResponseMinutes?: number;
+
+    constructor(data?: IAgentPerformanceItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.agentName = _data["agentName"];
+            this.resolved = _data["resolved"];
+            this.avgResolutionMinutes = _data["avgResolutionMinutes"];
+            this.avgResponseMinutes = _data["avgResponseMinutes"];
+        }
+    }
+
+    static fromJS(data: any): AgentPerformanceItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new AgentPerformanceItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["agentName"] = this.agentName;
+        data["resolved"] = this.resolved;
+        data["avgResolutionMinutes"] = this.avgResolutionMinutes;
+        data["avgResponseMinutes"] = this.avgResponseMinutes;
+        return data;
+    }
+}
+
+export interface IAgentPerformanceItemDto {
+    agentName?: string;
+    resolved?: number;
+    avgResolutionMinutes?: number;
+    avgResponseMinutes?: number;
+}
+
+export class CustomerActivityItemDto implements ICustomerActivityItemDto {
+    companyId?: number | undefined;
+    companyName?: string;
+    domain?: string | undefined;
+    ticketCount?: number;
+
+    constructor(data?: ICustomerActivityItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.companyId = _data["companyId"];
+            this.companyName = _data["companyName"];
+            this.domain = _data["domain"];
+            this.ticketCount = _data["ticketCount"];
+        }
+    }
+
+    static fromJS(data: any): CustomerActivityItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new CustomerActivityItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["companyId"] = this.companyId;
+        data["companyName"] = this.companyName;
+        data["domain"] = this.domain;
+        data["ticketCount"] = this.ticketCount;
+        return data;
+    }
+}
+
+export interface ICustomerActivityItemDto {
+    companyId?: number | undefined;
+    companyName?: string;
+    domain?: string | undefined;
+    ticketCount?: number;
 }
 
 export class RoleDto implements IRoleDto {

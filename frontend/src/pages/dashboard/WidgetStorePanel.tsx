@@ -1,6 +1,7 @@
 import { DashboardWidgetType } from '../../api'
 import type { LocalWidget } from './types'
 import { WIDGET_META, STAT_WIDGET_TYPES } from './types'
+import { useAuthStore } from '../../store/useAuthStore'
 import styles from './WidgetStorePanel.module.css'
 
 interface Props {
@@ -12,22 +13,34 @@ const ALL_WIDGET_TYPES: DashboardWidgetType[] = [
   ...STAT_WIDGET_TYPES,
   DashboardWidgetType.TrendChart,
   DashboardWidgetType.RecentActivity,
+  DashboardWidgetType.SlaBreakdown,
+  DashboardWidgetType.RecentTickets,
+  DashboardWidgetType.MyOpenTickets,
+  DashboardWidgetType.CategoryBreakdown,
+  DashboardWidgetType.AgentPerformance,
+  DashboardWidgetType.CustomerActivity,
 ]
 
+const ADMIN_ONLY_TYPES = new Set([DashboardWidgetType.AgentPerformance])
+
 export function WidgetStorePanel({ widgets, onStartDrag }: Props) {
+  const role = useAuthStore(s => s.user?.role ?? '')
+  const isAdmin = role === 'Admin' || role === 'MasterAdmin'
+
   function isDisabled(type: DashboardWidgetType): boolean {
-    // Stat widgets: only one per type
     if (STAT_WIDGET_TYPES.includes(type)) {
       return widgets.some(w => w.widgetType === type)
     }
     return false
   }
 
+  const visibleTypes = ALL_WIDGET_TYPES.filter(t => !ADMIN_ONLY_TYPES.has(t) || isAdmin)
+
   return (
     <div className={styles.panel}>
       <div className={styles.header}>Widget hozzáadása</div>
       <div className={styles.list}>
-        {ALL_WIDGET_TYPES.map(type => {
+        {visibleTypes.map(type => {
           const meta = WIDGET_META[type]
           const disabled = isDisabled(type)
           return (

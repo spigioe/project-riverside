@@ -223,6 +223,155 @@ public class AnalyticsService(AppDbContext db) : IAnalyticsService
         return new SlaComplianceDto(total, compliant, breached, percentage);
     }
 
+    public async Task<SlaComplianceDto> GetSlaBreakdownAsync(AnalyticsQuery query, int? userId)
+        => await GetSlaComplianceScopedAsync(query, userId);
+
+    public async Task<IReadOnlyList<RecentTicketItemDto>> GetRecentTicketsAsync(AnalyticsQuery query, int limit)
+    {
+        var q = ApplyAnalyticsQuery(db.Tickets.AsNoTracking(), query, null);
+        return await q
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(limit)
+            .Select(t => new RecentTicketItemDto(
+                t.Id,
+                t.Subject,
+                t.Status.ToString(),
+                t.Priority.ToString(),
+                t.RequesterName,
+                t.CreatedAt,
+                t.AssignedTo != null ? t.AssignedTo.FullName : null))
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<MyOpenTicketItemDto>> GetMyOpenTicketsAsync(int userId, int limit)
+    {
+        var openStatuses = new[] { TicketStatus.New, TicketStatus.Open, TicketStatus.Pending };
+        return await db.Tickets.AsNoTracking()
+            .Where(t => t.AssignedToId == userId && openStatuses.Contains(t.Status) && !t.IsMerged)
+            .OrderBy(t => t.SlaDueAt.HasValue ? 0 : 1)
+            .ThenBy(t => t.SlaDueAt)
+            .ThenByDescending(t => t.CreatedAt)
+            .Take(limit)
+            .Select(t => new MyOpenTicketItemDto(
+                t.Id,
+                t.Subject,
+                t.Status.ToString(),
+                t.Priority.ToString(),
+                t.SlaDueAt,
+                t.SlaBreach))
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<CategoryBreakdownItemDto>> GetCategoryBreakdownAsync(AnalyticsQuery query, int? userId, int limit)
+    {
+        var q = ApplyAnalyticsQuery(db.Tickets.AsNoTracking(), query, userId);
+
+        var grouped = await q
+            .GroupBy(t => t.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        var categories = await db.TicketCategories.AsNoTracking()
+            .ToDictionaryAsync(c => c.Id, c => new { c.Name, c.DisplayOrder });
+
+        return grouped
+            .Select(g => new
+            {
+                CategoryName = g.CategoryId.HasValue && categories.TryGetValue(g.CategoryId.Value, out var cat)
+                    ? cat.Name : "Nincs kategória",
+                DisplayOrder = g.CategoryId.HasValue && categories.TryGetValue(g.CategoryId.Value, out var cat2)
+                    ? cat2.DisplayOrder : 999,
+                g.Count
+            })
+            .OrderBy(x => x.DisplayOrder)
+            .Take(limit)
+            .Select(x => new CategoryBreakdownItemDto(x.CategoryName, x.Count))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<AgentPerformanceItemDto>> GetAgentPerformanceAsync(AnalyticsQuery query)
+    {
+        var q = ApplyAnalyticsQuery(db.Tickets.AsNoTracking(), query, null)
+            .Where(t => t.AssignedToId.HasValue);
+
+        var tickets = await q
+            .Select(t => new { t.Id, t.AssignedToId, t.CreatedAt, t.Status, t.UpdatedAt })
+            .ToListAsync();
+
+        if (tickets.Count == 0) return [];
+
+        var agentIds = tickets.Select(t => t.AssignedToId!.Value).Distinct().ToList();
+        var agents = await db.Users.AsNoTracking()
+            .Where(u => agentIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.FullName);
+
+        var ticketIds = tickets.Select(t => t.Id).ToList();
+        var messages = await db.TicketMessages.AsNoTracking()
+            .Where(m => ticketIds.Contains(m.TicketId) && !m.IsInternalNote)
+            .OrderBy(m => m.TicketId).ThenBy(m => m.CreatedAt)
+            .Select(m => new { m.TicketId, m.Direction, m.SenderUserId, m.CreatedAt })
+            .ToListAsync();
+
+        var msgByTicket = messages.GroupBy(m => m.TicketId).ToDictionary(g => g.Key, g => g.ToList());
+
+        var byAgent = tickets.GroupBy(t => t.AssignedToId!.Value);
+        var result = new List<AgentPerformanceItemDto>();
+
+        foreach (var group in byAgent)
+        {
+            var agentName = agents.TryGetValue(group.Key, out var name) ? name : $"Agent #{group.Key}";
+            var resolved = group.Count(t => t.Status == TicketStatus.Resolved || t.Status == TicketStatus.Closed);
+            var resolutionMins = group
+                .Where(t => t.Status == TicketStatus.Resolved || t.Status == TicketStatus.Closed)
+                .Select(t => (t.UpdatedAt - t.CreatedAt).TotalMinutes)
+                .ToList();
+            var responseMins = new List<double>();
+
+            foreach (var ticket in group)
+            {
+                if (!msgByTicket.TryGetValue(ticket.Id, out var msgs)) continue;
+                var firstOut = msgs.FirstOrDefault(m => m.Direction == MessageDirection.Outbound && m.SenderUserId != null);
+                if (firstOut != null)
+                    responseMins.Add((firstOut.CreatedAt - ticket.CreatedAt).TotalMinutes);
+            }
+
+            result.Add(new AgentPerformanceItemDto(
+                agentName,
+                resolved,
+                resolutionMins.Count > 0 ? Math.Round(resolutionMins.Average(), 1) : 0,
+                responseMins.Count > 0 ? Math.Round(responseMins.Average(), 1) : 0));
+        }
+
+        return result.OrderByDescending(a => a.Resolved).ToList();
+    }
+
+    public async Task<IReadOnlyList<CustomerActivityItemDto>> GetCustomerActivityAsync(AnalyticsQuery query, int limit)
+    {
+        var q = ApplyAnalyticsQuery(db.Tickets.AsNoTracking(), query, null)
+            .Where(t => t.ContactId.HasValue);
+
+        var grouped = await q
+            .GroupBy(t => t.Contact!.CompanyId)
+            .Select(g => new { CompanyId = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        var companyIds = grouped.Where(g => g.CompanyId.HasValue).Select(g => g.CompanyId!.Value).ToList();
+        var companies = await db.Companies.AsNoTracking()
+            .Where(c => companyIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => new { c.Name, c.Domain });
+
+        return grouped
+            .Where(g => g.CompanyId.HasValue)
+            .Select(g =>
+            {
+                companies.TryGetValue(g.CompanyId!.Value, out var co);
+                return new CustomerActivityItemDto(g.CompanyId, co?.Name ?? $"Cég #{g.CompanyId}", co?.Domain, g.Count);
+            })
+            .OrderByDescending(x => x.TicketCount)
+            .Take(limit)
+            .ToList();
+    }
+
     private static IQueryable<Domain.Entities.Ticket> ApplyPeriod(IQueryable<Domain.Entities.Ticket> ticketsQuery, AnalyticsPeriodQuery query)
     {
         if (query.DateFrom.HasValue)
