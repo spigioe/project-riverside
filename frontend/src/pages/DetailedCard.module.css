@@ -18,13 +18,15 @@
   align-items: center;
   gap: 14px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border-light);
-  padding: 14px 18px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 4px;
+  margin: 2px;
   transition: background 0.1s;
 }
 
 .card:first-child {
-  border-radius: var(--radius) var(--radius) 0 0;
+  border-radius: var(--radius);
 }
 
 .card:hover {
