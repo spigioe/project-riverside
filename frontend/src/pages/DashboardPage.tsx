@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, useIsFetching } from '@tanstack/react-query'
+import type { Query } from '@tanstack/react-query'
 import { dashboardClient, DashboardWidgetType, UpdateDashboardWidgetItem, UpdateDashboardWidgetsRequest } from '../api'
 import type { DashboardStatsDto } from '../api'
-import type { LocalWidget, ChartConfig, ResponseTimeConfig, SlaBreakdownConfig, RecentTicketsConfig, MyOpenTicketsConfig, CategoryBreakdownConfig, AgentPerformanceConfig, CustomerActivityConfig } from './dashboard/types'
-import { WIDGET_META, DEFAULT_STAT_CONFIG, DEFAULT_CHART_CONFIG, DEFAULT_RESPONSE_TIME_CONFIG, DEFAULT_SLA_BREAKDOWN_CONFIG, DEFAULT_RECENT_TICKETS_CONFIG, DEFAULT_MY_OPEN_TICKETS_CONFIG, DEFAULT_CATEGORY_BREAKDOWN_CONFIG, DEFAULT_AGENT_PERFORMANCE_CONFIG, DEFAULT_CUSTOMER_ACTIVITY_CONFIG, GRID_COLS, GRID_ROWS, GRID_GAP, GRID_CELL_MIN_H } from './dashboard/types'
+import type { LocalWidget, ChartConfig, ResponseTimeConfig, SlaBreakdownConfig, RecentTicketsConfig, MyOpenTicketsConfig, CategoryBreakdownConfig, AgentPerformanceConfig, CustomerActivityConfig, BacklogAgeConfig, VolumeHeatmapConfig, SlaAtRiskConfig, ServiceQualityConfig } from './dashboard/types'
+import { WIDGET_META, DEFAULT_STAT_CONFIG, DEFAULT_CHART_CONFIG, DEFAULT_RESPONSE_TIME_CONFIG, DEFAULT_SLA_BREAKDOWN_CONFIG, DEFAULT_RECENT_TICKETS_CONFIG, DEFAULT_MY_OPEN_TICKETS_CONFIG, DEFAULT_CATEGORY_BREAKDOWN_CONFIG, DEFAULT_AGENT_PERFORMANCE_CONFIG, DEFAULT_CUSTOMER_ACTIVITY_CONFIG, DEFAULT_BACKLOG_AGE_CONFIG, DEFAULT_VOLUME_HEATMAP_CONFIG, DEFAULT_SLA_AT_RISK_CONFIG, DEFAULT_SERVICE_QUALITY_CONFIG, GRID_COLS, GRID_ROWS, GRID_GAP, GRID_CELL_MIN_H } from './dashboard/types'
 import { parseConfig, hasCollision, findFreePosition } from './dashboard/widgetUtils'
 import { StatWidget } from './dashboard/StatWidget'
 import { ChartWidget } from './dashboard/ChartWidget'
@@ -14,6 +15,10 @@ import { MyOpenTicketsWidget } from './dashboard/MyOpenTicketsWidget'
 import { CategoryBreakdownWidget } from './dashboard/CategoryBreakdownWidget'
 import { AgentPerformanceWidget } from './dashboard/AgentPerformanceWidget'
 import { CustomerActivityWidget } from './dashboard/CustomerActivityWidget'
+import { BacklogAgeWidget } from './dashboard/BacklogAgeWidget'
+import { VolumeHeatmapWidget } from './dashboard/VolumeHeatmapWidget'
+import { SlaAtRiskWidget } from './dashboard/SlaAtRiskWidget'
+import { ServiceQualityWidget } from './dashboard/ServiceQualityWidget'
 import { WidgetEditorPanel } from './dashboard/WidgetEditorPanel'
 import { WidgetStorePanel } from './dashboard/WidgetStorePanel'
 import styles from './DashboardPage.module.css'
@@ -42,6 +47,32 @@ interface ResizeState {
 
 const TEMP_STORE_ID = -9999
 
+const AUTO_REFRESH_STORAGE_KEY = 'dashboard.autoRefreshSeconds'
+const AUTO_REFRESH_OPTIONS: { value: number; label: string }[] = [
+  { value: 0,   label: 'Auto-frissítés: ki' },
+  { value: 60,  label: 'Auto-frissítés: 1 perc' },
+  { value: 300, label: 'Auto-frissítés: 5 perc' },
+  { value: 900, label: 'Auto-frissítés: 15 perc' },
+]
+
+function loadAutoRefresh(): number {
+  try {
+    const v = Number(localStorage.getItem(AUTO_REFRESH_STORAGE_KEY))
+    return AUTO_REFRESH_OPTIONS.some(o => o.value === v) ? v : 0
+  } catch {
+    return 0
+  }
+}
+
+function isDashboardDataQuery(query: Query): boolean {
+  const key = query.queryKey[0]
+  return typeof key === 'string' && (key.startsWith('analytics-') || key === 'dashboard-stats')
+}
+
+function formatTime(d: Date): string {
+  return d.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })
+}
+
 function defaultConfig(type: DashboardWidgetType): LocalWidget['config'] {
   if (type === DashboardWidgetType.TrendChart)        return DEFAULT_CHART_CONFIG
   if (type === DashboardWidgetType.RecentActivity)    return DEFAULT_RESPONSE_TIME_CONFIG
@@ -51,6 +82,10 @@ function defaultConfig(type: DashboardWidgetType): LocalWidget['config'] {
   if (type === DashboardWidgetType.CategoryBreakdown) return DEFAULT_CATEGORY_BREAKDOWN_CONFIG
   if (type === DashboardWidgetType.AgentPerformance)  return DEFAULT_AGENT_PERFORMANCE_CONFIG
   if (type === DashboardWidgetType.CustomerActivity)  return DEFAULT_CUSTOMER_ACTIVITY_CONFIG
+  if (type === DashboardWidgetType.BacklogAge)        return DEFAULT_BACKLOG_AGE_CONFIG
+  if (type === DashboardWidgetType.VolumeHeatmap)     return DEFAULT_VOLUME_HEATMAP_CONFIG
+  if (type === DashboardWidgetType.SlaAtRisk)         return DEFAULT_SLA_AT_RISK_CONFIG
+  if (type === DashboardWidgetType.ServiceQuality)    return DEFAULT_SERVICE_QUALITY_CONFIG
   return DEFAULT_STAT_CONFIG
 }
 
@@ -68,6 +103,11 @@ export function DashboardPage() {
   const dragPreviewRef = useRef<{ col: number; row: number } | null>(null)
   const resizePreviewRef = useRef<{ colSpan: number; rowSpan: number } | null>(null)
   const [renderTick, setRenderTick] = useState(0)
+  const pageRef = useRef<HTMLDivElement>(null)
+  const [autoRefreshSeconds, setAutoRefreshSeconds] = useState(loadAutoRefresh)
+  const [lastUpdated, setLastUpdated] = useState(() => new Date())
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const fetchingCount = useIsFetching({ predicate: isDashboardDataQuery })
 
   useEffect(() => { draftRef.current = draftWidgets }, [draftWidgets])
 
@@ -150,6 +190,37 @@ export function DashboardPage() {
     }
     setMode('view')
     setSelectedId(null)
+  }
+
+  // ── Frissítés + TV mód ──────────────────────────────────────────────────
+  const refreshAll = useCallback(() => {
+    queryClient.invalidateQueries({ predicate: isDashboardDataQuery })
+    setLastUpdated(new Date())
+  }, [queryClient])
+
+  function changeAutoRefresh(seconds: number) {
+    setAutoRefreshSeconds(seconds)
+    try { localStorage.setItem(AUTO_REFRESH_STORAGE_KEY, String(seconds)) } catch { /* ignore */ }
+  }
+
+  useEffect(() => {
+    if (mode !== 'view' || autoRefreshSeconds === 0) return
+    const id = window.setInterval(refreshAll, autoRefreshSeconds * 1000)
+    return () => window.clearInterval(id)
+  }, [mode, autoRefreshSeconds, refreshAll])
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(document.fullscreenElement === pageRef.current)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => { /* ignore */ })
+    } else {
+      pageRef.current?.requestFullscreen().catch(() => { /* ignore */ })
+    }
   }
 
   // ── Grid coordinate helpers ───────────────────────────────────────────────
@@ -377,16 +448,39 @@ export function DashboardPage() {
   const sortedWidgets = [...draftWidgets].sort((a, b) => a.row - b.row || a.col - b.col)
 
   return (
-    <div className={`${styles.page} ${mode === 'edit' ? styles.editMode : ''}`}>
+    <div ref={pageRef} className={`${styles.page} ${mode === 'edit' ? styles.editMode : ''} ${isFullscreen ? styles.fullscreen : ''}`}>
       {/* Header */}
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Dashboard</h1>
-          <div className={styles.subtitle}>Napi áttekintés</div>
+          <div className={styles.subtitle}>
+            Napi áttekintés · {fetchingCount > 0 ? 'Frissítés…' : `Frissítve: ${formatTime(lastUpdated)}`}
+          </div>
         </div>
         <div className={styles.headerActions}>
           {mode === 'view' ? (
-            <button className={styles.editBtn} onClick={enterEdit}>Szerkesztés</button>
+            <>
+              <select
+                className={styles.refreshSelect}
+                value={autoRefreshSeconds}
+                onChange={e => changeAutoRefresh(Number(e.target.value))}
+                title="Automatikus frissítés"
+              >
+                {AUTO_REFRESH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <button
+                className={styles.iconBtn}
+                onClick={refreshAll}
+                disabled={fetchingCount > 0}
+                title="Frissítés most"
+              >
+                <span className={fetchingCount > 0 ? styles.spin : ''}>↻</span>
+              </button>
+              <button className={styles.iconBtn} onClick={toggleFullscreen} title={isFullscreen ? 'Kilépés a TV módból' : 'TV mód (teljes képernyő)'}>
+                {isFullscreen ? '⤡' : '⛶'}
+              </button>
+              {!isFullscreen && <button className={styles.editBtn} onClick={enterEdit}>Szerkesztés</button>}
+            </>
           ) : (
             <>
               <button className={styles.cancelBtn} onClick={cancelEdit} disabled={saveMutation.isPending}>Mégse</button>
@@ -498,6 +592,14 @@ export function DashboardPage() {
                       <AgentPerformanceWidget config={w.config as AgentPerformanceConfig} />
                     ) : w.widgetType === DashboardWidgetType.CustomerActivity ? (
                       <CustomerActivityWidget config={w.config as CustomerActivityConfig} />
+                    ) : w.widgetType === DashboardWidgetType.BacklogAge ? (
+                      <BacklogAgeWidget config={w.config as BacklogAgeConfig} />
+                    ) : w.widgetType === DashboardWidgetType.VolumeHeatmap ? (
+                      <VolumeHeatmapWidget config={w.config as VolumeHeatmapConfig} />
+                    ) : w.widgetType === DashboardWidgetType.SlaAtRisk ? (
+                      <SlaAtRiskWidget config={w.config as SlaAtRiskConfig} />
+                    ) : w.widgetType === DashboardWidgetType.ServiceQuality ? (
+                      <ServiceQualityWidget config={w.config as ServiceQualityConfig} />
                     ) : (
                       <StatWidget widgetType={w.widgetType} stats={stats} editMode={mode === 'edit'} />
                     )}

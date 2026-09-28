@@ -349,9 +349,9 @@ function AutoResponderSection() {
 
   useEffect(() => {
     if (arQuery.data) {
-      setIsEnabled(arQuery.data.isEnabled)
-      setSubject(arQuery.data.subjectTemplate)
-      setBody(arQuery.data.bodyTemplate)
+      setIsEnabled(arQuery.data.isEnabled ?? false)
+      setSubject(arQuery.data.subjectTemplate ?? '')
+      setBody(arQuery.data.bodyTemplate ?? '')
     }
   }, [arQuery.data])
 

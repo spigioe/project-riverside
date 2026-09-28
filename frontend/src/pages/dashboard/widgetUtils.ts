@@ -1,5 +1,5 @@
-import type { TimeRange, WidgetConfig, StatConfig, ChartConfig, ResponseTimeConfig, SlaBreakdownConfig, RecentTicketsConfig, MyOpenTicketsConfig, CategoryBreakdownConfig, AgentPerformanceConfig, CustomerActivityConfig } from './types'
-import { DEFAULT_STAT_CONFIG, DEFAULT_CHART_CONFIG, DEFAULT_RESPONSE_TIME_CONFIG, DEFAULT_SLA_BREAKDOWN_CONFIG, DEFAULT_RECENT_TICKETS_CONFIG, DEFAULT_MY_OPEN_TICKETS_CONFIG, DEFAULT_CATEGORY_BREAKDOWN_CONFIG, DEFAULT_AGENT_PERFORMANCE_CONFIG, DEFAULT_CUSTOMER_ACTIVITY_CONFIG } from './types'
+import type { TimeRange, WidgetConfig, StatConfig, ChartConfig, ResponseTimeConfig, SlaBreakdownConfig, RecentTicketsConfig, MyOpenTicketsConfig, CategoryBreakdownConfig, AgentPerformanceConfig, CustomerActivityConfig, BacklogAgeConfig, VolumeHeatmapConfig, SlaAtRiskConfig, ServiceQualityConfig } from './types'
+import { DEFAULT_STAT_CONFIG, DEFAULT_CHART_CONFIG, DEFAULT_RESPONSE_TIME_CONFIG, DEFAULT_SLA_BREAKDOWN_CONFIG, DEFAULT_RECENT_TICKETS_CONFIG, DEFAULT_MY_OPEN_TICKETS_CONFIG, DEFAULT_CATEGORY_BREAKDOWN_CONFIG, DEFAULT_AGENT_PERFORMANCE_CONFIG, DEFAULT_CUSTOMER_ACTIVITY_CONFIG, DEFAULT_BACKLOG_AGE_CONFIG, DEFAULT_VOLUME_HEATMAP_CONFIG, DEFAULT_SLA_AT_RISK_CONFIG, DEFAULT_SERVICE_QUALITY_CONFIG } from './types'
 import { DashboardWidgetType } from '../../api'
 
 export function timeRangeToDates(range: TimeRange, customFrom?: string, customTo?: string): { from: Date | null; to: Date | null } {
@@ -70,6 +70,18 @@ export function parseConfig(widgetType: DashboardWidgetType, raw: string | null 
   if (widgetType === DashboardWidgetType.CustomerActivity) {
     return { ...DEFAULT_CUSTOMER_ACTIVITY_CONFIG, ...parsed } as CustomerActivityConfig
   }
+  if (widgetType === DashboardWidgetType.BacklogAge) {
+    return { ...DEFAULT_BACKLOG_AGE_CONFIG, ...parsed } as BacklogAgeConfig
+  }
+  if (widgetType === DashboardWidgetType.VolumeHeatmap) {
+    return { ...DEFAULT_VOLUME_HEATMAP_CONFIG, ...parsed } as VolumeHeatmapConfig
+  }
+  if (widgetType === DashboardWidgetType.SlaAtRisk) {
+    return { ...DEFAULT_SLA_AT_RISK_CONFIG, ...parsed } as SlaAtRiskConfig
+  }
+  if (widgetType === DashboardWidgetType.ServiceQuality) {
+    return { ...DEFAULT_SERVICE_QUALITY_CONFIG, ...parsed } as ServiceQualityConfig
+  }
   return { ...DEFAULT_STAT_CONFIG, ...parsed } as StatConfig
 }
 
@@ -92,4 +104,10 @@ export function findFreePosition(widgets: { col: number; row: number; colSpan: n
     }
   }
   return { col: 0, row: 0 }
+}
+
+export function formatHours(hours: number | undefined | null): string {
+  if (hours == null || isNaN(hours)) return '—'
+  if (hours < 24) return `${Math.round(hours)}ó`
+  return `${Math.round(hours / 24)} nap`
 }

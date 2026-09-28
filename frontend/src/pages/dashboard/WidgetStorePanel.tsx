@@ -19,6 +19,10 @@ const ALL_WIDGET_TYPES: DashboardWidgetType[] = [
   DashboardWidgetType.CategoryBreakdown,
   DashboardWidgetType.AgentPerformance,
   DashboardWidgetType.CustomerActivity,
+  DashboardWidgetType.BacklogAge,
+  DashboardWidgetType.VolumeHeatmap,
+  DashboardWidgetType.SlaAtRisk,
+  DashboardWidgetType.ServiceQuality,
 ]
 
 const ADMIN_ONLY_TYPES = new Set([DashboardWidgetType.AgentPerformance])

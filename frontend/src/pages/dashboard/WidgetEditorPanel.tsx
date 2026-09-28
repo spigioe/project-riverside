@@ -1,5 +1,5 @@
 import { DashboardWidgetType } from '../../api'
-import type { LocalWidget, ChartConfig, ResponseTimeConfig, StatConfig, TimeRange, ChartType, Scope, SlaBreakdownConfig, RecentTicketsConfig, MyOpenTicketsConfig, CategoryBreakdownConfig, AgentPerformanceConfig, CustomerActivityConfig } from './types'
+import type { LocalWidget, ChartConfig, ResponseTimeConfig, StatConfig, TimeRange, ChartType, Scope, SlaBreakdownConfig, RecentTicketsConfig, MyOpenTicketsConfig, CategoryBreakdownConfig, AgentPerformanceConfig, CustomerActivityConfig, BacklogAgeConfig, VolumeHeatmapConfig, SlaAtRiskConfig, ServiceQualityConfig } from './types'
 import { WIDGET_META } from './types'
 import styles from './WidgetEditorPanel.module.css'
 
@@ -211,6 +211,45 @@ function CustomerActivityEditor({ config, onChange }: { config: CustomerActivity
   )
 }
 
+function BacklogAgeEditor({ config, onChange }: { config: BacklogAgeConfig; onChange: (c: BacklogAgeConfig) => void }) {
+  return <ScopeSelect value={config.scope} onChange={v => onChange({ ...config, scope: v })} />
+}
+
+function PeriodScopeEditor<T extends VolumeHeatmapConfig | ServiceQualityConfig>({ config, onChange }: { config: T; onChange: (c: T) => void }) {
+  return (
+    <>
+      <ScopeSelect value={config.scope} onChange={v => onChange({ ...config, scope: v })} />
+      <TimeRangeSelect
+        value={config.timeRange}
+        onChange={v => onChange({ ...config, timeRange: v })}
+        dateFrom={config.dateFrom}
+        dateTo={config.dateTo}
+        onDateFrom={v => onChange({ ...config, dateFrom: v })}
+        onDateTo={v => onChange({ ...config, dateTo: v })}
+      />
+    </>
+  )
+}
+
+function SlaAtRiskEditor({ config, onChange }: { config: SlaAtRiskConfig; onChange: (c: SlaAtRiskConfig) => void }) {
+  return (
+    <>
+      <div className={styles.field}>
+        <label className={styles.label}>Időablak</label>
+        <select className={styles.select} value={config.hours} onChange={e => onChange({ ...config, hours: Number(e.target.value) })}>
+          <option value={2}>Következő 2 óra</option>
+          <option value={4}>Következő 4 óra</option>
+          <option value={8}>Következő 8 óra</option>
+          <option value={24}>Következő 24 óra</option>
+          <option value={72}>Következő 3 nap</option>
+        </select>
+      </div>
+      <LimitSelect value={config.limit} onChange={v => onChange({ ...config, limit: v })} />
+      <ScopeSelect value={config.scope} onChange={v => onChange({ ...config, scope: v })} />
+    </>
+  )
+}
+
 export function WidgetEditorPanel({ widget, onUpdate, onClose, onDelete }: Props) {
   const meta = WIDGET_META[widget.widgetType]
 
@@ -252,7 +291,19 @@ export function WidgetEditorPanel({ widget, onUpdate, onClose, onDelete }: Props
           {widget.widgetType === DashboardWidgetType.CustomerActivity && (
             <CustomerActivityEditor config={widget.config as CustomerActivityConfig} onChange={updateConfig} />
           )}
-          {![DashboardWidgetType.TrendChart, DashboardWidgetType.RecentActivity, DashboardWidgetType.SlaBreakdown, DashboardWidgetType.RecentTickets, DashboardWidgetType.MyOpenTickets, DashboardWidgetType.CategoryBreakdown, DashboardWidgetType.AgentPerformance, DashboardWidgetType.CustomerActivity].includes(widget.widgetType) && (
+          {widget.widgetType === DashboardWidgetType.BacklogAge && (
+            <BacklogAgeEditor config={widget.config as BacklogAgeConfig} onChange={updateConfig} />
+          )}
+          {widget.widgetType === DashboardWidgetType.VolumeHeatmap && (
+            <PeriodScopeEditor config={widget.config as VolumeHeatmapConfig} onChange={updateConfig} />
+          )}
+          {widget.widgetType === DashboardWidgetType.SlaAtRisk && (
+            <SlaAtRiskEditor config={widget.config as SlaAtRiskConfig} onChange={updateConfig} />
+          )}
+          {widget.widgetType === DashboardWidgetType.ServiceQuality && (
+            <PeriodScopeEditor config={widget.config as ServiceQualityConfig} onChange={updateConfig} />
+          )}
+          {![DashboardWidgetType.TrendChart, DashboardWidgetType.RecentActivity, DashboardWidgetType.SlaBreakdown, DashboardWidgetType.RecentTickets, DashboardWidgetType.MyOpenTickets, DashboardWidgetType.CategoryBreakdown, DashboardWidgetType.AgentPerformance, DashboardWidgetType.CustomerActivity, DashboardWidgetType.BacklogAge, DashboardWidgetType.VolumeHeatmap, DashboardWidgetType.SlaAtRisk, DashboardWidgetType.ServiceQuality].includes(widget.widgetType) && (
             <StatEditor config={widget.config as StatConfig} onChange={updateConfig} />
           )}
         </div>

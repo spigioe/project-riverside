@@ -372,6 +372,161 @@ public class AnalyticsService(AppDbContext db) : IAnalyticsService
             .ToList();
     }
 
+    private static readonly TicketStatus[] OpenStatuses = [TicketStatus.New, TicketStatus.Open, TicketStatus.Pending];
+    private static readonly string[] ResolvedStatusNames = [nameof(TicketStatus.Resolved), nameof(TicketStatus.Closed)];
+    private static readonly string[] OpenStatusNames = [nameof(TicketStatus.New), nameof(TicketStatus.Open), nameof(TicketStatus.Pending)];
+
+    // Backlog kor-kategóriák: (kulcs, címke, felső határ órában — az utolsó nyitott végű)
+    private static readonly (string Key, string Label, double MaxHours)[] BacklogBuckets =
+    [
+        ("lt1d", "< 1 nap", 24),
+        ("1to3d", "1–3 nap", 72),
+        ("3to7d", "3–7 nap", 168),
+        ("7to30d", "7–30 nap", 720),
+        ("gt30d", "> 30 nap", double.MaxValue),
+    ];
+
+    public async Task<BacklogAgeDto> GetBacklogAgeAsync(int? userId)
+    {
+        var q = db.Tickets.AsNoTracking().Where(t => !t.IsMerged && OpenStatuses.Contains(t.Status));
+        if (userId.HasValue)
+            q = q.Where(t => t.AssignedToId == userId.Value);
+
+        var tickets = await q.Select(t => new { t.Id, t.CreatedAt, t.Priority }).ToListAsync();
+        var now = DateTime.UtcNow;
+        var aged = tickets.Select(t => new { t.Id, t.Priority, AgeHours = Math.Max(0, (now - t.CreatedAt).TotalHours) }).ToList();
+
+        var buckets = new List<BacklogAgeBucketDto>();
+        var lower = 0d;
+        foreach (var (key, label, maxHours) in BacklogBuckets)
+        {
+            var inBucket = aged.Where(t => t.AgeHours >= lower && t.AgeHours < maxHours).ToList();
+            buckets.Add(new BacklogAgeBucketDto(
+                key, label,
+                inBucket.Count(t => t.Priority == TicketPriority.Low),
+                inBucket.Count(t => t.Priority == TicketPriority.Medium),
+                inBucket.Count(t => t.Priority == TicketPriority.High),
+                inBucket.Count(t => t.Priority == TicketPriority.Urgent),
+                inBucket.Count));
+            lower = maxHours;
+        }
+
+        var oldest = aged.OrderByDescending(t => t.AgeHours).FirstOrDefault();
+        return new BacklogAgeDto(
+            buckets,
+            aged.Count,
+            aged.Count > 0 ? Math.Round(aged.Average(t => t.AgeHours), 1) : 0,
+            oldest?.Id,
+            oldest != null ? Math.Round(oldest.AgeHours, 1) : 0);
+    }
+
+    public async Task<IReadOnlyList<VolumeHeatmapCellDto>> GetVolumeHeatmapAsync(AnalyticsQuery query, int? userId, int tzOffsetMinutes)
+    {
+        var createdAts = await ApplyAnalyticsQuery(db.Tickets.AsNoTracking(), query, userId)
+            .Select(t => t.CreatedAt)
+            .ToListAsync();
+
+        var counts = new int[7, 24];
+        foreach (var createdAt in createdAts)
+        {
+            var local = createdAt.AddMinutes(tzOffsetMinutes);
+            var day = ((int)local.DayOfWeek + 6) % 7; // hétfő = 0
+            counts[day, local.Hour]++;
+        }
+
+        var result = new List<VolumeHeatmapCellDto>(7 * 24);
+        for (var d = 0; d < 7; d++)
+            for (var h = 0; h < 24; h++)
+                result.Add(new VolumeHeatmapCellDto(d, h, counts[d, h]));
+        return result;
+    }
+
+    public async Task<IReadOnlyList<SlaAtRiskItemDto>> GetSlaAtRiskAsync(int? userId, int hours, int limit)
+    {
+        var now = DateTime.UtcNow;
+        var threshold = now.AddHours(hours);
+
+        // A lejárt, de a SlaBreachChecker által még meg nem jelölt jegyek is ide kerülnek (negatív hátralévő idővel).
+        var q = db.Tickets.AsNoTracking()
+            .Where(t => !t.IsMerged
+                && OpenStatuses.Contains(t.Status)
+                && !t.SlaBreach
+                && t.SlaPausedAt == null
+                && t.SlaDueAt != null
+                && t.SlaDueAt <= threshold);
+        if (userId.HasValue)
+            q = q.Where(t => t.AssignedToId == userId.Value);
+
+        var items = await q
+            .OrderBy(t => t.SlaDueAt)
+            .Take(limit)
+            .Select(t => new
+            {
+                t.Id, t.Subject, t.Status, t.Priority,
+                AssignedToName = t.AssignedTo != null ? t.AssignedTo.FullName : null,
+                SlaDueAt = t.SlaDueAt!.Value,
+            })
+            .ToListAsync();
+
+        return items
+            .Select(t => new SlaAtRiskItemDto(
+                t.Id, t.Subject, t.Status.ToString(), t.Priority.ToString(), t.AssignedToName,
+                t.SlaDueAt, Math.Round((t.SlaDueAt - now).TotalMinutes, 0)))
+            .ToList();
+    }
+
+    public async Task<ServiceQualityDto> GetServiceQualityAsync(AnalyticsQuery query, int? userId)
+    {
+        var tickets = await ApplyAnalyticsQuery(db.Tickets.AsNoTracking(), query, userId)
+            .Select(t => new { t.Id, t.Status })
+            .ToListAsync();
+
+        if (tickets.Count == 0)
+            return new ServiceQualityDto(0, 0, 0, 0, 0, 0, 0);
+
+        var ticketIds = tickets.Select(t => t.Id).ToList();
+
+        var agentReplies = await db.TicketMessages.AsNoTracking()
+            .Where(m => ticketIds.Contains(m.TicketId)
+                && !m.IsInternalNote
+                && m.Direction == MessageDirection.Outbound
+                && m.SenderUserId != null)
+            .Select(m => m.TicketId)
+            .ToListAsync();
+        var repliesByTicket = agentReplies.GroupBy(id => id).ToDictionary(g => g.Key, g => g.Count());
+
+        var statusChanges = await db.AuditLogs.AsNoTracking()
+            .Where(l => l.EntityType == "ticket" && l.Action == "status_changed" && ticketIds.Contains(l.EntityId))
+            .Select(l => new { l.EntityId, l.OldValue, l.NewValue })
+            .ToListAsync();
+
+        var reopenedIds = statusChanges
+            .Where(l => ResolvedStatusNames.Contains(l.OldValue) && OpenStatusNames.Contains(l.NewValue))
+            .Select(l => l.EntityId)
+            .ToHashSet();
+        var everResolvedIds = statusChanges
+            .Where(l => ResolvedStatusNames.Contains(l.NewValue))
+            .Select(l => l.EntityId)
+            .ToHashSet();
+
+        var resolved = tickets.Where(t => t.Status == TicketStatus.Resolved || t.Status == TicketStatus.Closed).ToList();
+        everResolvedIds.UnionWith(resolved.Select(t => t.Id));
+
+        // FCR: a megoldott (és nem újranyitott) jegyek közül azok, ahol pontosan egy ügyintézői válasz ment ki.
+        var fcrEligible = resolved.Where(t => repliesByTicket.ContainsKey(t.Id)).ToList();
+        var fcrCount = fcrEligible.Count(t => repliesByTicket[t.Id] == 1 && !reopenedIds.Contains(t.Id));
+        var totalReplies = resolved.Sum(t => repliesByTicket.GetValueOrDefault(t.Id));
+
+        return new ServiceQualityDto(
+            tickets.Count,
+            resolved.Count,
+            fcrEligible.Count > 0 ? Math.Round(fcrCount / (double)fcrEligible.Count * 100, 1) : 0,
+            fcrEligible.Count,
+            everResolvedIds.Count > 0 ? Math.Round(reopenedIds.Count / (double)everResolvedIds.Count * 100, 1) : 0,
+            reopenedIds.Count,
+            resolved.Count > 0 ? Math.Round(totalReplies / (double)resolved.Count, 1) : 0);
+    }
+
     private static IQueryable<Domain.Entities.Ticket> ApplyPeriod(IQueryable<Domain.Entities.Ticket> ticketsQuery, AnalyticsPeriodQuery query)
     {
         if (query.DateFrom.HasValue)

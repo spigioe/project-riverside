@@ -269,3 +269,44 @@
   border-radius: var(--radius);
   margin-bottom: 16px;
 }
+
+/* ── Frissítés + TV mód ───────────────────────────────────────────── */
+.refreshSelect {
+  padding: 6px 8px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.iconBtn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.iconBtn:hover:not(:disabled) { background: var(--bg-alt, #f5f6fa); }
+.iconBtn:disabled { cursor: progress; }
+
+.spin {
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.fullscreen {
+  background: var(--bg, #f5f6fa);
+  overflow: auto;
+}

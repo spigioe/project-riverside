@@ -63,7 +63,31 @@ export interface CustomerActivityConfig {
   limit: number
 }
 
-export type WidgetConfig = StatConfig | ChartConfig | ResponseTimeConfig | SlaBreakdownConfig | RecentTicketsConfig | MyOpenTicketsConfig | CategoryBreakdownConfig | AgentPerformanceConfig | CustomerActivityConfig
+export interface BacklogAgeConfig {
+  scope: Scope
+}
+
+export interface VolumeHeatmapConfig {
+  scope: Scope
+  timeRange: TimeRange
+  dateFrom?: string
+  dateTo?: string
+}
+
+export interface SlaAtRiskConfig {
+  scope: Scope
+  hours: number
+  limit: number
+}
+
+export interface ServiceQualityConfig {
+  scope: Scope
+  timeRange: TimeRange
+  dateFrom?: string
+  dateTo?: string
+}
+
+export type WidgetConfig = StatConfig | ChartConfig | ResponseTimeConfig | SlaBreakdownConfig | RecentTicketsConfig | MyOpenTicketsConfig | CategoryBreakdownConfig | AgentPerformanceConfig | CustomerActivityConfig | BacklogAgeConfig | VolumeHeatmapConfig | SlaAtRiskConfig | ServiceQualityConfig
 
 export interface LocalWidget {
   id: number // negative = new (unsaved)
@@ -107,6 +131,10 @@ export const WIDGET_META: Record<DashboardWidgetType, WidgetMeta> = {
   [DashboardWidgetType.CategoryBreakdown]: { label: 'Kategória megoszlás',    description: 'Jegyek eloszlása kategóriánként',                  defaultColSpan: 2, defaultRowSpan: 2, icon: '🗂️' },
   [DashboardWidgetType.AgentPerformance]:  { label: 'Ügyintéző teljesítmény', description: 'Megoldott jegyek és válaszidők ügyintézőnként',    defaultColSpan: 3, defaultRowSpan: 2, icon: '🏆' },
   [DashboardWidgetType.CustomerActivity]:  { label: 'Ügyfélforgalom',         description: 'Legtöbb jegyet beküldő cégek',                    defaultColSpan: 2, defaultRowSpan: 2, icon: '🏢' },
+  [DashboardWidgetType.BacklogAge]:        { label: 'Backlog kora',           description: 'Nyitott jegyek életkor szerint, prioritásonként',  defaultColSpan: 3, defaultRowSpan: 2, icon: '⏳' },
+  [DashboardWidgetType.VolumeHeatmap]:     { label: 'Forgalmi hőtérkép',      description: 'Beérkező jegyek a hét napjai és órák szerint',     defaultColSpan: 4, defaultRowSpan: 2, icon: '🔥' },
+  [DashboardWidgetType.SlaAtRisk]:         { label: 'SLA veszélyben',         description: 'Hamarosan lejáró SLA határidejű jegyek',           defaultColSpan: 2, defaultRowSpan: 2, icon: '🚨' },
+  [DashboardWidgetType.ServiceQuality]:    { label: 'Minőségi mutatók',       description: 'Első kontaktusos megoldás, újranyitás, válaszok',  defaultColSpan: 3, defaultRowSpan: 1, icon: '🎯' },
 }
 
 export const DEFAULT_STAT_CONFIG: StatConfig = { scope: 'all' }
@@ -118,6 +146,10 @@ export const DEFAULT_MY_OPEN_TICKETS_CONFIG: MyOpenTicketsConfig = { limit: 10 }
 export const DEFAULT_CATEGORY_BREAKDOWN_CONFIG: CategoryBreakdownConfig = { scope: 'all', timeRange: '30days', limit: 10 }
 export const DEFAULT_AGENT_PERFORMANCE_CONFIG: AgentPerformanceConfig = { timeRange: '30days' }
 export const DEFAULT_CUSTOMER_ACTIVITY_CONFIG: CustomerActivityConfig = { timeRange: '30days', limit: 10 }
+export const DEFAULT_BACKLOG_AGE_CONFIG: BacklogAgeConfig = { scope: 'all' }
+export const DEFAULT_VOLUME_HEATMAP_CONFIG: VolumeHeatmapConfig = { scope: 'all', timeRange: '30days' }
+export const DEFAULT_SLA_AT_RISK_CONFIG: SlaAtRiskConfig = { scope: 'all', hours: 8, limit: 10 }
+export const DEFAULT_SERVICE_QUALITY_CONFIG: ServiceQualityConfig = { scope: 'all', timeRange: '30days' }
 
 export const STAT_NAV_URLS: Partial<Record<DashboardWidgetType, string>> = {
   [DashboardWidgetType.Unresolved]:    '/tickets?status=New,Open,Pending',
