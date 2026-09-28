@@ -20,7 +20,7 @@ public class EmailServiceRouter(
     IOptions<MailSettings> defaultOptions,
     IEncryptionService encryptionService,
     HttpClient mailpitHttpClient,
-    IHttpClientFactory httpClientFactory,
+    IAttachmentService attachmentService,
     ILogger<EmailServiceRouter> logger,
     ILogger<ImapEmailService> imapLogger) : IEmailService
 {
@@ -69,9 +69,9 @@ public class EmailServiceRouter(
         if (settings.Provider.Equals("imap", StringComparison.OrdinalIgnoreCase) ||
             settings.Provider.Equals("gmail", StringComparison.OrdinalIgnoreCase))
         {
-            return new ImapEmailService(settings, imapLogger, httpClientFactory);
+            return new ImapEmailService(settings, imapLogger, attachmentService);
         }
 
-        return new MailpitEmailService(mailpitHttpClient, settings, logger, httpClientFactory);
+        return new MailpitEmailService(mailpitHttpClient, settings, logger, attachmentService);
     }
 }

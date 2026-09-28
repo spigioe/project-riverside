@@ -53,7 +53,7 @@ export function ReplyComposer({
   const authUser = useAuthStore((s) => s.user)
 
   const handleImageUpload = useCallback(async (file: File): Promise<string> => {
-    const result = await ticketAttachmentsClient.uploadInline(ticketId, file)
+    const result = await ticketAttachmentsClient.uploadInline(ticketId, { data: file, fileName: file.name })
     return result.downloadUrl ?? ''
   }, [ticketId])
 

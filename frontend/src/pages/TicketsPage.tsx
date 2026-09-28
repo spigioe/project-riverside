@@ -313,10 +313,9 @@ interface DetailedCardProps {
   onCustomStatusChange: (id: number, key: string | null) => void
   onPriorityChange: (id: number, priority: TicketPriority) => void
   onTypeChange: (id: number, type: string | null) => void
-  onDelete: (id: number) => void
 }
 
-function DetailedCard({ ticket, customStatuses, ticketTypes, onStatusChange, onCustomStatusChange, onPriorityChange, onTypeChange, onDelete }: DetailedCardProps) {
+function DetailedCard({ ticket, customStatuses, ticketTypes, onStatusChange, onCustomStatusChange, onPriorityChange, onTypeChange }: DetailedCardProps) {
   const name = ticket.requesterName ?? ticket.requesterEmail ?? ''
   const initial = name.charAt(0).toUpperCase()
   const bgColor = hashAvatarColor(ticket.requesterEmail ?? name)
@@ -1007,7 +1006,6 @@ export function TicketsPage() {
                   onCustomStatusChange={(id, key) => customStatusMutation.mutate({ id, key })}
                   onPriorityChange={(id, p) => priorityMutation.mutate({ id, p })}
                   onTypeChange={(id, t) => typeMutation.mutate({ id, t })}
-                  onDelete={handleDelete}
                 />
               ))}
 
