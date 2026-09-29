@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { analyticsClient } from '../../api'
 import type { VolumeHeatmapConfig } from './types'
 import { timeRangeToDates } from './widgetUtils'
+import { DASHBOARD_STALE_TIME } from './types'
 import styles from './widget.module.css'
 
 const DAY_LABELS = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V']
@@ -15,6 +16,7 @@ export function VolumeHeatmapWidget({ config }: { config: VolumeHeatmapConfig })
   const { data, isLoading } = useQuery({
     queryKey: ['analytics-volume-heatmap', config, tzOffsetMinutes],
     queryFn: () => analyticsClient.getVolumeHeatmap(from ?? undefined, to ?? undefined, config.scope, tzOffsetMinutes),
+    staleTime: DASHBOARD_STALE_TIME,
   })
 
   if (isLoading) return <div className={styles.loading}>Betöltés…</div>

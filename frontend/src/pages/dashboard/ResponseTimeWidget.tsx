@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { analyticsClient } from '../../api'
 import type { ResponseTimeConfig } from './types'
 import { timeRangeToDates, formatMinutes } from './widgetUtils'
+import { DASHBOARD_STALE_TIME } from './types'
 import styles from './widget.module.css'
 
 interface Props {
@@ -14,6 +15,7 @@ export function ResponseTimeWidget({ config }: Props) {
   const { data, isLoading } = useQuery({
     queryKey: ['analytics-response-times', config.timeRange, config.scope, config.dateFrom, config.dateTo],
     queryFn: () => analyticsClient.getResponseTimes(from, to, config.scope === 'mine' ? 'mine' : null),
+    staleTime: DASHBOARD_STALE_TIME,
   })
 
   if (isLoading) {

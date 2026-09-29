@@ -3,6 +3,7 @@ import { analyticsClient } from '../../api'
 import type { CategoryBreakdownConfig } from './types'
 import { timeRangeToDates } from './widgetUtils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { DASHBOARD_STALE_TIME } from './types'
 import styles from './widget.module.css'
 
 export function CategoryBreakdownWidget({ config }: { config: CategoryBreakdownConfig }) {
@@ -11,6 +12,7 @@ export function CategoryBreakdownWidget({ config }: { config: CategoryBreakdownC
   const { data, isLoading } = useQuery({
     queryKey: ['analytics-category-breakdown', config],
     queryFn: () => analyticsClient.getTicketsByCategory(from ?? undefined, to ?? undefined, config.scope, config.limit),
+    staleTime: DASHBOARD_STALE_TIME,
   })
 
   if (isLoading) return <div className={styles.loading}>Betöltés…</div>

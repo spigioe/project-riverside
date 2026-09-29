@@ -1,5 +1,5 @@
 import type { TimeRange, WidgetConfig, StatConfig, ChartConfig, ResponseTimeConfig, SlaBreakdownConfig, RecentTicketsConfig, MyOpenTicketsConfig, CategoryBreakdownConfig, AgentPerformanceConfig, CustomerActivityConfig, BacklogAgeConfig, VolumeHeatmapConfig, SlaAtRiskConfig, ServiceQualityConfig } from './types'
-import { DEFAULT_STAT_CONFIG, DEFAULT_CHART_CONFIG, DEFAULT_RESPONSE_TIME_CONFIG, DEFAULT_SLA_BREAKDOWN_CONFIG, DEFAULT_RECENT_TICKETS_CONFIG, DEFAULT_MY_OPEN_TICKETS_CONFIG, DEFAULT_CATEGORY_BREAKDOWN_CONFIG, DEFAULT_AGENT_PERFORMANCE_CONFIG, DEFAULT_CUSTOMER_ACTIVITY_CONFIG, DEFAULT_BACKLOG_AGE_CONFIG, DEFAULT_VOLUME_HEATMAP_CONFIG, DEFAULT_SLA_AT_RISK_CONFIG, DEFAULT_SERVICE_QUALITY_CONFIG } from './types'
+import { GRID_COLS, GRID_ROWS, DEFAULT_STAT_CONFIG, DEFAULT_CHART_CONFIG, DEFAULT_RESPONSE_TIME_CONFIG, DEFAULT_SLA_BREAKDOWN_CONFIG, DEFAULT_RECENT_TICKETS_CONFIG, DEFAULT_MY_OPEN_TICKETS_CONFIG, DEFAULT_CATEGORY_BREAKDOWN_CONFIG, DEFAULT_AGENT_PERFORMANCE_CONFIG, DEFAULT_CUSTOMER_ACTIVITY_CONFIG, DEFAULT_BACKLOG_AGE_CONFIG, DEFAULT_VOLUME_HEATMAP_CONFIG, DEFAULT_SLA_AT_RISK_CONFIG, DEFAULT_SERVICE_QUALITY_CONFIG } from './types'
 import { DashboardWidgetType } from '../../api'
 
 export function timeRangeToDates(range: TimeRange, customFrom?: string, customTo?: string): { from: Date | null; to: Date | null } {
@@ -94,16 +94,16 @@ export function hasCollision(widgets: { id: number; col: number; row: number; co
   return false
 }
 
-export function findFreePosition(widgets: { col: number; row: number; colSpan: number; rowSpan: number }[], colSpan: number, rowSpan: number): { col: number; row: number } {
-  for (let row = 0; row <= 10 - rowSpan; row++) {
-    for (let col = 0; col <= 8 - colSpan; col++) {
+export function findFreePosition(widgets: { col: number; row: number; colSpan: number; rowSpan: number }[], colSpan: number, rowSpan: number): { col: number; row: number } | null {
+  for (let row = 0; row <= GRID_ROWS - rowSpan; row++) {
+    for (let col = 0; col <= GRID_COLS - colSpan; col++) {
       const noCollision = widgets.every(w => {
         return col + colSpan <= w.col || w.col + w.colSpan <= col || row + rowSpan <= w.row || w.row + w.rowSpan <= row
       })
       if (noCollision) return { col, row }
     }
   }
-  return { col: 0, row: 0 }
+  return null
 }
 
 export function formatHours(hours: number | undefined | null): string {

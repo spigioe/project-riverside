@@ -5,6 +5,7 @@ import { PRIORITY_LABELS } from '../../lib/ticketLabels'
 import type { BacklogAgeConfig } from './types'
 import { formatHours } from './widgetUtils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
+import { DASHBOARD_STALE_TIME } from './types'
 import styles from './widget.module.css'
 
 const PRIORITY_COLORS: Record<TicketPriority, string> = {
@@ -27,6 +28,7 @@ export function BacklogAgeWidget({ config }: { config: BacklogAgeConfig }) {
   const { data, isLoading } = useQuery({
     queryKey: ['analytics-backlog-age', config],
     queryFn: () => analyticsClient.getBacklogAge(config.scope),
+    staleTime: DASHBOARD_STALE_TIME,
   })
 
   if (isLoading) return <div className={styles.loading}>Betöltés…</div>

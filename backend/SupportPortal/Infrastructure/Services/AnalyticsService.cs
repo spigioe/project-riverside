@@ -103,7 +103,8 @@ public class AnalyticsService(AppDbContext db) : IAnalyticsService
         if (tickets.Count == 0)
             return new ResponseTimesDto(0, 0, 0, 0, query.Scope ?? "all");
 
-        var ticketIds = tickets.Select(t => t.Id).ToList();
+        // Allekérdezés (IN (SELECT ...)) a memóriában összegyűjtött, akár több ezer elemű ID-lista helyett.
+        var ticketIds = ticketsQuery.Select(t => t.Id);
 
         var messages = await db.TicketMessages.AsNoTracking()
             .Where(m => ticketIds.Contains(m.TicketId) && !m.IsInternalNote)
@@ -305,7 +306,7 @@ public class AnalyticsService(AppDbContext db) : IAnalyticsService
             .Where(u => agentIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.FullName);
 
-        var ticketIds = tickets.Select(t => t.Id).ToList();
+        var ticketIds = q.Select(t => t.Id);
         var messages = await db.TicketMessages.AsNoTracking()
             .Where(m => ticketIds.Contains(m.TicketId) && !m.IsInternalNote)
             .OrderBy(m => m.TicketId).ThenBy(m => m.CreatedAt)
@@ -477,14 +478,15 @@ public class AnalyticsService(AppDbContext db) : IAnalyticsService
 
     public async Task<ServiceQualityDto> GetServiceQualityAsync(AnalyticsQuery query, int? userId)
     {
-        var tickets = await ApplyAnalyticsQuery(db.Tickets.AsNoTracking(), query, userId)
+        var ticketsQuery = ApplyAnalyticsQuery(db.Tickets.AsNoTracking(), query, userId);
+        var tickets = await ticketsQuery
             .Select(t => new { t.Id, t.Status })
             .ToListAsync();
 
         if (tickets.Count == 0)
             return new ServiceQualityDto(0, 0, 0, 0, 0, 0, 0);
 
-        var ticketIds = tickets.Select(t => t.Id).ToList();
+        var ticketIds = ticketsQuery.Select(t => t.Id);
 
         var agentReplies = await db.TicketMessages.AsNoTracking()
             .Where(m => ticketIds.Contains(m.TicketId)

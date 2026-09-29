@@ -4,6 +4,7 @@ import type { CustomerActivityConfig } from './types'
 import { timeRangeToDates } from './widgetUtils'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useNavigate } from 'react-router-dom'
+import { DASHBOARD_STALE_TIME } from './types'
 import styles from './widget.module.css'
 
 export function CustomerActivityWidget({ config }: { config: CustomerActivityConfig }) {
@@ -13,6 +14,7 @@ export function CustomerActivityWidget({ config }: { config: CustomerActivityCon
   const { data, isLoading } = useQuery({
     queryKey: ['analytics-customer-activity', config],
     queryFn: () => analyticsClient.getCustomerActivity(from ?? undefined, to ?? undefined, undefined, config.limit),
+    staleTime: DASHBOARD_STALE_TIME,
   })
 
   if (isLoading) return <div className={styles.loading}>Betöltés…</div>

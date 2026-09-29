@@ -163,3 +163,6 @@ export const GRID_COLS = 8
 export const GRID_ROWS = 10
 export const GRID_GAP = 12
 export const GRID_CELL_MIN_H = 120
+
+/** Dashboard lekérdezések frissességi ideje — fókuszváltáskor/újramountoláskor ne kérjen újra mindent azonnal. */
+export const DASHBOARD_STALE_TIME = 30_000

@@ -3,6 +3,7 @@ import { ResponsiveContainer, LineChart, BarChart, Line, Bar, XAxis, YAxis, Cart
 import { analyticsClient } from '../../api'
 import type { ChartConfig } from './types'
 import { timeRangeToDates } from './widgetUtils'
+import { DASHBOARD_STALE_TIME } from './types'
 import styles from './widget.module.css'
 
 interface Props {
@@ -87,6 +88,7 @@ export function ChartWidget({ config }: Props) {
   const { data, isLoading } = useQuery({
     queryKey: ['analytics-volume', config.timeRange, config.groupBy, config.scope, config.dateFrom, config.dateTo],
     queryFn: () => analyticsClient.getTicketVolume(from, to, config.scope === 'mine' ? 'mine' : null, config.groupBy),
+    staleTime: DASHBOARD_STALE_TIME,
   })
 
   if (isLoading) {

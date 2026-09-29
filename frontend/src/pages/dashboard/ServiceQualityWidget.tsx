@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { analyticsClient } from '../../api'
 import type { ServiceQualityConfig } from './types'
 import { timeRangeToDates } from './widgetUtils'
+import { DASHBOARD_STALE_TIME } from './types'
 import styles from './widget.module.css'
 
 export function ServiceQualityWidget({ config }: { config: ServiceQualityConfig }) {
@@ -10,6 +11,7 @@ export function ServiceQualityWidget({ config }: { config: ServiceQualityConfig 
   const { data, isLoading } = useQuery({
     queryKey: ['analytics-service-quality', config],
     queryFn: () => analyticsClient.getServiceQuality(from ?? undefined, to ?? undefined, config.scope),
+    staleTime: DASHBOARD_STALE_TIME,
   })
 
   if (isLoading) return <div className={styles.rtLoading}>Betöltés…</div>

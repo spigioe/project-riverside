@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { analyticsClient } from '../../api'
 import type { SlaAtRiskConfig } from './types'
 import { formatMinutes } from './widgetUtils'
+import { DASHBOARD_STALE_TIME } from './types'
 import styles from './widget.module.css'
 
 function RemainingBadge({ minutes }: { minutes: number }) {
@@ -18,6 +19,7 @@ export function SlaAtRiskWidget({ config }: { config: SlaAtRiskConfig }) {
   const { data, isLoading } = useQuery({
     queryKey: ['analytics-sla-at-risk', config],
     queryFn: () => analyticsClient.getSlaAtRisk(config.scope, config.hours, config.limit),
+    staleTime: DASHBOARD_STALE_TIME,
     refetchInterval: 60_000,
   })
 

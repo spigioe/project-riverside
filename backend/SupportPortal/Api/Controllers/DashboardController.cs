@@ -20,6 +20,7 @@ public class DashboardController(IDashboardService dashboardService) : Controlle
 
     [HttpPut("widgets")]
     [ProducesResponseType(typeof(IReadOnlyList<DashboardWidgetDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SaveWidgets([FromBody] UpdateDashboardWidgetsRequest request)
     {
         return Ok(await dashboardService.SaveWidgetsAsync(User.GetUserId(), request.Widgets));
