@@ -35,6 +35,10 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
 
         builder.HasQueryFilter(t => !t.IsDeleted);
 
+        // Dashboard/analytics lekérdezések szinte mind CreatedAt tartományra szűrnek, az SLA widgetek SlaDueAt-re.
+        builder.HasIndex(t => t.CreatedAt);
+        builder.HasIndex(t => t.SlaDueAt);
+
         builder.Property(t => t.Status).HasConversion<string>();
         builder.Property(t => t.Priority).HasConversion<string>();
         builder.Property(t => t.Source).HasConversion<string>();

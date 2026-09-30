@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { analyticsClient } from '../../api'
 import type { MyOpenTicketsConfig } from './types'
 import { useNavigate } from 'react-router-dom'
+import { DASHBOARD_STALE_TIME } from './types'
 import styles from './widget.module.css'
 
 function SlaBadge({ slaDueAt, slaBreach }: { slaDueAt?: string | null; slaBreach?: boolean }) {
@@ -24,6 +25,7 @@ export function MyOpenTicketsWidget({ config }: { config: MyOpenTicketsConfig })
   const { data, isLoading } = useQuery({
     queryKey: ['analytics-my-open-tickets', config],
     queryFn: () => analyticsClient.getMyOpenTickets(config.limit),
+    staleTime: DASHBOARD_STALE_TIME,
   })
 
   if (isLoading) return <div className={styles.loading}>Betöltés…</div>

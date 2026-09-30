@@ -225,6 +225,7 @@
 .slaBadgeBreach,
 .slaBadgeWarning,
 .slaBadgeOk {
+  white-space: nowrap;
   font-size: 10px;
   font-weight: 600;
   padding: 1px 5px;
@@ -289,4 +290,140 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* ── Shared KPI helpers ──────────────────────────────────── */
+.valueWarn { color: #d97706; }
+.valueGood { color: #16a34a; }
+
+.kpiStrip {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 20px;
+  row-gap: 2px;
+  padding: 2px 8px 6px;
+  flex-shrink: 0;
+}
+
+.kpi {
+  display: flex;
+  white-space: nowrap;
+  align-items: baseline;
+  gap: 6px;
+  border-radius: 4px;
+}
+
+.kpiLink { cursor: pointer; }
+.kpiLink:hover .kpiValue { color: var(--primary); }
+
+.kpiValue {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  transition: color 0.15s;
+}
+
+.kpiLabel {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Backlog Age ─────────────────────────────────────────── */
+.backlogRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.backlogChart {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Volume Heatmap ──────────────────────────────────────── */
+.heatmapRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 2px 8px 4px;
+  gap: 6px;
+}
+
+.heatmapGrid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 28px repeat(24, 1fr);
+  grid-template-rows: auto repeat(7, 1fr);
+  gap: 2px;
+}
+
+.heatmapRow { display: contents; }
+
+.heatmapHourLabel {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.heatmapDayLabel {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.heatmapCell {
+  border-radius: 2px;
+  min-height: 8px;
+  background: color-mix(in srgb, var(--primary) calc(var(--intensity) * 100%), var(--bg-hover, #eef0f6));
+  transition: outline-color 0.1s;
+  outline: 1px solid transparent;
+}
+
+.heatmapCell:hover { outline-color: var(--navy, #10162F); }
+
+.heatmapFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.heatmapFooter strong { color: var(--text); font-weight: 600; }
+
+.heatmapScale {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.heatmapScaleBar {
+  width: 64px;
+  height: 8px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--bg-hover, #eef0f6), var(--primary));
+}
+
+/* ── SLA At Risk ─────────────────────────────────────────── */
+.ticketAssignee {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 35%;
+  flex-shrink: 1;
+}
+
+.atRiskList { container-type: inline-size; }
+
+@container (max-width: 340px) {
+  .ticketAssignee { display: none; }
 }

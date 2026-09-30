@@ -2979,6 +2979,13 @@ export class DashboardClient {
             }
             return Promise.resolve<DashboardWidgetDto[]>(result200);
 
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
@@ -4260,6 +4267,268 @@ export class PortalAnalyticsClient {
         }
         return Promise.resolve<CustomerActivityItemDto[]>(null as any);
     }
+
+    getBacklogAge(scope?: string | null | undefined, cancelToken?: CancelToken): Promise<BacklogAgeDto> {
+        let url_ = this.baseUrl + "/api/portal/analytics/backlog-age?";
+        if (scope !== undefined && scope !== null)
+            url_ += "scope=" + encodeURIComponent("" + scope) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetBacklogAge(_response);
+        });
+    }
+
+    protected processGetBacklogAge(response: AxiosResponse): Promise<BacklogAgeDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = BacklogAgeDto.fromJS(resultData200);
+            return Promise.resolve<BacklogAgeDto>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<BacklogAgeDto>(null as any);
+    }
+
+    getVolumeHeatmap(from?: Date | null | undefined, to?: Date | null | undefined, scope?: string | null | undefined, tzOffsetMinutes?: number | undefined, cancelToken?: CancelToken): Promise<VolumeHeatmapCellDto[]> {
+        let url_ = this.baseUrl + "/api/portal/analytics/volume-heatmap?";
+        if (from !== undefined && from !== null)
+            url_ += "From=" + encodeURIComponent(from ? "" + from.toISOString() : "") + "&";
+        if (to !== undefined && to !== null)
+            url_ += "To=" + encodeURIComponent(to ? "" + to.toISOString() : "") + "&";
+        if (scope !== undefined && scope !== null)
+            url_ += "Scope=" + encodeURIComponent("" + scope) + "&";
+        if (tzOffsetMinutes === null)
+            throw new globalThis.Error("The parameter 'tzOffsetMinutes' cannot be null.");
+        else if (tzOffsetMinutes !== undefined)
+            url_ += "tzOffsetMinutes=" + encodeURIComponent("" + tzOffsetMinutes) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetVolumeHeatmap(_response);
+        });
+    }
+
+    protected processGetVolumeHeatmap(response: AxiosResponse): Promise<VolumeHeatmapCellDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(VolumeHeatmapCellDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<VolumeHeatmapCellDto[]>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<VolumeHeatmapCellDto[]>(null as any);
+    }
+
+    getSlaAtRisk(scope?: string | null | undefined, hours?: number | undefined, limit?: number | undefined, cancelToken?: CancelToken): Promise<SlaAtRiskItemDto[]> {
+        let url_ = this.baseUrl + "/api/portal/analytics/sla-at-risk?";
+        if (scope !== undefined && scope !== null)
+            url_ += "scope=" + encodeURIComponent("" + scope) + "&";
+        if (hours === null)
+            throw new globalThis.Error("The parameter 'hours' cannot be null.");
+        else if (hours !== undefined)
+            url_ += "hours=" + encodeURIComponent("" + hours) + "&";
+        if (limit === null)
+            throw new globalThis.Error("The parameter 'limit' cannot be null.");
+        else if (limit !== undefined)
+            url_ += "limit=" + encodeURIComponent("" + limit) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetSlaAtRisk(_response);
+        });
+    }
+
+    protected processGetSlaAtRisk(response: AxiosResponse): Promise<SlaAtRiskItemDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(SlaAtRiskItemDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<SlaAtRiskItemDto[]>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SlaAtRiskItemDto[]>(null as any);
+    }
+
+    getServiceQuality(from?: Date | null | undefined, to?: Date | null | undefined, scope?: string | null | undefined, cancelToken?: CancelToken): Promise<ServiceQualityDto> {
+        let url_ = this.baseUrl + "/api/portal/analytics/service-quality?";
+        if (from !== undefined && from !== null)
+            url_ += "From=" + encodeURIComponent(from ? "" + from.toISOString() : "") + "&";
+        if (to !== undefined && to !== null)
+            url_ += "To=" + encodeURIComponent(to ? "" + to.toISOString() : "") + "&";
+        if (scope !== undefined && scope !== null)
+            url_ += "Scope=" + encodeURIComponent("" + scope) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetServiceQuality(_response);
+        });
+    }
+
+    protected processGetServiceQuality(response: AxiosResponse): Promise<ServiceQualityDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = ServiceQualityDto.fromJS(resultData200);
+            return Promise.resolve<ServiceQualityDto>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ServiceQualityDto>(null as any);
+    }
 }
 
 export class RolesClient {
@@ -4503,49 +4772,118 @@ export class SettingsClient {
         return Promise.resolve<TestEmailConnectionResponse>(null as any);
     }
 
-    getAutoResponder(cancelToken?: CancelToken): Promise<AutoResponderDto> {
+    getAutoResponder( cancelToken?: CancelToken): Promise<AutoResponderDto> {
         let url_ = this.baseUrl + "/api/portal/settings/auto-responder";
         url_ = url_.replace(/[?&]$/, "");
+
         let options_: AxiosRequestConfig = {
-            method: "GET", url: url_,
-            headers: { "Accept": "application/json" },
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
             cancelToken
         };
+
         return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) return _error.response;
-            else throw _error;
-        }).then((_response: AxiosResponse) => {
-            const status = _response.status;
-            if (status === 200) {
-                return AutoResponderDto.fromJS(_response.data);
-            } else if (status !== 200 && status !== 204) {
-                return throwException("An unexpected server error occurred.", status, _response.data, {});
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
             }
-            return Promise.resolve<AutoResponderDto>(null as any);
+        }).then((_response: AxiosResponse) => {
+            return this.processGetAutoResponder(_response);
         });
+    }
+
+    protected processGetAutoResponder(response: AxiosResponse): Promise<AutoResponderDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = AutoResponderDto.fromJS(resultData200);
+            return Promise.resolve<AutoResponderDto>(result200);
+
+        } else if (status === 404) {
+            const _responseText = response.data;
+            let result404: any = null;
+            let resultData404  = _responseText;
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AutoResponderDto>(null as any);
     }
 
     updateAutoResponder(request: UpdateAutoResponderRequest, cancelToken?: CancelToken): Promise<AutoResponderDto> {
         let url_ = this.baseUrl + "/api/portal/settings/auto-responder";
         url_ = url_.replace(/[?&]$/, "");
+
         const content_ = JSON.stringify(request);
+
         let options_: AxiosRequestConfig = {
-            data: content_, method: "PUT", url: url_,
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
             cancelToken
         };
+
         return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) return _error.response;
-            else throw _error;
-        }).then((_response: AxiosResponse) => {
-            const status = _response.status;
-            if (status === 200) {
-                return AutoResponderDto.fromJS(_response.data);
-            } else if (status !== 200 && status !== 204) {
-                return throwException("An unexpected server error occurred.", status, _response.data, {});
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
             }
-            return Promise.resolve<AutoResponderDto>(null as any);
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdateAutoResponder(_response);
         });
+    }
+
+    protected processUpdateAutoResponder(response: AxiosResponse): Promise<AutoResponderDto> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = AutoResponderDto.fromJS(resultData200);
+            return Promise.resolve<AutoResponderDto>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AutoResponderDto>(null as any);
     }
 }
 
@@ -4981,51 +5319,125 @@ export class SlaClient {
         return Promise.resolve<BusinessHoursDayDto[]>(null as any);
     }
 
-    getFreezeStatuses(cancelToken?: CancelToken): Promise<SlaFreezeStatusDto[]> {
+    getFreezeStatuses( cancelToken?: CancelToken): Promise<SlaFreezeStatusDto[]> {
         let url_ = this.baseUrl + "/api/portal/sla/freeze-statuses";
         url_ = url_.replace(/[?&]$/, "");
+
         let options_: AxiosRequestConfig = {
-            method: "GET", url: url_,
-            headers: { "Accept": "application/json" },
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
             cancelToken
         };
+
         return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) return _error.response;
-            else throw _error;
-        }).then((_response: AxiosResponse) => {
-            const status = _response.status;
-            if (status === 200) {
-                const data = _response.data;
-                return Array.isArray(data) ? data.map((item: any) => SlaFreezeStatusDto.fromJS(item)) : [];
-            } else if (status !== 200 && status !== 204) {
-                return throwException("An unexpected server error occurred.", status, _response.data, {});
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
             }
-            return Promise.resolve<SlaFreezeStatusDto[]>(null as any);
+        }).then((_response: AxiosResponse) => {
+            return this.processGetFreezeStatuses(_response);
         });
+    }
+
+    protected processGetFreezeStatuses(response: AxiosResponse): Promise<SlaFreezeStatusDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(SlaFreezeStatusDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<SlaFreezeStatusDto[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SlaFreezeStatusDto[]>(null as any);
     }
 
     updateFreezeStatuses(request: UpdateSlaFreezeStatusesRequest, cancelToken?: CancelToken): Promise<SlaFreezeStatusDto[]> {
         let url_ = this.baseUrl + "/api/portal/sla/freeze-statuses";
         url_ = url_.replace(/[?&]$/, "");
+
         const content_ = JSON.stringify(request);
+
         let options_: AxiosRequestConfig = {
-            data: content_, method: "PUT", url: url_,
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
             cancelToken
         };
+
         return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) return _error.response;
-            else throw _error;
-        }).then((_response: AxiosResponse) => {
-            const status = _response.status;
-            if (status === 200) {
-                const data = _response.data;
-                return Array.isArray(data) ? data.map((item: any) => SlaFreezeStatusDto.fromJS(item)) : [];
-            } else if (status !== 200 && status !== 204) {
-                return throwException("An unexpected server error occurred.", status, _response.data, {});
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
             }
-            return Promise.resolve<SlaFreezeStatusDto[]>(null as any);
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdateFreezeStatuses(_response);
         });
+    }
+
+    protected processUpdateFreezeStatuses(response: AxiosResponse): Promise<SlaFreezeStatusDto[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(SlaFreezeStatusDto.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<SlaFreezeStatusDto[]>(result200);
+
+        } else if (status === 400) {
+            const _responseText = response.data;
+            let result400: any = null;
+            let resultData400  = _responseText;
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SlaFreezeStatusDto[]>(null as any);
     }
 }
 
@@ -10075,6 +10487,10 @@ export enum DashboardWidgetType {
     CategoryBreakdown = "CategoryBreakdown",
     AgentPerformance = "AgentPerformance",
     CustomerActivity = "CustomerActivity",
+    BacklogAge = "BacklogAge",
+    VolumeHeatmap = "VolumeHeatmap",
+    SlaAtRisk = "SlaAtRisk",
+    ServiceQuality = "ServiceQuality",
 }
 
 export class UpdateDashboardWidgetsRequest implements IUpdateDashboardWidgetsRequest {
@@ -11022,6 +11438,290 @@ export interface ICustomerActivityItemDto {
     ticketCount?: number;
 }
 
+export class BacklogAgeDto implements IBacklogAgeDto {
+    buckets?: BacklogAgeBucketDto[];
+    totalOpen?: number;
+    averageAgeHours?: number;
+    oldestTicketId?: number | undefined;
+    oldestAgeHours?: number;
+
+    constructor(data?: IBacklogAgeDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["buckets"])) {
+                this.buckets = [] as any;
+                for (let item of _data["buckets"])
+                    this.buckets!.push(BacklogAgeBucketDto.fromJS(item));
+            }
+            this.totalOpen = _data["totalOpen"];
+            this.averageAgeHours = _data["averageAgeHours"];
+            this.oldestTicketId = _data["oldestTicketId"];
+            this.oldestAgeHours = _data["oldestAgeHours"];
+        }
+    }
+
+    static fromJS(data: any): BacklogAgeDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new BacklogAgeDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.buckets)) {
+            data["buckets"] = [];
+            for (let item of this.buckets)
+                data["buckets"].push(item ? item.toJSON() : undefined as any);
+        }
+        data["totalOpen"] = this.totalOpen;
+        data["averageAgeHours"] = this.averageAgeHours;
+        data["oldestTicketId"] = this.oldestTicketId;
+        data["oldestAgeHours"] = this.oldestAgeHours;
+        return data;
+    }
+}
+
+export interface IBacklogAgeDto {
+    buckets?: BacklogAgeBucketDto[];
+    totalOpen?: number;
+    averageAgeHours?: number;
+    oldestTicketId?: number | undefined;
+    oldestAgeHours?: number;
+}
+
+export class BacklogAgeBucketDto implements IBacklogAgeBucketDto {
+    key?: string;
+    label?: string;
+    low?: number;
+    medium?: number;
+    high?: number;
+    urgent?: number;
+    total?: number;
+
+    constructor(data?: IBacklogAgeBucketDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.key = _data["key"];
+            this.label = _data["label"];
+            this.low = _data["low"];
+            this.medium = _data["medium"];
+            this.high = _data["high"];
+            this.urgent = _data["urgent"];
+            this.total = _data["total"];
+        }
+    }
+
+    static fromJS(data: any): BacklogAgeBucketDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new BacklogAgeBucketDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["key"] = this.key;
+        data["label"] = this.label;
+        data["low"] = this.low;
+        data["medium"] = this.medium;
+        data["high"] = this.high;
+        data["urgent"] = this.urgent;
+        data["total"] = this.total;
+        return data;
+    }
+}
+
+export interface IBacklogAgeBucketDto {
+    key?: string;
+    label?: string;
+    low?: number;
+    medium?: number;
+    high?: number;
+    urgent?: number;
+    total?: number;
+}
+
+export class VolumeHeatmapCellDto implements IVolumeHeatmapCellDto {
+    dayOfWeek?: number;
+    hour?: number;
+    count?: number;
+
+    constructor(data?: IVolumeHeatmapCellDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.dayOfWeek = _data["dayOfWeek"];
+            this.hour = _data["hour"];
+            this.count = _data["count"];
+        }
+    }
+
+    static fromJS(data: any): VolumeHeatmapCellDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new VolumeHeatmapCellDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["dayOfWeek"] = this.dayOfWeek;
+        data["hour"] = this.hour;
+        data["count"] = this.count;
+        return data;
+    }
+}
+
+export interface IVolumeHeatmapCellDto {
+    dayOfWeek?: number;
+    hour?: number;
+    count?: number;
+}
+
+export class SlaAtRiskItemDto implements ISlaAtRiskItemDto {
+    id?: number;
+    subject?: string;
+    status?: string;
+    priority?: string;
+    assignedToName?: string | undefined;
+    slaDueAt?: Date;
+    minutesRemaining?: number;
+
+    constructor(data?: ISlaAtRiskItemDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.subject = _data["subject"];
+            this.status = _data["status"];
+            this.priority = _data["priority"];
+            this.assignedToName = _data["assignedToName"];
+            this.slaDueAt = _data["slaDueAt"] ? new Date(_data["slaDueAt"].toString()) : undefined as any;
+            this.minutesRemaining = _data["minutesRemaining"];
+        }
+    }
+
+    static fromJS(data: any): SlaAtRiskItemDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new SlaAtRiskItemDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["subject"] = this.subject;
+        data["status"] = this.status;
+        data["priority"] = this.priority;
+        data["assignedToName"] = this.assignedToName;
+        data["slaDueAt"] = this.slaDueAt ? this.slaDueAt.toISOString() : undefined as any;
+        data["minutesRemaining"] = this.minutesRemaining;
+        return data;
+    }
+}
+
+export interface ISlaAtRiskItemDto {
+    id?: number;
+    subject?: string;
+    status?: string;
+    priority?: string;
+    assignedToName?: string | undefined;
+    slaDueAt?: Date;
+    minutesRemaining?: number;
+}
+
+export class ServiceQualityDto implements IServiceQualityDto {
+    ticketsCreated?: number;
+    ticketsResolved?: number;
+    firstContactResolutionRate?: number;
+    fcrEligible?: number;
+    reopenRate?: number;
+    reopenedCount?: number;
+    avgRepliesPerResolved?: number;
+
+    constructor(data?: IServiceQualityDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.ticketsCreated = _data["ticketsCreated"];
+            this.ticketsResolved = _data["ticketsResolved"];
+            this.firstContactResolutionRate = _data["firstContactResolutionRate"];
+            this.fcrEligible = _data["fcrEligible"];
+            this.reopenRate = _data["reopenRate"];
+            this.reopenedCount = _data["reopenedCount"];
+            this.avgRepliesPerResolved = _data["avgRepliesPerResolved"];
+        }
+    }
+
+    static fromJS(data: any): ServiceQualityDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new ServiceQualityDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["ticketsCreated"] = this.ticketsCreated;
+        data["ticketsResolved"] = this.ticketsResolved;
+        data["firstContactResolutionRate"] = this.firstContactResolutionRate;
+        data["fcrEligible"] = this.fcrEligible;
+        data["reopenRate"] = this.reopenRate;
+        data["reopenedCount"] = this.reopenedCount;
+        data["avgRepliesPerResolved"] = this.avgRepliesPerResolved;
+        return data;
+    }
+}
+
+export interface IServiceQualityDto {
+    ticketsCreated?: number;
+    ticketsResolved?: number;
+    firstContactResolutionRate?: number;
+    fcrEligible?: number;
+    reopenRate?: number;
+    reopenedCount?: number;
+    avgRepliesPerResolved?: number;
+}
+
 export class RoleDto implements IRoleDto {
     id?: number;
     name?: UserRole;
@@ -11335,6 +12035,102 @@ export interface ITestEmailConnectionRequest {
     username?: string;
     password?: string;
     fromAddress?: string;
+}
+
+export class AutoResponderDto implements IAutoResponderDto {
+    id?: number;
+    trigger?: string;
+    subjectTemplate?: string;
+    bodyTemplate?: string;
+    isEnabled?: boolean;
+
+    constructor(data?: IAutoResponderDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.trigger = _data["trigger"];
+            this.subjectTemplate = _data["subjectTemplate"];
+            this.bodyTemplate = _data["bodyTemplate"];
+            this.isEnabled = _data["isEnabled"];
+        }
+    }
+
+    static fromJS(data: any): AutoResponderDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new AutoResponderDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["trigger"] = this.trigger;
+        data["subjectTemplate"] = this.subjectTemplate;
+        data["bodyTemplate"] = this.bodyTemplate;
+        data["isEnabled"] = this.isEnabled;
+        return data;
+    }
+}
+
+export interface IAutoResponderDto {
+    id?: number;
+    trigger?: string;
+    subjectTemplate?: string;
+    bodyTemplate?: string;
+    isEnabled?: boolean;
+}
+
+export class UpdateAutoResponderRequest implements IUpdateAutoResponderRequest {
+    subjectTemplate?: string;
+    bodyTemplate?: string;
+    isEnabled?: boolean;
+
+    constructor(data?: IUpdateAutoResponderRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.subjectTemplate = _data["subjectTemplate"];
+            this.bodyTemplate = _data["bodyTemplate"];
+            this.isEnabled = _data["isEnabled"];
+        }
+    }
+
+    static fromJS(data: any): UpdateAutoResponderRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateAutoResponderRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["subjectTemplate"] = this.subjectTemplate;
+        data["bodyTemplate"] = this.bodyTemplate;
+        data["isEnabled"] = this.isEnabled;
+        return data;
+    }
+}
+
+export interface IUpdateAutoResponderRequest {
+    subjectTemplate?: string;
+    bodyTemplate?: string;
+    isEnabled?: boolean;
 }
 
 export class SlaPolicyDto implements ISlaPolicyDto {
@@ -11741,6 +12537,90 @@ export class UpdateBusinessHoursRequest implements IUpdateBusinessHoursRequest {
 
 export interface IUpdateBusinessHoursRequest {
     days?: BusinessHoursDayDto[];
+}
+
+export class SlaFreezeStatusDto implements ISlaFreezeStatusDto {
+    statusKey?: string;
+    freezeEnabled?: boolean;
+
+    constructor(data?: ISlaFreezeStatusDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.statusKey = _data["statusKey"];
+            this.freezeEnabled = _data["freezeEnabled"];
+        }
+    }
+
+    static fromJS(data: any): SlaFreezeStatusDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new SlaFreezeStatusDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["statusKey"] = this.statusKey;
+        data["freezeEnabled"] = this.freezeEnabled;
+        return data;
+    }
+}
+
+export interface ISlaFreezeStatusDto {
+    statusKey?: string;
+    freezeEnabled?: boolean;
+}
+
+export class UpdateSlaFreezeStatusesRequest implements IUpdateSlaFreezeStatusesRequest {
+    statuses?: SlaFreezeStatusDto[];
+
+    constructor(data?: IUpdateSlaFreezeStatusesRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["statuses"])) {
+                this.statuses = [] as any;
+                for (let item of _data["statuses"])
+                    this.statuses!.push(SlaFreezeStatusDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): UpdateSlaFreezeStatusesRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new UpdateSlaFreezeStatusesRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.statuses)) {
+            data["statuses"] = [];
+            for (let item of this.statuses)
+                data["statuses"].push(item ? item.toJSON() : undefined as any);
+        }
+        return data;
+    }
+}
+
+export interface IUpdateSlaFreezeStatusesRequest {
+    statuses?: SlaFreezeStatusDto[];
 }
 
 export class AiSummaryResponse implements IAiSummaryResponse {
@@ -13999,186 +14879,6 @@ function throwException(message: string, status: number, response: string, heade
         throw result;
     else
         throw new SwaggerException(message, status, response, headers, null);
-}
-
-export class SlaFreezeStatusDto implements ISlaFreezeStatusDto {
-    statusKey!: string;
-    freezeEnabled!: boolean;
-
-    constructor(data?: ISlaFreezeStatusDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.statusKey = _data["statusKey"];
-            this.freezeEnabled = _data["freezeEnabled"];
-        }
-    }
-
-    static fromJS(data: any): SlaFreezeStatusDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new SlaFreezeStatusDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["statusKey"] = this.statusKey;
-        data["freezeEnabled"] = this.freezeEnabled;
-        return data;
-    }
-}
-
-export interface ISlaFreezeStatusDto {
-    statusKey: string;
-    freezeEnabled: boolean;
-}
-
-export class UpdateSlaFreezeStatusesRequest implements IUpdateSlaFreezeStatusesRequest {
-    statuses!: SlaFreezeStatusDto[];
-
-    constructor(data?: IUpdateSlaFreezeStatusesRequest) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            if (Array.isArray(_data["statuses"])) {
-                this.statuses = [] as any;
-                for (let item of _data["statuses"])
-                    this.statuses!.push(SlaFreezeStatusDto.fromJS(item));
-            }
-        }
-    }
-
-    static fromJS(data: any): UpdateSlaFreezeStatusesRequest {
-        data = typeof data === 'object' ? data : {};
-        let result = new UpdateSlaFreezeStatusesRequest();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        if (Array.isArray(this.statuses)) {
-            data["statuses"] = [];
-            for (let item of this.statuses)
-                data["statuses"].push(item.toJSON());
-        }
-        return data;
-    }
-}
-
-export interface IUpdateSlaFreezeStatusesRequest {
-    statuses: SlaFreezeStatusDto[];
-}
-
-export class AutoResponderDto implements IAutoResponderDto {
-    id!: number;
-    trigger!: string;
-    subjectTemplate!: string;
-    bodyTemplate!: string;
-    isEnabled!: boolean;
-
-    constructor(data?: IAutoResponderDto) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.id = _data["id"];
-            this.trigger = _data["trigger"];
-            this.subjectTemplate = _data["subjectTemplate"];
-            this.bodyTemplate = _data["bodyTemplate"];
-            this.isEnabled = _data["isEnabled"];
-        }
-    }
-
-    static fromJS(data: any): AutoResponderDto {
-        data = typeof data === 'object' ? data : {};
-        let result = new AutoResponderDto();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["id"] = this.id;
-        data["trigger"] = this.trigger;
-        data["subjectTemplate"] = this.subjectTemplate;
-        data["bodyTemplate"] = this.bodyTemplate;
-        data["isEnabled"] = this.isEnabled;
-        return data;
-    }
-}
-
-export interface IAutoResponderDto {
-    id: number;
-    trigger: string;
-    subjectTemplate: string;
-    bodyTemplate: string;
-    isEnabled: boolean;
-}
-
-export class UpdateAutoResponderRequest implements IUpdateAutoResponderRequest {
-    subjectTemplate!: string;
-    bodyTemplate!: string;
-    isEnabled!: boolean;
-
-    constructor(data?: IUpdateAutoResponderRequest) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.subjectTemplate = _data["subjectTemplate"];
-            this.bodyTemplate = _data["bodyTemplate"];
-            this.isEnabled = _data["isEnabled"];
-        }
-    }
-
-    static fromJS(data: any): UpdateAutoResponderRequest {
-        data = typeof data === 'object' ? data : {};
-        let result = new UpdateAutoResponderRequest();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["subjectTemplate"] = this.subjectTemplate;
-        data["bodyTemplate"] = this.bodyTemplate;
-        data["isEnabled"] = this.isEnabled;
-        return data;
-    }
-}
-
-export interface IUpdateAutoResponderRequest {
-    subjectTemplate: string;
-    bodyTemplate: string;
-    isEnabled: boolean;
 }
 
 function isAxiosError(obj: any): obj is AxiosError {

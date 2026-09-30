@@ -116,8 +116,6 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddHttpClient<EmailServiceRouter>(client =>
     client.BaseAddress = new Uri(mailSettings.ApiBaseUrl));
 builder.Services.AddScoped<IEmailService>(sp => sp.GetRequiredService<EmailServiceRouter>());
-// Belső HTTP hívások (inline kép letöltés küldéskor) — auth token nem kell, csak a base URL
-builder.Services.AddHttpClient("internal");
 builder.Services.AddScoped<ITicketEmailProcessor, TicketEmailProcessor>();
 builder.Services.AddHostedService<EmailPollingService>();
 builder.Services.AddSingleton<INotificationService, NotificationService>();

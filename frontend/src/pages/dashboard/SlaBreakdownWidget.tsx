@@ -3,6 +3,7 @@ import { analyticsClient } from '../../api'
 import type { SlaBreakdownConfig } from './types'
 import { timeRangeToDates } from './widgetUtils'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
+import { DASHBOARD_STALE_TIME } from './types'
 import styles from './widget.module.css'
 
 const COLORS = ['#22c55e', '#ef4444']
@@ -13,6 +14,7 @@ export function SlaBreakdownWidget({ config }: { config: SlaBreakdownConfig }) {
   const { data, isLoading } = useQuery({
     queryKey: ['analytics-sla-breakdown', config],
     queryFn: () => analyticsClient.getSlaBreakdown(from ?? undefined, to ?? undefined, config.scope),
+    staleTime: DASHBOARD_STALE_TIME,
   })
 
   if (isLoading) return <div className={styles.loading}>Betöltés…</div>

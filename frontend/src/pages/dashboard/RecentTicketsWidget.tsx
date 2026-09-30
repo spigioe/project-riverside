@@ -3,6 +3,7 @@ import { analyticsClient } from '../../api'
 import type { RecentTicketsConfig } from './types'
 import { timeRangeToDates } from './widgetUtils'
 import { useNavigate } from 'react-router-dom'
+import { DASHBOARD_STALE_TIME } from './types'
 import styles from './widget.module.css'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -20,6 +21,7 @@ export function RecentTicketsWidget({ config }: { config: RecentTicketsConfig })
   const { data, isLoading } = useQuery({
     queryKey: ['analytics-recent-tickets', config],
     queryFn: () => analyticsClient.getRecentTickets(from ?? undefined, to ?? undefined, undefined, config.limit),
+    staleTime: DASHBOARD_STALE_TIME,
   })
 
   if (isLoading) return <div className={styles.loading}>Betöltés…</div>

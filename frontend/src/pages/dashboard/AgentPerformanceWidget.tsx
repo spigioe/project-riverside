@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { analyticsClient } from '../../api'
 import type { AgentPerformanceConfig } from './types'
 import { timeRangeToDates, formatMinutes } from './widgetUtils'
+import { DASHBOARD_STALE_TIME } from './types'
 import styles from './widget.module.css'
 
 export function AgentPerformanceWidget({ config }: { config: AgentPerformanceConfig }) {
@@ -10,6 +11,7 @@ export function AgentPerformanceWidget({ config }: { config: AgentPerformanceCon
   const { data, isLoading, isError } = useQuery({
     queryKey: ['analytics-agent-performance', config],
     queryFn: () => analyticsClient.getAgentPerformance(from ?? undefined, to ?? undefined),
+    staleTime: DASHBOARD_STALE_TIME,
     retry: false,
   })
 

@@ -6,7 +6,10 @@ import styles from './WidgetStorePanel.module.css'
 
 interface Props {
   widgets: LocalWidget[]
+  hidden: boolean
   onStartDrag: (widgetType: DashboardWidgetType, e: React.PointerEvent) => void
+  onAdd: (widgetType: DashboardWidgetType) => void
+  onClose: () => void
 }
 
 const ALL_WIDGET_TYPES: DashboardWidgetType[] = [
@@ -19,26 +22,32 @@ const ALL_WIDGET_TYPES: DashboardWidgetType[] = [
   DashboardWidgetType.CategoryBreakdown,
   DashboardWidgetType.AgentPerformance,
   DashboardWidgetType.CustomerActivity,
+  DashboardWidgetType.BacklogAge,
+  DashboardWidgetType.VolumeHeatmap,
+  DashboardWidgetType.SlaAtRisk,
+  DashboardWidgetType.ServiceQuality,
 ]
 
 const ADMIN_ONLY_TYPES = new Set([DashboardWidgetType.AgentPerformance])
 
-export function WidgetStorePanel({ widgets, onStartDrag }: Props) {
+export function WidgetStorePanel({ widgets, hidden, onStartDrag, onAdd, onClose }: Props) {
   const role = useAuthStore(s => s.user?.role ?? '')
   const isAdmin = role === 'Admin' || role === 'MasterAdmin'
 
+  // Minden widget típus felhasználónként csak egyszer szerepelhet (backend validátor + egyedi index)
   function isDisabled(type: DashboardWidgetType): boolean {
-    if (STAT_WIDGET_TYPES.includes(type)) {
-      return widgets.some(w => w.widgetType === type)
-    }
-    return false
+    return widgets.some(w => w.widgetType === type)
   }
 
   const visibleTypes = ALL_WIDGET_TYPES.filter(t => !ADMIN_ONLY_TYPES.has(t) || isAdmin)
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.header}>Widget hozzáadása</div>
+    <div className={`${styles.panel} ${hidden ? styles.panelHidden : ''}`}>
+      <div className={styles.header}>
+        <span>Widget hozzáadása</span>
+        <button className={styles.closeBtn} onClick={onClose} title="Widget store elrejtése" aria-label="Widget store bezárása">×</button>
+      </div>
+      <div className={styles.hint}>Húzd a gridre, vagy kattints a + gombra</div>
       <div className={styles.list}>
         {visibleTypes.map(type => {
           const meta = WIDGET_META[type]
@@ -54,6 +63,14 @@ export function WidgetStorePanel({ widgets, onStartDrag }: Props) {
                 <div className={styles.name}>{meta.label}</div>
                 <div className={styles.desc}>{meta.description}</div>
               </div>
+              {!disabled && (
+                <button
+                  className={styles.addBtn}
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={() => onAdd(type)}
+                  title="Hozzáadás az első szabad helyre"
+                >+</button>
+              )}
               <div className={styles.dragHandle} title="Húzd a gridre">⠿</div>
             </div>
           )

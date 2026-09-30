@@ -10,7 +10,6 @@ using SupportPortal.Application.DTOs.Settings;
 using SupportPortal.Domain.Entities;
 using SupportPortal.Application.Interfaces;
 using SupportPortal.Data;
-using SupportPortal.Domain.Entities;
 using SupportPortal.Infrastructure.Services;
 
 namespace SupportPortal.Api.Controllers;

@@ -88,7 +88,10 @@ public class DashboardService(AppDbContext db, IAnalyticsService analyticsServic
 
         var open = await db.Tickets.CountAsync(t => t.Status == TicketStatus.Open && !t.IsMerged);
 
-        var unassigned = await db.Tickets.CountAsync(t => t.AssignedToId == null && !t.IsMerged);
+        // Csak a még nyitott jegyek számítanak — a megoldott/lezárt, felelős nélküli jegy nem teendő.
+        var unassigned = await db.Tickets.CountAsync(t =>
+            t.AssignedToId == null && !t.IsMerged &&
+            (t.Status == TicketStatus.New || t.Status == TicketStatus.Open || t.Status == TicketStatus.Pending));
 
         var slaCompliance = await analyticsService.GetSlaComplianceAsync(new AnalyticsPeriodQuery());
 

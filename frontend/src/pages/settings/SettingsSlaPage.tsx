@@ -583,12 +583,12 @@ function SlaFreezeSection() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '10px 0', borderBottom: '1px solid var(--border-light)',
           }}>
-            <span style={{ fontWeight: 500, fontSize: 13 }}>{STATUS_LABELS[s.statusKey] ?? s.statusKey}</span>
+            <span style={{ fontWeight: 500, fontSize: 13 }}>{(s.statusKey && STATUS_LABELS[s.statusKey]) ?? s.statusKey}</span>
             <button
               type="button"
               className={`${shared.toggle} ${s.freezeEnabled ? shared.toggleOn : ''}`}
               aria-pressed={s.freezeEnabled}
-              onClick={() => toggle(s.statusKey)}
+              onClick={() => s.statusKey && toggle(s.statusKey)}
             >
               <span className={shared.toggleKnob} />
             </button>

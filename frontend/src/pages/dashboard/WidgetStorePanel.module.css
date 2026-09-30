@@ -1,14 +1,29 @@
 .panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 20;
   width: 260px;
-  flex-shrink: 0;
   background: var(--surface);
   border-right: 1px solid var(--border-light);
+  box-shadow: 4px 0 16px rgba(16, 22, 47, 0.12);
+  transition: transform 0.15s ease, opacity 0.15s ease;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
+.panelHidden {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
 .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 14px 16px 12px;
   font-size: 12px;
   font-weight: 700;
@@ -87,3 +102,36 @@
   flex-shrink: 0;
   cursor: grab;
 }
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.closeBtn:hover { color: var(--text); }
+
+.hint {
+  padding: 8px 16px 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.addBtn {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--primary);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.addBtn:hover { background: var(--primary); color: #fff; }

@@ -19,4 +19,9 @@ public interface IAnalyticsService
     Task<IReadOnlyList<CategoryBreakdownItemDto>> GetCategoryBreakdownAsync(AnalyticsQuery query, int? userId, int limit);
     Task<IReadOnlyList<AgentPerformanceItemDto>> GetAgentPerformanceAsync(AnalyticsQuery query);
     Task<IReadOnlyList<CustomerActivityItemDto>> GetCustomerActivityAsync(AnalyticsQuery query, int limit);
+
+    Task<BacklogAgeDto> GetBacklogAgeAsync(int? userId);
+    Task<IReadOnlyList<VolumeHeatmapCellDto>> GetVolumeHeatmapAsync(AnalyticsQuery query, int? userId, int tzOffsetMinutes);
+    Task<IReadOnlyList<SlaAtRiskItemDto>> GetSlaAtRiskAsync(int? userId, int hours, int limit);
+    Task<ServiceQualityDto> GetServiceQualityAsync(AnalyticsQuery query, int? userId);
 }
